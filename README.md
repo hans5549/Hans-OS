@@ -32,11 +32,13 @@ dotnet run --project src/CGMSportFinance.Api
 
 ### Database
 
-The backend defaults to PostgreSQL via `ConnectionStrings:DefaultConnection` in `backend/src/CGMSportFinance.Api/appsettings.json`. Replace it with the connection details you provide later.
+The backend now loads its default database connection string and JWT signing key from the encrypted file `backend/src/CGMSportFinance.Api/appsettings.secrets.enc.json`.
+
+The encryption key is currently hardcoded in `backend/src/CGMSportFinance.Secrets/EmbeddedSecretsKey.cs` as a temporary convenience tradeoff.
 
 Migrations are stored under `backend/src/CGMSportFinance.Api/Infrastructure/Persistence/Migrations`.
 
-The API also supports standard PostgreSQL environment variables at runtime:
+At runtime the API still supports overrides through standard PostgreSQL environment variables:
 
 - `PGHOST`
 - `PGPORT`
@@ -44,6 +46,27 @@ The API also supports standard PostgreSQL environment variables at runtime:
 - `PGUSER`
 - `PGPASSWORD`
 - optional: `PGSSLMODE`
+
+ASP.NET Core configuration overrides also still work:
+
+- `ConnectionStrings__DefaultConnection`
+- `Jwt__SigningKey`
+
+### Encrypted secrets maintenance
+
+Regenerate the encrypted secrets file from a plaintext JSON file with this helper:
+
+```bash
+cd backend
+dotnet run --project tools/CGMSportFinance.SecretsCli -- encrypt /path/to/plain-secrets.json src/CGMSportFinance.Api/appsettings.secrets.enc.json
+```
+
+To inspect the current encrypted file locally:
+
+```bash
+cd backend
+dotnet run --project tools/CGMSportFinance.SecretsCli -- decrypt src/CGMSportFinance.Api/appsettings.secrets.enc.json
+```
 
 ## Frontend
 
@@ -60,4 +83,4 @@ pnpm dev:antd
 
 - Refresh token rotation uses an HttpOnly cookie named `refresh_token`.
 - Frontend mock mode is disabled in development.
-- Once you provide the PostgreSQL connection info, only environment/config updates should be needed.
+- The current encrypted secrets approach is convenience-first and should be replaced by environment-managed secrets later.

@@ -11,6 +11,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{A4CC668C
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CGMSportFinance.Api.IntegrationTests", "tests\CGMSportFinance.Api.IntegrationTests\CGMSportFinance.Api.IntegrationTests.csproj", "{F14FD1E4-CF8E-427D-8CC9-F2F062116569}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tools", "tools", "{D3C68EBA-8668-4733-AE48-145D30255B0D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CGMSportFinance.SecretsCli", "tools\CGMSportFinance.SecretsCli\CGMSportFinance.SecretsCli.csproj", "{59B8B1C7-F691-4BF3-AD31-049F2AF2535A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -28,9 +32,14 @@ Global
 		{F14FD1E4-CF8E-427D-8CC9-F2F062116569}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F14FD1E4-CF8E-427D-8CC9-F2F062116569}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F14FD1E4-CF8E-427D-8CC9-F2F062116569}.Release|Any CPU.Build.0 = Release|Any CPU
+		{59B8B1C7-F691-4BF3-AD31-049F2AF2535A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{59B8B1C7-F691-4BF3-AD31-049F2AF2535A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{59B8B1C7-F691-4BF3-AD31-049F2AF2535A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{59B8B1C7-F691-4BF3-AD31-049F2AF2535A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{6468818D-57B6-462B-8B9B-7940F723E580} = {8E9CDB13-2B03-4AFB-9F4D-9AF0441EB160}
 		{F14FD1E4-CF8E-427D-8CC9-F2F062116569} = {A4CC668C-1CFF-4022-845E-81FC1406C593}
+		{59B8B1C7-F691-4BF3-AD31-049F2AF2535A} = {D3C68EBA-8668-4733-AE48-145D30255B0D}
 	EndGlobalSection
 EndGlobal

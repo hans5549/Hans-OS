@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Text;
 using CGMSportFinance.Api.Features.Auth;
+using CGMSportFinance.Api.Infrastructure.Configuration;
 using CGMSportFinance.Api.Infrastructure.Identity;
 using CGMSportFinance.Api.Infrastructure.Persistence;
 using CGMSportFinance.Api.Infrastructure.Persistence.Seeding;
@@ -14,6 +15,8 @@ using Microsoft.OpenApi;
 using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Configuration.AddEncryptedJsonFileBeforeEnvironmentVariables("appsettings.secrets.enc.json", optional: true);
 
 builder.Services.AddProblemDetails();
 builder.Services.AddControllers();
@@ -213,8 +216,13 @@ static string ResolveConnectionString(ConfigurationManager configuration)
         return builder.ConnectionString;
     }
 
-    return configuration.GetConnectionString("DefaultConnection")
-           ?? throw new InvalidOperationException("ConnectionStrings:DefaultConnection is not configured.");
+    var configuredConnectionString = configuration.GetConnectionString("DefaultConnection");
+    if (!string.IsNullOrWhiteSpace(configuredConnectionString))
+    {
+        return configuredConnectionString;
+    }
+
+    throw new InvalidOperationException("ConnectionStrings:DefaultConnection is not configured.");
 }
 
 public partial class Program;
