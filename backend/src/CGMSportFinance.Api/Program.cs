@@ -11,6 +11,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
+using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -41,8 +42,7 @@ builder.Services
     .Validate(options => options.RefreshTokenDays > 0, "Jwt:RefreshTokenDays must be greater than 0.")
     .ValidateOnStart();
 
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-                       ?? throw new InvalidOperationException("ConnectionStrings:DefaultConnection is not configured.");
+var connectionString = ResolveConnectionString(builder.Configuration);
 var databaseOptions = builder.Configuration.GetSection(DatabaseOptions.SectionName).Get<DatabaseOptions>()
                       ?? new DatabaseOptions();
 
@@ -176,5 +176,45 @@ await using (var scope = app.Services.CreateAsyncScope())
 }
 
 app.Run();
+
+static string ResolveConnectionString(ConfigurationManager configuration)
+{
+    var pgHost = Environment.GetEnvironmentVariable("PGHOST");
+    var pgDatabase = Environment.GetEnvironmentVariable("PGDATABASE");
+    var pgUser = Environment.GetEnvironmentVariable("PGUSER");
+    var pgPassword = Environment.GetEnvironmentVariable("PGPASSWORD");
+    var pgPort = Environment.GetEnvironmentVariable("PGPORT");
+    var pgSslMode = Environment.GetEnvironmentVariable("PGSSLMODE");
+
+    if (!string.IsNullOrWhiteSpace(pgHost) &&
+        !string.IsNullOrWhiteSpace(pgDatabase) &&
+        !string.IsNullOrWhiteSpace(pgUser) &&
+        !string.IsNullOrWhiteSpace(pgPassword))
+    {
+        var builder = new NpgsqlConnectionStringBuilder
+        {
+            Database = pgDatabase,
+            Host = pgHost,
+            Password = pgPassword,
+            Port = int.TryParse(pgPort, out var port) ? port : 5432,
+            Username = pgUser,
+        };
+
+        if (!string.IsNullOrWhiteSpace(pgSslMode) &&
+            Enum.TryParse<SslMode>(pgSslMode, ignoreCase: true, out var sslMode))
+        {
+            builder.SslMode = sslMode;
+        }
+        else if (pgHost.Contains(".postgres.database.azure.com", StringComparison.OrdinalIgnoreCase))
+        {
+            builder.SslMode = SslMode.Require;
+        }
+
+        return builder.ConnectionString;
+    }
+
+    return configuration.GetConnectionString("DefaultConnection")
+           ?? throw new InvalidOperationException("ConnectionStrings:DefaultConnection is not configured.");
+}
 
 public partial class Program;

@@ -36,6 +36,15 @@ The backend defaults to PostgreSQL via `ConnectionStrings:DefaultConnection` in 
 
 Migrations are stored under `backend/src/CGMSportFinance.Api/Infrastructure/Persistence/Migrations`.
 
+The API also supports standard PostgreSQL environment variables at runtime:
+
+- `PGHOST`
+- `PGPORT`
+- `PGDATABASE`
+- `PGUSER`
+- `PGPASSWORD`
+- optional: `PGSSLMODE`
+
 ## Frontend
 
 `apps/web-antd` now runs in backend access mode and points development API traffic at `http://localhost:5180/api`.
