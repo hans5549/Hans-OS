@@ -1,0 +1,458 @@
+using CGMSportFinance.Api.Infrastructure.Identity;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+
+namespace CGMSportFinance.Api.Infrastructure.Persistence.Seeding;
+
+public sealed class DatabaseSeeder(
+    ApplicationDbContext dbContext,
+    RoleManager<IdentityRole> roleManager,
+    UserManager<ApplicationUser> userManager) : IDatabaseSeeder
+{
+    public async Task SeedAsync(CancellationToken cancellationToken = default)
+    {
+        if (dbContext.Database.ProviderName?.Contains("Sqlite", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            await dbContext.Database.EnsureCreatedAsync(cancellationToken);
+        }
+        else
+        {
+            await dbContext.Database.MigrateAsync(cancellationToken);
+        }
+
+        var roles = await EnsureRolesAsync();
+        _ = await EnsureUsersAsync();
+        var permissions = await EnsurePermissionsAsync(cancellationToken);
+        var menus = await EnsureMenusAsync(cancellationToken);
+
+        await EnsureRolePermissionsAsync(roles, permissions, cancellationToken);
+        await EnsureRoleMenusAsync(roles, menus, cancellationToken);
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task<Dictionary<string, Menu>> EnsureMenusAsync(CancellationToken cancellationToken)
+    {
+        var menus = new[]
+        {
+            new MenuSeed(
+                Id: Guid.Parse("8C37E615-4CD6-4BF7-BE2A-690B87D8F001"),
+                Name: "Dashboard",
+                Path: "/dashboard",
+                TitleKey: "page.dashboard.title",
+                Type: MenuType.Catalog,
+                OrderNo: -1,
+                Icon: "lucide:layout-dashboard",
+                Redirect: "/analytics"),
+            new MenuSeed(
+                Id: Guid.Parse("8C37E615-4CD6-4BF7-BE2A-690B87D8F002"),
+                ParentId: Guid.Parse("8C37E615-4CD6-4BF7-BE2A-690B87D8F001"),
+                Name: "Analytics",
+                Path: "/analytics",
+                TitleKey: "page.dashboard.analytics",
+                Type: MenuType.Menu,
+                OrderNo: 0,
+                Icon: "lucide:area-chart",
+                ComponentKey: "/dashboard/analytics/index",
+                KeepAlive: true,
+                AffixTab: true,
+                PermissionCode: "dashboard:analytics:view"),
+            new MenuSeed(
+                Id: Guid.Parse("8C37E615-4CD6-4BF7-BE2A-690B87D8F003"),
+                ParentId: Guid.Parse("8C37E615-4CD6-4BF7-BE2A-690B87D8F001"),
+                Name: "Workspace",
+                Path: "/workspace",
+                TitleKey: "page.dashboard.workspace",
+                Type: MenuType.Menu,
+                OrderNo: 1,
+                Icon: "carbon:workspace",
+                ComponentKey: "/dashboard/workspace/index",
+                PermissionCode: "dashboard:workspace:view"),
+            new MenuSeed(
+                Id: Guid.Parse("8C37E615-4CD6-4BF7-BE2A-690B87D8F004"),
+                Name: "Demos",
+                Path: "/demos",
+                TitleKey: "demos.title",
+                Type: MenuType.Catalog,
+                OrderNo: 1000,
+                Icon: "ic:baseline-view-in-ar",
+                KeepAlive: true),
+            new MenuSeed(
+                Id: Guid.Parse("8C37E615-4CD6-4BF7-BE2A-690B87D8F005"),
+                ParentId: Guid.Parse("8C37E615-4CD6-4BF7-BE2A-690B87D8F004"),
+                Name: "AntDesignDemos",
+                Path: "/demos/ant-design",
+                TitleKey: "demos.antd",
+                Type: MenuType.Menu,
+                OrderNo: 0,
+                ComponentKey: "/demos/antd/index",
+                PermissionCode: "demos:ant-design:view"),
+            new MenuSeed(
+                Id: Guid.Parse("8C37E615-4CD6-4BF7-BE2A-690B87D8F006"),
+                Name: "VbenProject",
+                Path: "/vben-admin",
+                TitleKey: "demos.vben.title",
+                Type: MenuType.Catalog,
+                OrderNo: 9998,
+                Icon: "lucide:panels-top-left"),
+            new MenuSeed(
+                Id: Guid.Parse("8C37E615-4CD6-4BF7-BE2A-690B87D8F007"),
+                ParentId: Guid.Parse("8C37E615-4CD6-4BF7-BE2A-690B87D8F006"),
+                Name: "VbenDocument",
+                Path: "/vben-admin/document",
+                TitleKey: "demos.vben.document",
+                Type: MenuType.Menu,
+                OrderNo: 0,
+                Icon: "lucide:book-open-text",
+                ComponentKey: "IFrameView",
+                Link: "https://doc.vben.pro/",
+                PermissionCode: "vben:document:view"),
+            new MenuSeed(
+                Id: Guid.Parse("8C37E615-4CD6-4BF7-BE2A-690B87D8F008"),
+                ParentId: Guid.Parse("8C37E615-4CD6-4BF7-BE2A-690B87D8F006"),
+                Name: "VbenGithub",
+                Path: "/vben-admin/github",
+                TitleKey: "Github",
+                Type: MenuType.Menu,
+                OrderNo: 1,
+                Icon: "mdi:github",
+                ComponentKey: "IFrameView",
+                Link: "https://github.com/vbenjs/vue-vben-admin"),
+            new MenuSeed(
+                Id: Guid.Parse("8C37E615-4CD6-4BF7-BE2A-690B87D8F009"),
+                Name: "VbenAbout",
+                Path: "/vben-admin/about",
+                TitleKey: "demos.vben.about",
+                Type: MenuType.Menu,
+                OrderNo: 9999,
+                Icon: "lucide:copyright",
+                ComponentKey: "/_core/about/index",
+                PermissionCode: "vben:about:view"),
+            new MenuSeed(
+                Id: Guid.Parse("8C37E615-4CD6-4BF7-BE2A-690B87D8F010"),
+                Name: "Profile",
+                Path: "/profile",
+                TitleKey: "page.auth.profile",
+                Type: MenuType.Menu,
+                OrderNo: 10000,
+                Icon: "lucide:user",
+                ComponentKey: "/_core/profile/index",
+                HideInMenu: true,
+                PermissionCode: "profile:view"),
+        };
+
+        var menuIds = menus.Select(menu => menu.Id).ToArray();
+        var existing = await dbContext.Menus.Where(menu => menuIds.Contains(menu.Id)).ToDictionaryAsync(menu => menu.Id, cancellationToken);
+
+        foreach (var seed in menus)
+        {
+            if (!existing.TryGetValue(seed.Id, out var menu))
+            {
+                menu = new Menu { Id = seed.Id };
+                dbContext.Menus.Add(menu);
+                existing[seed.Id] = menu;
+            }
+
+            menu.ActivePath = seed.ActivePath;
+            menu.AffixTab = seed.AffixTab;
+            menu.Badge = seed.Badge;
+            menu.BadgeType = seed.BadgeType;
+            menu.BadgeVariant = seed.BadgeVariant;
+            menu.ComponentKey = seed.ComponentKey;
+            menu.HideInBreadcrumb = seed.HideInBreadcrumb;
+            menu.HideInMenu = seed.HideInMenu;
+            menu.HideInTab = seed.HideInTab;
+            menu.Icon = seed.Icon;
+            menu.Id = seed.Id;
+            menu.IframeSrc = seed.IframeSrc;
+            menu.KeepAlive = seed.KeepAlive;
+            menu.Link = seed.Link;
+            menu.MenuVisibleWithForbidden = seed.MenuVisibleWithForbidden;
+            menu.Name = seed.Name;
+            menu.OrderNo = seed.OrderNo;
+            menu.ParentId = seed.ParentId;
+            menu.Path = seed.Path;
+            menu.PermissionCode = seed.PermissionCode;
+            menu.Redirect = seed.Redirect;
+            menu.Status = true;
+            menu.TitleKey = seed.TitleKey;
+            menu.Type = seed.Type;
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        return await dbContext.Menus.ToDictionaryAsync(menu => menu.Name, cancellationToken);
+    }
+
+    private async Task<Dictionary<string, Permission>> EnsurePermissionsAsync(CancellationToken cancellationToken)
+    {
+        var seedPermissions = new[]
+        {
+            new PermissionSeed("dashboard:analytics:view", "View analytics dashboard"),
+            new PermissionSeed("dashboard:workspace:view", "View workspace dashboard"),
+            new PermissionSeed("demos:ant-design:view", "View Ant Design demo page"),
+            new PermissionSeed("vben:document:view", "View Vben documentation iframe"),
+            new PermissionSeed("vben:about:view", "View About page"),
+            new PermissionSeed("profile:view", "View profile page"),
+            new PermissionSeed("dashboard:analytics:refresh", "Refresh analytics widgets"),
+            new PermissionSeed("system:menu:create", "Create menu items"),
+            new PermissionSeed("system:menu:edit", "Edit menu items"),
+            new PermissionSeed("system:menu:delete", "Delete menu items"),
+        };
+
+        var codes = seedPermissions.Select(permission => permission.Code).ToArray();
+        var existing = await dbContext.Permissions.Where(permission => codes.Contains(permission.Code)).ToDictionaryAsync(permission => permission.Code, cancellationToken);
+
+        foreach (var seed in seedPermissions)
+        {
+            if (!existing.TryGetValue(seed.Code, out var permission))
+            {
+                permission = new Permission { Code = seed.Code };
+                dbContext.Permissions.Add(permission);
+                existing[seed.Code] = permission;
+            }
+
+            permission.Description = seed.Description;
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return existing;
+    }
+
+    private async Task EnsureRoleMenusAsync(
+        IReadOnlyDictionary<string, IdentityRole> roles,
+        IReadOnlyDictionary<string, Menu> menus,
+        CancellationToken cancellationToken)
+    {
+        var assignments = new Dictionary<string, string[]>
+        {
+            ["super"] =
+            [
+                "Dashboard",
+                "Analytics",
+                "Workspace",
+                "Demos",
+                "AntDesignDemos",
+                "VbenProject",
+                "VbenDocument",
+                "VbenGithub",
+                "VbenAbout",
+                "Profile",
+            ],
+            ["admin"] =
+            [
+                "Dashboard",
+                "Analytics",
+                "Workspace",
+                "Demos",
+                "AntDesignDemos",
+                "VbenAbout",
+                "Profile",
+            ],
+            ["user"] =
+            [
+                "Dashboard",
+                "Analytics",
+                "Profile",
+            ],
+        };
+
+        foreach (var (roleName, menuNames) in assignments)
+        {
+            var role = roles[roleName];
+            var menuIds = menuNames.Select(name => menus[name].Id).ToHashSet();
+            var existingMappings = await dbContext.RoleMenus
+                .Where(mapping => mapping.RoleId == role.Id)
+                .ToListAsync(cancellationToken);
+
+            foreach (var mapping in existingMappings.Where(mapping => !menuIds.Contains(mapping.MenuId)))
+            {
+                dbContext.RoleMenus.Remove(mapping);
+            }
+
+            var existingMenuIds = existingMappings.Select(mapping => mapping.MenuId).ToHashSet();
+            foreach (var menuId in menuIds.Where(menuId => !existingMenuIds.Contains(menuId)))
+            {
+                dbContext.RoleMenus.Add(new RoleMenu
+                {
+                    MenuId = menuId,
+                    RoleId = role.Id,
+                });
+            }
+        }
+    }
+
+    private async Task EnsureRolePermissionsAsync(
+        IReadOnlyDictionary<string, IdentityRole> roles,
+        IReadOnlyDictionary<string, Permission> permissions,
+        CancellationToken cancellationToken)
+    {
+        var assignments = new Dictionary<string, string[]>
+        {
+            ["super"] = permissions.Keys.ToArray(),
+            ["admin"] =
+            [
+                "dashboard:analytics:view",
+                "dashboard:workspace:view",
+                "demos:ant-design:view",
+                "vben:about:view",
+                "profile:view",
+                "dashboard:analytics:refresh",
+                "system:menu:create",
+                "system:menu:edit",
+            ],
+            ["user"] =
+            [
+                "dashboard:analytics:view",
+                "profile:view",
+            ],
+        };
+
+        foreach (var (roleName, codes) in assignments)
+        {
+            var role = roles[roleName];
+            var permissionIds = codes.Select(code => permissions[code].Id).ToHashSet();
+            var existingMappings = await dbContext.RolePermissions
+                .Where(mapping => mapping.RoleId == role.Id)
+                .ToListAsync(cancellationToken);
+
+            foreach (var mapping in existingMappings.Where(mapping => !permissionIds.Contains(mapping.PermissionId)))
+            {
+                dbContext.RolePermissions.Remove(mapping);
+            }
+
+            var existingPermissionIds = existingMappings.Select(mapping => mapping.PermissionId).ToHashSet();
+            foreach (var permissionId in permissionIds.Where(permissionId => !existingPermissionIds.Contains(permissionId)))
+            {
+                dbContext.RolePermissions.Add(new RolePermission
+                {
+                    PermissionId = permissionId,
+                    RoleId = role.Id,
+                });
+            }
+        }
+    }
+
+    private async Task<Dictionary<string, IdentityRole>> EnsureRolesAsync()
+    {
+        var roleNames = new[] { "super", "admin", "user" };
+        var roles = new Dictionary<string, IdentityRole>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var roleName in roleNames)
+        {
+            var role = await roleManager.FindByNameAsync(roleName);
+            if (role is null)
+            {
+                role = new IdentityRole(roleName);
+                var result = await roleManager.CreateAsync(role);
+                if (!result.Succeeded)
+                {
+                    throw new InvalidOperationException($"Failed to create role '{roleName}': {string.Join(", ", result.Errors.Select(error => error.Description))}");
+                }
+            }
+
+            roles[roleName] = role;
+        }
+
+        return roles;
+    }
+
+    private async Task<Dictionary<string, ApplicationUser>> EnsureUsersAsync()
+    {
+        var seedUsers = new[]
+        {
+            new SeedUser("vben", "123456", "Vben", "/analytics", "https://ui-avatars.com/api/?name=Vben&background=0D8ABC&color=fff", new[] { "super" }),
+            new SeedUser("admin", "123456", "Admin", "/workspace", "https://ui-avatars.com/api/?name=Admin&background=1F8A70&color=fff", new[] { "admin" }),
+            new SeedUser("jack", "123456", "Jack", "/analytics", "https://ui-avatars.com/api/?name=Jack&background=7C3AED&color=fff", new[] { "user" }),
+        };
+
+        var users = new Dictionary<string, ApplicationUser>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var seed in seedUsers)
+        {
+            var user = await userManager.FindByNameAsync(seed.Username);
+            if (user is null)
+            {
+                user = new ApplicationUser
+                {
+                    Avatar = seed.Avatar,
+                    Email = $"{seed.Username}@example.local",
+                    EmailConfirmed = true,
+                    HomePath = seed.HomePath,
+                    IsActive = true,
+                    RealName = seed.RealName,
+                    UserName = seed.Username,
+                };
+
+                var result = await userManager.CreateAsync(user, seed.Password);
+                if (!result.Succeeded)
+                {
+                    throw new InvalidOperationException($"Failed to create user '{seed.Username}': {string.Join(", ", result.Errors.Select(error => error.Description))}");
+                }
+            }
+            else
+            {
+                user.Avatar = seed.Avatar;
+                user.HomePath = seed.HomePath;
+                user.IsActive = true;
+                user.RealName = seed.RealName;
+                user.Email ??= $"{seed.Username}@example.local";
+                user.EmailConfirmed = true;
+                await userManager.UpdateAsync(user);
+            }
+
+            var currentRoles = await userManager.GetRolesAsync(user);
+            var rolesToAdd = seed.Roles.Except(currentRoles, StringComparer.OrdinalIgnoreCase).ToArray();
+            var rolesToRemove = currentRoles.Except(seed.Roles, StringComparer.OrdinalIgnoreCase).ToArray();
+
+            if (rolesToRemove.Length > 0)
+            {
+                await userManager.RemoveFromRolesAsync(user, rolesToRemove);
+            }
+
+            if (rolesToAdd.Length > 0)
+            {
+                await userManager.AddToRolesAsync(user, rolesToAdd);
+            }
+
+            users[seed.Username] = user;
+        }
+
+        return users;
+    }
+
+    private sealed record MenuSeed(
+        Guid Id,
+        string Name,
+        string Path,
+        string TitleKey,
+        MenuType Type,
+        int OrderNo,
+        Guid? ParentId = null,
+        string? ComponentKey = null,
+        string? Redirect = null,
+        string? Icon = null,
+        string? PermissionCode = null,
+        string? Link = null,
+        string? IframeSrc = null,
+        bool KeepAlive = false,
+        bool HideInMenu = false,
+        bool HideInTab = false,
+        bool HideInBreadcrumb = false,
+        bool AffixTab = false,
+        string? ActivePath = null,
+        string? Badge = null,
+        string? BadgeType = null,
+        string? BadgeVariant = null,
+        bool MenuVisibleWithForbidden = false);
+
+    private sealed record PermissionSeed(string Code, string Description);
+
+    private sealed record SeedUser(
+        string Username,
+        string Password,
+        string RealName,
+        string HomePath,
+        string Avatar,
+        string[] Roles);
+}

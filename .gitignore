@@ -1,0 +1,16 @@
+.DS_Store
+
+# frontend
+frontend/node_modules/
+frontend/.turbo/
+frontend/dist/
+frontend/.pnpm-store/
+
+# backend
+backend/**/bin/
+backend/**/obj/
+
+# misc
+*.user
+*.suo
+*.swp
