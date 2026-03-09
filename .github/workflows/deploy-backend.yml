@@ -66,10 +66,16 @@ jobs:
       - name: Validate Azure deployment settings
         env:
           AZURE_WEBAPP_NAME: ${{ vars.AZURE_WEBAPP_NAME }}
+          AZURE_WEBAPP_HEALTHCHECK_URL: ${{ vars.AZURE_WEBAPP_HEALTHCHECK_URL }}
           AZURE_WEBAPP_PUBLISH_PROFILE: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
         run: |
           if [ -z "$AZURE_WEBAPP_NAME" ]; then
             echo "Repository variable AZURE_WEBAPP_NAME is required." >&2
+            exit 1
+          fi
+
+          if [ -z "$AZURE_WEBAPP_HEALTHCHECK_URL" ]; then
+            echo "Repository variable AZURE_WEBAPP_HEALTHCHECK_URL is required." >&2
             exit 1
           fi
 
@@ -86,4 +92,4 @@ jobs:
           package: ${{ env.PUBLISH_PATH }}
 
       - name: Health check
-        run: curl --fail --retry 5 --retry-delay 5 "https://${{ vars.AZURE_WEBAPP_NAME }}.azurewebsites.net/health"
+        run: curl --fail --retry 5 --retry-delay 5 "${{ vars.AZURE_WEBAPP_HEALTHCHECK_URL }}"

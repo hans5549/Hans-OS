@@ -93,6 +93,7 @@ This repository includes [deploy-backend.yml](/Users/hansh/Documents/Personal As
 Set these GitHub repository values before the first deployment:
 
 - Repository variable: `AZURE_WEBAPP_NAME`
+- Repository variable: `AZURE_WEBAPP_HEALTHCHECK_URL`
 - Repository secret: `AZURE_WEBAPP_PUBLISH_PROFILE`
 
 To get the publish profile:
@@ -109,7 +110,12 @@ Workflow behavior:
 - test
 - publish the API
 - deploy to Azure App Service
-- call `https://<app-name>.azurewebsites.net/health`
+- call the exact URL stored in `AZURE_WEBAPP_HEALTHCHECK_URL`
+
+Use the App Service default hostname for `AZURE_WEBAPP_HEALTHCHECK_URL`, for example:
+
+- `https://<default-hostname>/health`
+- `https://hans-os-api-b8axc6apdaerbjda.japanwest-01.azurewebsites.net/health`
 
 ## 6. First deployment checklist
 
@@ -119,7 +125,7 @@ Before pushing to `main`, confirm:
 - all required app settings are present
 - `ASPNETCORE_ENVIRONMENT=Production`
 - `Seeding__EnableDemoData=false`
-- GitHub secret and variable are configured
+- GitHub secret and variables are configured
 
 After deployment:
 
