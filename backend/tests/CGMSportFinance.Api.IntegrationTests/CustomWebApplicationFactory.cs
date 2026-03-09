@@ -15,14 +15,4 @@ public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
         builder.UseSetting("Frontend:AllowedOrigins:0", "http://localhost:5666");
         builder.UseSetting("Jwt:SigningKey", "integration-tests-signing-key-32chars-minimum");
     }
-
-    protected override void Dispose(bool disposing)
-    {
-        base.Dispose(disposing);
-
-        if (disposing && File.Exists(sqlitePath))
-        {
-            File.Delete(sqlitePath);
-        }
-    }
 }

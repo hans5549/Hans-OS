@@ -12,9 +12,27 @@ Monorepo bootstrap for `vue-vben-admin` frontend plus an ASP.NET Core 9 backend 
 
 ### Seeded users
 
+Development and test environments seed these demo users by default:
+
 - `vben` / `123456`
 - `admin` / `123456`
 - `jack` / `123456`
+
+Production does not create these demo users unless `Seeding__EnableDemoData=true` is explicitly configured.
+
+### Production bootstrap admin
+
+Production startup expects a bootstrap admin to be provided through environment variables when no privileged user exists yet:
+
+- `BootstrapAdmin__Username`
+- `BootstrapAdmin__Email`
+- `BootstrapAdmin__Password`
+
+Optional bootstrap admin settings:
+
+- `BootstrapAdmin__RealName`
+- `BootstrapAdmin__HomePath`
+- `BootstrapAdmin__Avatar`
 
 ### Run
 
@@ -32,13 +50,7 @@ dotnet run --project src/CGMSportFinance.Api
 
 ### Database
 
-The backend now loads its default database connection string and JWT signing key from the encrypted file `backend/src/CGMSportFinance.Api/appsettings.secrets.enc.json`.
-
-The encryption key is currently hardcoded in `backend/src/CGMSportFinance.Secrets/EmbeddedSecretsKey.cs` as a temporary convenience tradeoff.
-
-Migrations are stored under `backend/src/CGMSportFinance.Api/Infrastructure/Persistence/Migrations`.
-
-At runtime the API still supports overrides through standard PostgreSQL environment variables:
+For production, prefer environment-managed settings such as Azure App Service `Environment variables`. The application supports standard PostgreSQL environment variables:
 
 - `PGHOST`
 - `PGPORT`
@@ -47,10 +59,18 @@ At runtime the API still supports overrides through standard PostgreSQL environm
 - `PGPASSWORD`
 - optional: `PGSSLMODE`
 
-ASP.NET Core configuration overrides also still work:
+ASP.NET Core configuration overrides also work:
 
 - `ConnectionStrings__DefaultConnection`
+- `Frontend__AllowedOrigins__0`
 - `Jwt__SigningKey`
+- `BootstrapAdmin__Username`
+- `BootstrapAdmin__Email`
+- `BootstrapAdmin__Password`
+
+Migrations are stored under `backend/src/CGMSportFinance.Api/Infrastructure/Persistence/Migrations`.
+
+The encrypted file `backend/src/CGMSportFinance.Api/appsettings.secrets.enc.json` is still available for local convenience and fallback scenarios, but it should not be the source of truth for production secrets.
 
 ### Encrypted secrets maintenance
 
@@ -83,4 +103,4 @@ pnpm dev:antd
 
 - Refresh token rotation uses an HttpOnly cookie named `refresh_token`.
 - Frontend mock mode is disabled in development.
-- The current encrypted secrets approach is convenience-first and should be replaced by environment-managed secrets later.
+- Production deployment guidance lives in [backend/docs/azure-app-service.md](/Users/hansh/Documents/Personal%20Assistant/Hans-OS/backend/docs/azure-app-service.md).

@@ -24,6 +24,17 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddHealthChecks();
 
 builder.Services
+    .AddOptions<SeedingOptions>()
+    .Bind(builder.Configuration.GetSection(SeedingOptions.SectionName))
+    .ValidateOnStart();
+
+builder.Services
+    .AddOptions<BootstrapAdminOptions>()
+    .Bind(builder.Configuration.GetSection(BootstrapAdminOptions.SectionName))
+    .Validate(options => options.IsEmpty() || options.IsConfigured(), "BootstrapAdmin must include Username, Email, and Password when configured.")
+    .ValidateOnStart();
+
+builder.Services
     .AddOptions<FrontendOptions>()
     .Bind(builder.Configuration.GetSection(FrontendOptions.SectionName))
     .Validate(options => options.AllowedOrigins.Count > 0, "At least one frontend origin must be configured.")
@@ -48,6 +59,11 @@ builder.Services
 var connectionString = ResolveConnectionString(builder.Configuration);
 var databaseOptions = builder.Configuration.GetSection(DatabaseOptions.SectionName).Get<DatabaseOptions>()
                       ?? new DatabaseOptions();
+
+if (builder.Environment.IsProduction() && string.IsNullOrWhiteSpace(connectionString))
+{
+    throw new InvalidOperationException("A database connection string or PG* environment variables must be configured in Production.");
+}
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
