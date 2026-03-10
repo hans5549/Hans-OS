@@ -1,141 +1,51 @@
-# Azure App Service Deployment
+# Azure App Service 部署文件總覽
 
-This document describes the baseline production deployment flow for the backend API on Azure App Service with Azure Database for PostgreSQL.
+這組文件整理了 `CGMSportFinance.Api` 部署到 Azure App Service 的實際流程、必要設定、設定用途，以及這次部署過程中真正遇到並修正的問題。
 
-## 1. Create or confirm the App Service
+## 目前狀態
 
-Create a Web App in Azure App Service or confirm an existing one.
+- App Service 已建立：`hans-os-api`
+- 目前可用網址：[https://hans-os-api-b8axc6apdaerbjda.japanwest-01.azurewebsites.net](https://hans-os-api-b8axc6apdaerbjda.japanwest-01.azurewebsites.net)
+- 健康檢查端點：[https://hans-os-api-b8axc6apdaerbjda.japanwest-01.azurewebsites.net/health](https://hans-os-api-b8axc6apdaerbjda.japanwest-01.azurewebsites.net/health)
+- `GET /health` 目前回應 `Healthy`
+- 成功完成 GitHub Actions 部署的 commit：`fa45e9c`
 
-- Publish: `Code`
-- Operating system: `Linux`
-- Runtime stack: choose the supported `.NET` runtime that matches the project target framework
-- Region: keep it close to the Azure PostgreSQL server
+## 這次完成了什麼
 
-This repository currently targets `net9.0` in [CGMSportFinance.Api.csproj](/Users/hansh/Documents/Personal Assistant/Hans-OS/backend/src/CGMSportFinance.Api/CGMSportFinance.Api.csproj). If the Azure portal in your region doesn't offer `.NET 9`, stop there and verify the supported runtimes before deploying.
+### 後端程式調整
 
-Useful checks:
+- production 啟動時會驗證必要設定，避免缺設定卻啟動成功
+- 保留 `/health` 供平台與部署驗證使用
+- Swagger 只在 development 開啟，production 不暴露 `/swagger`
+- production 不再自動建立 demo 帳號
+- production 會依 `BootstrapAdmin` 設定建立或更新 bootstrap admin
 
-```bash
-az webapp list-runtimes --os linux | grep DOTNET
-az webapp config show --resource-group <resource-group-name> --name <app-name> --query linuxFxVersion
-```
+### CI/CD 調整
 
-Record these values because they are needed in the next steps:
+- 建立 GitHub Actions workflow，自動執行 restore、build、test、publish、deploy
+- deploy 後會主動打 health check URL 驗證站台是否真的可用
+- health check URL 改為獨立變數 `AZURE_WEBAPP_HEALTHCHECK_URL`，不再硬組網址
 
-- App Service name
-- Resource group
-- Default hostname, for example `https://<app-name>.azurewebsites.net`
+### 部署問題修正
 
-## 2. Configure App Service application settings
+- 修正 workflow 原本假設 Azure 網址為 `https://<app-name>.azurewebsites.net/health` 的問題
+- 修正 `dotnet publish --no-build` 在 GitHub runner 上找不到 `CGMSportFinance.Secrets.dll` 的問題
 
-In Azure Portal, open the App Service and go to `Settings > Environment variables`.
+## 文件導覽
 
-Add the following app settings:
+- 操作教學：[azure-app-service-deployment-guide.md](/C:/Users/hansh/Documents/Personal%20Assistant/Hans-OS/backend/docs/azure-app-service-deployment-guide.md)
+- 設定說明：[azure-app-service-settings-reference.md](/C:/Users/hansh/Documents/Personal%20Assistant/Hans-OS/backend/docs/azure-app-service-settings-reference.md)
 
-| Key | Required | Example / notes |
-| --- | --- | --- |
-| `ASPNETCORE_ENVIRONMENT` | Yes | `Production` |
-| `PGHOST` | Yes | `<server>.postgres.database.azure.com` |
-| `PGPORT` | Yes | `5432` |
-| `PGDATABASE` | Yes | your Azure PostgreSQL database name |
-| `PGUSER` | Yes | Azure PostgreSQL login, often `<username>@<server>` |
-| `PGPASSWORD` | Yes | database password |
-| `PGSSLMODE` | Yes | `Require` |
-| `Frontend__AllowedOrigins__0` | Yes | `https://<your-frontend-domain>` |
-| `Jwt__SigningKey` | Yes | at least 32 random characters |
-| `Jwt__Issuer` | No | defaults to `CGMSportFinance.Api` |
-| `Jwt__Audience` | No | defaults to `CGMSportFinance.Frontend` |
-| `BootstrapAdmin__Username` | Yes | initial production admin username |
-| `BootstrapAdmin__Email` | Yes | initial production admin email |
-| `BootstrapAdmin__Password` | Yes | initial production admin password |
-| `BootstrapAdmin__RealName` | No | defaults to `Administrator` |
-| `BootstrapAdmin__HomePath` | No | defaults to `/workspace` |
-| `BootstrapAdmin__Avatar` | No | optional avatar URL |
-| `Seeding__EnableDemoData` | No | keep `false` in production |
+## 相關檔案
 
-Notes:
+- GitHub Actions workflow：[deploy-backend.yml](/C:/Users/hansh/Documents/Personal%20Assistant/Hans-OS/.github/workflows/deploy-backend.yml)
+- API 入口與設定驗證：[Program.cs](/C:/Users/hansh/Documents/Personal%20Assistant/Hans-OS/backend/src/CGMSportFinance.Api/Program.cs)
+- 資料初始化與 production seed 行為：[DatabaseSeeder.cs](/C:/Users/hansh/Documents/Personal%20Assistant/Hans-OS/backend/src/CGMSportFinance.Api/Infrastructure/Persistence/Seeding/DatabaseSeeder.cs)
+- 預設設定檔：[appsettings.json](/C:/Users/hansh/Documents/Personal%20Assistant/Hans-OS/backend/src/CGMSportFinance.Api/appsettings.json)
+- Solution 檔案：[CGMSportFinance.sln](/C:/Users/hansh/Documents/Personal%20Assistant/Hans-OS/backend/CGMSportFinance.sln)
 
-- Azure App Service app settings override `appsettings.json`.
-- Hierarchical ASP.NET Core configuration keys on Linux use the `__` separator.
-- The API accepts standard PostgreSQL environment variables, so `PG*` settings are the simplest production configuration.
+## 建議閱讀順序
 
-## 3. Production seeding behavior
-
-Production startup does the following automatically:
-
-- applies EF Core migrations
-- ensures base roles, permissions, and menus exist
-- creates or updates the bootstrap admin if `BootstrapAdmin__*` settings are present
-
-Production startup does not create the demo accounts `vben`, `admin`, and `jack` unless `Seeding__EnableDemoData=true` is explicitly set.
-
-If the app starts in `Production` without a configured bootstrap admin and no privileged user already exists, startup fails on purpose.
-
-## 4. Enable Health Check
-
-The API exposes `GET /health`.
-
-In Azure Portal:
-
-1. Open the App Service.
-2. Go to `Monitoring > Health check`.
-3. Enable it and set the path to `/health`.
-4. Save.
-
-Recommended related setting:
-
-- `HTTPS Only`: `On`
-
-## 5. Configure GitHub deployment
-
-This repository includes [deploy-backend.yml](/Users/hansh/Documents/Personal Assistant/Hans-OS/.github/workflows/deploy-backend.yml).
-
-Set these GitHub repository values before the first deployment:
-
-- Repository variable: `AZURE_WEBAPP_NAME`
-- Repository variable: `AZURE_WEBAPP_HEALTHCHECK_URL`
-- Repository secret: `AZURE_WEBAPP_PUBLISH_PROFILE`
-
-To get the publish profile:
-
-1. Open the App Service in Azure Portal.
-2. Go to `Overview` or `Get publish profile`.
-3. Download the publish profile file.
-4. Copy its XML content into the GitHub secret `AZURE_WEBAPP_PUBLISH_PROFILE`.
-
-Workflow behavior:
-
-- restore
-- build
-- test
-- publish the API
-- deploy to Azure App Service
-- call the exact URL stored in `AZURE_WEBAPP_HEALTHCHECK_URL`
-
-Use the App Service default hostname for `AZURE_WEBAPP_HEALTHCHECK_URL`, for example:
-
-- `https://<default-hostname>/health`
-- `https://hans-os-api-b8axc6apdaerbjda.japanwest-01.azurewebsites.net/health`
-
-## 6. First deployment checklist
-
-Before pushing to `main`, confirm:
-
-- Azure PostgreSQL firewall and network rules allow the App Service to connect
-- all required app settings are present
-- `ASPNETCORE_ENVIRONMENT=Production`
-- `Seeding__EnableDemoData=false`
-- GitHub secret and variables are configured
-
-After deployment:
-
-1. Open `https://<app-name>.azurewebsites.net/health`
-2. Verify the GitHub Actions run passed
-3. Sign in with the bootstrap admin account
-4. Confirm no demo accounts were created in production
-
-## 7. Operational notes
-
-- The encrypted file `appsettings.secrets.enc.json` can still support local or fallback scenarios, but it should not be the source of truth for production secrets.
-- App Service restarts the app after app setting changes.
-- If health checks show redirects instead of `200`, confirm `HTTPS Only` is enabled and the health check path is `/health`.
+1. 先看操作教學，照流程完成 Azure 與 GitHub 的設定
+2. 再看設定說明，理解每個值的用途、作用點與錯誤影響
+3. 需要排錯時，回頭對照 workflow、`Program.cs` 與 `DatabaseSeeder.cs`
