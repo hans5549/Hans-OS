@@ -1,76 +1,158 @@
 {
   "permissions": {
     "allow": [
+      "Bash(dotnet:*)",
+      "Bash(git:*)",
+      "Bash(pnpm:*)",
+      "Bash(npm:*)",
+      "Bash(npx:*)",
+      "Bash(node:*)",
+      "Bash(python:*)",
+      "Bash(python3:*)",
+      "Bash(ls:*)",
+      "Bash(find:*)",
+      "Bash(gh:*)",
+      "Bash(cd:*)",
+      "Bash(echo:*)",
+      "Bash(grep:*)",
+      "Bash(wc:*)",
+      "Bash(test:*)",
+      "Bash(bash:*)",
+      "Bash(cat:*)",
+      "Bash(sed:*)",
+      "Bash(xargs:*)",
+      "Bash(more:*)",
+      "Bash(chmod +x:*)",
+      "Bash(dotnet build:*)",
+      "Bash(dotnet test:*)",
+      "Bash(dotnet ef:*)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:learn.microsoft.com)",
+      "WebFetch(domain:docs.microsoft.com)",
+      "WebFetch(domain:vuejs.org)",
+      "WebFetch(domain:antdv.com)",
+      "WebFetch(domain:www.antdv.com)",
+      "WebFetch(domain:pinia.vuejs.org)",
+      "WebFetch(domain:tailwindcss.com)",
+      "WebFetch(domain:vitejs.dev)",
+      "mcp__filesystem__list_directory",
+      "mcp__filesystem__list_directory_with_sizes",
       "mcp__filesystem__directory_tree",
       "mcp__filesystem__read_text_file",
-      "mcp__filesystem__list_directory",
       "mcp__filesystem__read_multiple_files",
-      "Bash(xargs grep -l \"[\\\\u4e00-\\\\u9fff]\")",
-      "Bash(pnpm add -D opencc-js)",
-      "Bash(where.exe pnpm)",
-      "Bash(where.exe npm)",
-      "Bash(where.exe node)",
-      "Read(//c/Users/hansh/AppData/Local/**)",
-      "Read(//c/Users/hansh/AppData/Roaming/npm/**)",
-      "Read(//c/Users/hansh/**)",
-      "Bash(node -e \"console.log\\(process.version\\)\")",
-      "Bash(npx --yes pnpm --version)",
-      "Bash(npm install -g pnpm)",
-      "Bash(npx pnpm add -D opencc-js)",
-      "Bash(mkdir -p /tmp/locale-converter)",
-      "Read(//tmp/**)",
-      "Bash(npm init -y)",
-      "Bash(npm install opencc-js)",
-      "Bash(node convert.mjs)",
-      "Bash(for f in apps/web-antd/src/locales/langs/zh-TW/page.json apps/web-antdv-next/src/locales/langs/zh-TW/page.json apps/web-ele/src/locales/langs/zh-TW/page.json apps/web-naive/src/locales/langs/zh-TW/page.json apps/web-tdesign/src/locales/langs/zh-TW/page.json)",
-      "Bash(do sed -i 's/工作臺/工作台/g' \"$f\")",
-      "Bash(echo \"Fixed: $f\")",
-      "Bash(done)",
-      "Bash(node -e \"const n=require\\(''naive-ui''\\); console.log\\(''zhTW'' in n, ''koKR'' in n\\)\")",
-      "Bash(for dir in \"C:/Users/hansh/Documents/Personal Assistant/Hans-OS/frontend/apps/web-antd/src/locales/langs/ko-KR\" \"C:/Users/hansh/Documents/Personal Assistant/Hans-OS/frontend/apps/web-antdv-next/src/locales/langs/ko-KR\" \"C:/Users/hansh/Documents/Personal Assistant/Hans-OS/frontend/apps/web-ele/src/locales/langs/ko-KR\" \"C:/Users/hansh/Documents/Personal Assistant/Hans-OS/frontend/apps/web-naive/src/locales/langs/ko-KR\" \"C:/Users/hansh/Documents/Personal Assistant/Hans-OS/frontend/apps/web-tdesign/src/locales/langs/ko-KR\" \"C:/Users/hansh/Documents/Personal Assistant/Hans-OS/frontend/playground/src/locales/langs/ko-KR\")",
-      "Bash(do)",
-      "Bash(mkdir -p \"$dir\")",
-      "Bash(base=\"C:/Users/hansh/Documents/Personal Assistant/Hans-OS/frontend\")",
-      "Bash(src=\"$base/apps/web-antd/src/locales/langs/ko-KR\")",
-      "Bash(for app in web-antdv-next web-ele web-naive web-tdesign)",
-      "Bash(dest=\"$base/apps/$app/src/locales/langs/ko-KR\")",
-      "Bash(cp \"$src/demos.json\" \"$dest/demos.json\")",
-      "Bash(cp \"$src/page.json\" \"$dest/page.json\")",
-      "Bash(pnpm typecheck)",
-      "Bash(export PATH=\"$PATH:/c/Users/hansh/AppData/Roaming/npm:/c/Users/hansh/AppData/Local/pnpm:/c/Program Files/nodejs\")",
-      "Bash(where pnpm)",
-      "Bash(cmd.exe /c \"where pnpm\")",
-      "Bash(cmd.exe /c \"where pnpm 2>&1\")",
-      "Bash(cmd.exe /c \"where node 2>&1 && where npm 2>&1\")",
-      "Bash(export PATH=\"/c/Program Files/nodejs:$PATH\")",
-      "Bash(npx pnpm --version)",
-      "Bash(corepack enable)",
-      "Bash(corepack prepare pnpm@latest --activate)",
-      "Bash(npm install -g pnpm@10.28.2 --prefix \"$HOME/.local\")",
-      "Bash(export PATH=\"$HOME/.local/bin:/c/Program Files/nodejs:$PATH\")",
-      "Bash(pnpm --version)",
-      "Read(//c/Users/hansh/Documents/Personal Assistant/Hans-OS/frontend/$HOME/.local/**)",
-      "Read(//c/Users/hansh/Documents/Personal Assistant/Hans-OS/frontend/$HOME/.local/lib/node_modules/pnpm/**)",
-      "Bash(node /c/Users/hansh/.local/node_modules/pnpm/bin/pnpm.cjs --version)",
-      "Bash(node /c/Users/hansh/.local/node_modules/pnpm/bin/pnpm.cjs typecheck)",
-      "Bash(node /c/Users/hansh/.local/node_modules/pnpm/bin/pnpm.cjs run check:type)",
-      "Bash(node /c/Users/hansh/.local/node_modules/pnpm/bin/pnpm.cjs install)",
-      "Bash(node /c/Users/hansh/.local/node_modules/pnpm/bin/pnpm.cjs -r run stub --if-present)",
-      "Bash(cp /c/Users/hansh/.local/pnpm.cmd \"/c/Program Files/nodejs/pnpm.cmd\")",
-      "Bash(cp /c/Users/hansh/.local/pnpm \"/c/Program Files/nodejs/pnpm\")",
-      "Bash(echo \"Result: $?\")",
-      "Bash(mkdir -p \"$HOME/bin\")",
-      "Bash(cp /c/Users/hansh/.local/pnpm.cmd \"$HOME/bin/pnpm.cmd\")",
-      "Bash(cp /c/Users/hansh/.local/pnpm \"$HOME/bin/pnpm\")",
-      "Bash(cp /c/Users/hansh/.local/node_modules/pnpm/bin/pnpm.cjs \"$HOME/bin/pnpm.cjs\")",
-      "Bash(export PATH=\"$HOME/bin:/c/Program Files/nodejs:$PATH\")",
-      "Bash(pnpm -r run stub --if-present)",
-      "Bash(mkdir -p \"$HOME/bin/node_modules/pnpm/bin\")",
-      "Bash(cp /c/Users/hansh/.local/node_modules/pnpm/bin/pnpm.cjs \"$HOME/bin/node_modules/pnpm/bin/pnpm.cjs\")",
-      "Bash(rm -rf \"$HOME/bin/node_modules\")",
-      "Bash(ln -s /c/Users/hansh/.local/node_modules \"$HOME/bin/node_modules\")",
-      "Bash(pnpm run check:type)",
-      "Bash(pnpm run build:antd)"
+      "mcp__filesystem__edit_file",
+      "mcp__filesystem__write_file",
+      "mcp__filesystem__create_directory",
+      "mcp__filesystem__move_file",
+      "mcp__filesystem__search_files",
+      "mcp__filesystem__list_allowed_directories",
+      "mcp__sequential-thinking__sequentialthinking",
+      "mcp__memory__create_entities",
+      "mcp__memory__create_relations",
+      "mcp__memory__add_observations"
     ]
-  }
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "filesystem",
+    "memory",
+    "sequential-thinking"
+  ],
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/session-start.mjs",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/pre-compact.mjs",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/on-stop.mjs",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/workflow-orchestrator.mjs",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit|MultiEdit|Write|mcp__filesystem__edit_file|mcp__filesystem__write_file|mcp__filesystem__move_file",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/pre-edit-check.mjs",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/pre-bash-check.mjs",
+            "timeout": 120
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/post-agent-verify.mjs",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|MultiEdit|Write|mcp__filesystem__edit_file|mcp__filesystem__write_file",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/post-edit-build.mjs",
+            "timeout": 60
+          },
+          {
+            "type": "command",
+            "command": "node .claude/hooks/post-edit-cs-lint.mjs",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  },
+  "outputStyle": "Explanatory"
 }
