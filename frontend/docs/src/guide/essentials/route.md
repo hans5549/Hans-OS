@@ -10,7 +10,7 @@ outline: deep
 
 路由分为核心路由、静态路由和动态路由，核心路由是框架内置的路由，包含了根路由、登录路由、404路由等；静态路由是在项目启动时就已经确定的路由；动态路由一般是在用户登录后，根据用户的权限动态生成的路由。
 
-静态路由和动态路由都会走权限控制，可以通过配置路由的 `meta` 属性中的 `authority` 字段来控制权限，可以参考[路由权限控制](https://github.com/vbenjs/vue-vben-admin/blob/main/playground/src/router/routes/modules/demos.ts)。
+静态路由和动态路由都会走权限控制，可以通过配置路由的 `meta` 属性中的 `authority` 字段来控制权限，可以参考[路由权限控制](https://github.com/vbenjs/vue-vben-admin/blob/main/apps/web-antd/src/router/routes/modules/demos.ts)。
 
 ### 核心路由
 
@@ -275,7 +275,7 @@ export default routes;
 
 ### 验证
 
-到这里页面已添加完成，访问 `http://localhost:5555/home/index` 出现对应的页面即可。
+到这里页面已添加完成，访问 `http://localhost:5666/home/index` 出现对应的页面即可。
 
 ## 路由配置
 

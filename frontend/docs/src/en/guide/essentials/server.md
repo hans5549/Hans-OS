@@ -72,7 +72,7 @@ At this point, the request will be proxied to `http://localhost:5320/api/user`.
 
 ::: warning Note
 
-From the browser's console Network tab, the request appears as `http://localhost:5555/api/user`. This is because the proxy configuration does not change the local request's URL.
+From the browser's console Network tab, the request appears as `http://localhost:5666/api/user`. This is because the proxy configuration does not change the local request's URL.
 
 :::
 

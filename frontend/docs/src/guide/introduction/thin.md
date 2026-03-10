@@ -20,10 +20,6 @@ apps/web-antd
 
 :::
 
-## 演示代码精简
-
-如果你不需要演示代码，你可以直接删除 `playground` 文件夹。
-
 ## 文档精简
 
 如果你不需要文档，你可以直接删除`docs`文件夹。
@@ -56,10 +52,8 @@ pnpm install
   "scripts": {
     "build:antd": "pnpm run build --filter=@vben/web-antd",
     "build:docs": "pnpm run build --filter=@vben/docs",
-    "build:play": "pnpm run build --filter=@vben/playground",
     "dev:antd": "pnpm -F @vben/web-antd run dev",
-    "dev:docs": "pnpm -F @vben/docs run dev",
-    "dev:play": "pnpm -F @vben/playground run dev"
+    "dev:docs": "pnpm -F @vben/docs run dev"
   }
 }
 ```

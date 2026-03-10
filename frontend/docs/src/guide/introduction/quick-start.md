@@ -90,11 +90,10 @@ pnpm dev
 ◆  Select the app you need to run [dev]:
 │  ● @vben/web-antd
 │  ○ @vben/docs
-│  ● @vben/playground
 └
 ```
 
-现在，你可以在浏览器访问 `http://localhost:5555` 查看项目。
+现在，你可以在浏览器访问 `http://localhost:5666` 查看项目。
 
 #### 运行指定项目
 
@@ -103,5 +102,4 @@ pnpm dev
 ```bash
 pnpm run dev:antd
 pnpm run dev:docs
-pnpm run dev:play
 ```

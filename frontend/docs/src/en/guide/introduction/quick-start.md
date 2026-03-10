@@ -86,8 +86,7 @@ You will see an output similar to the following, allowing you to select the proj
 ◆  Select the app you need to run [dev]:
 │  ● @vben/web-antd
 │  ○ @vben/docs
-│  ○ @vben/playground
 └
 ```
 
-Now, you can visit `http://localhost:5555` in your browser to view the project.
+Now, you can visit `http://localhost:5666` in your browser to view the project.

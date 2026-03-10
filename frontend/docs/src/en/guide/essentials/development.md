@@ -56,8 +56,6 @@ The execution command is: `pnpm run [script]` or `npm run [script]`.
     "build:antd": "pnpm run build --filter=@vben/web-antd",
     // Build the documentation separately
     "build:docs": "pnpm run build --filter=@vben/docs",
-    // Build the playground application separately
-    "build:play": "pnpm run build --filter=@vben/playground",
     // Changeset version management
     "changeset": "pnpm exec changeset",
     // Check for various issues in the project
@@ -80,8 +78,6 @@ The execution command is: `pnpm run [script]` or `npm run [script]`.
     "dev:antd": "pnpm -F @vben/web-antd run dev",
     // Start the documentation
     "dev:docs": "pnpm -F @vben/docs run dev",
-    // Start the playground application
-    "dev:play": "pnpm -F @vben/playground run dev",
     // Format code
     "format": "vsh lint --format",
     // Lint code
@@ -116,7 +112,7 @@ To run the project locally and make adjustments, you can execute the following c
 pnpm dev
 ```
 
-The current repository exposes `web-antd`, `docs`, and `playground` as the active development targets. If you want to run a specific application directly, you can execute the following commands:
+The current repository exposes `web-antd` and `docs` as the active development targets. If you want to run a specific application directly, you can execute the following commands:
 
 To run the `web-antd` application:
 
@@ -128,12 +124,6 @@ To run the `docs` application:
 
 ```bash
 pnpm dev:docs
-```
-
-To run the `playground` application:
-
-```bash
-pnpm dev:play
 ```
 
 ### Distinguishing Build Environments

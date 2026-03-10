@@ -39,7 +39,7 @@ VITE_APP_NAMESPACE=vben-web-antd
 
 ```bash [.env.development]
 # Port Number
-VITE_PORT=5555
+VITE_PORT=5666
 
 # Public Path for Resources, must start and end with /
 VITE_BASE=/

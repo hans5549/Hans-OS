@@ -285,7 +285,7 @@ In `#/views/home/`, add a new `index.vue` file, as follows:
 
 ### Verification
 
-At this point, the page has been added. Visit `http://localhost:5555/home/index` to see the corresponding page.
+At this point, the page has been added. Visit `http://localhost:5666/home/index` to see the corresponding page.
 
 ## Route Configuration
 

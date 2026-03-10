@@ -72,7 +72,7 @@ axios.get('/api/user').then((res) => {
 
 ::: warning 注意
 
-从浏览器控制台的 Network 看，请求是 `http://localhost:5555/api/user`, 这是因为 proxy 配置不会改变本地请求的 url。
+从浏览器控制台的 Network 看，请求是 `http://localhost:5666/api/user`, 这是因为 proxy 配置不会改变本地请求的 url。
 
 :::
 

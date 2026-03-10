@@ -16,10 +16,6 @@ If your project doesn’t include the `UI` component library you need, you can r
 
 :::
 
-## Demo Code Slimming
-
-If you don’t need demo code, you can simply delete the `playground` folder
-
 ## Documentation Slimming
 
 If you don’t need documentation, you can delete the `docs` folder.
@@ -52,10 +48,8 @@ After slimming down, you may need to adjust commands according to your project. 
   "scripts": {
     "build:antd": "pnpm run build --filter=@vben/web-antd",
     "build:docs": "pnpm run build --filter=@vben/docs",
-    "build:play": "pnpm run build --filter=@vben/playground",
     "dev:antd": "pnpm -F @vben/web-antd run dev",
-    "dev:docs": "pnpm -F @vben/docs run dev",
-    "dev:play": "pnpm -F @vben/playground run dev"
+    "dev:docs": "pnpm -F @vben/docs run dev"
   }
 }
 ```

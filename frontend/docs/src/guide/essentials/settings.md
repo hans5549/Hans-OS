@@ -39,7 +39,7 @@ VITE_APP_NAMESPACE=vben-web-antd
 
 ```bash [.env.development]
 # 端口号
-VITE_PORT=5555
+VITE_PORT=5666
 
 # 资源公共路径,需要以 / 开头和结尾
 VITE_BASE=/
