@@ -7,7 +7,7 @@ import { createSharedComposable } from '@vueuse/core';
 import { getMessages } from './messages';
 
 export const useSimpleLocale = createSharedComposable(() => {
-  const currentLocale = ref<Locale>('zh-CN');
+  const currentLocale = ref<Locale>('zh-TW');
 
   const setSimpleLocale = (locale: Locale) => {
     currentLocale.value = locale;

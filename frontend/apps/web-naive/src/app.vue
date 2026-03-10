@@ -9,13 +9,13 @@ import { preferences } from '@vben/preferences';
 import {
   darkTheme,
   dateEnUS,
-  dateZhCN,
+  dateZhTW,
   enUS,
   lightTheme,
   NConfigProvider,
   NMessageProvider,
   NNotificationProvider,
-  zhCN,
+  zhTW,
 } from 'naive-ui';
 
 defineOptions({ name: 'App' });
@@ -23,10 +23,10 @@ defineOptions({ name: 'App' });
 const { commonTokens } = useNaiveDesignTokens();
 
 const tokenLocale = computed(() =>
-  preferences.app.locale === 'zh-CN' ? zhCN : enUS,
+  preferences.app.locale === 'zh-TW' ? zhTW : enUS,
 );
 const tokenDateLocale = computed(() =>
-  preferences.app.locale === 'zh-CN' ? dateZhCN : dateEnUS,
+  preferences.app.locale === 'zh-TW' ? dateZhTW : dateEnUS,
 );
 const tokenTheme = computed(() =>
   preferences.theme.mode === 'dark' ? darkTheme : lightTheme,

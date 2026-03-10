@@ -15,7 +15,7 @@ import { preferences } from '@vben/preferences';
 
 import dayjs from 'dayjs';
 import enLocale from 'element-plus/es/locale/lang/en';
-import defaultLocale from 'element-plus/es/locale/lang/zh-cn';
+import defaultLocale from 'element-plus/es/locale/lang/zh-tw';
 
 const elementLocale = ref<Language>(defaultLocale);
 
@@ -26,8 +26,7 @@ const localesMap = loadLocalesMapFromDir(
   modules,
 );
 /**
- * 加载应用特有的语言包
- * 这里也可以改造为从服务端获取翻译数据
+ * 載入應用特有的語言包
  * @param lang
  */
 async function loadMessages(lang: SupportedLanguagesType) {
@@ -39,7 +38,7 @@ async function loadMessages(lang: SupportedLanguagesType) {
 }
 
 /**
- * 加载第三方组件库的语言包
+ * 載入第三方元件庫的語言包
  * @param lang
  */
 async function loadThirdPartyMessage(lang: SupportedLanguagesType) {
@@ -47,7 +46,7 @@ async function loadThirdPartyMessage(lang: SupportedLanguagesType) {
 }
 
 /**
- * 加载dayjs的语言包
+ * 載入 dayjs 的語言包
  * @param lang
  */
 async function loadDayjsLocale(lang: SupportedLanguagesType) {
@@ -57,11 +56,14 @@ async function loadDayjsLocale(lang: SupportedLanguagesType) {
       locale = await import('dayjs/locale/en');
       break;
     }
-    case 'zh-CN': {
-      locale = await import('dayjs/locale/zh-cn');
+    case 'ko-KR': {
+      locale = await import('dayjs/locale/ko');
       break;
     }
-    // 默认使用英语
+    case 'zh-TW': {
+      locale = await import('dayjs/locale/zh-tw');
+      break;
+    }
     default: {
       locale = await import('dayjs/locale/en');
     }
@@ -74,7 +76,7 @@ async function loadDayjsLocale(lang: SupportedLanguagesType) {
 }
 
 /**
- * 加载element-plus的语言包
+ * 載入 element-plus 的語言包
  * @param lang
  */
 async function loadElementLocale(lang: SupportedLanguagesType) {
@@ -83,7 +85,12 @@ async function loadElementLocale(lang: SupportedLanguagesType) {
       elementLocale.value = enLocale;
       break;
     }
-    case 'zh-CN': {
+    case 'ko-KR': {
+      const mod = await import('element-plus/es/locale/lang/ko');
+      elementLocale.value = mod.default;
+      break;
+    }
+    case 'zh-TW': {
       elementLocale.value = defaultLocale;
       break;
     }
