@@ -489,9 +489,12 @@ public sealed class DatabaseSeeder(
 
             await EnsureSucceededAsync(userManager.UpdateAsync(user), $"update bootstrap admin '{options.Username}'");
 
-            if (!await userManager.HasPasswordAsync(user))
+            if (!await userManager.CheckPasswordAsync(user, options.Password))
             {
-                await EnsureSucceededAsync(userManager.AddPasswordAsync(user, options.Password), $"set bootstrap admin password for '{options.Username}'");
+                var token = await userManager.GeneratePasswordResetTokenAsync(user);
+                await EnsureSucceededAsync(
+                    userManager.ResetPasswordAsync(user, token, options.Password),
+                    $"sync bootstrap admin password for '{options.Username}'");
             }
         }
 
