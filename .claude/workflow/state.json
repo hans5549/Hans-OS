@@ -1,6 +1,6 @@
 {
-  "toolCallCount": 149,
-  "researchOpCount": 96,
+  "toolCallCount": 195,
+  "researchOpCount": 120,
   "editHistory": [],
   "lastReadFiles": {
     "C:\\Users\\hansh\\Documents\\Personal Assistant\\Hans-OS/frontend/.vscode/extensions.json": 16,
@@ -59,6 +59,27 @@
     "C:\\Users\\hansh\\Documents\\Personal Assistant\\Hans-OS\\frontend\\apps\\web-antd\\src\\preferences.ts": 92,
     "C:\\Users\\hansh\\Documents\\Personal Assistant\\Hans-OS\\frontend\\packages\\@core\\ui-kit\\shadcn-ui\\src\\components\\scrollbar\\scrollbar.vue": 143,
     "C:\\Users\\hansh\\Documents\\Personal Assistant\\Hans-OS\\frontend\\packages\\@core\\ui-kit\\shadcn-ui\\src\\components\\scrollbar\\index.ts": 137,
-    "C:\\Users\\hansh\\Documents\\Personal Assistant\\Hans-OS\\frontend\\packages\\@core\\ui-kit\\tabs-ui\\src\\use-tabs-view-scroll.ts": 146
+    "C:\\Users\\hansh\\Documents\\Personal Assistant\\Hans-OS\\frontend\\packages\\@core\\ui-kit\\tabs-ui\\src\\use-tabs-view-scroll.ts": 146,
+    "/c/Users/hansh/Documents/Personal Assistant/Hans-OS/.claude/worktrees/reverent-carson/frontend/packages/effects/common-ui/src/components/captcha/index.ts": 159,
+    "/c/Users/hansh/Documents/Personal Assistant/Hans-OS/.claude/worktrees/reverent-carson/frontend/packages/effects/common-ui/src/components/captcha/types.ts": 160,
+    "/c/Users/hansh/Documents/Personal Assistant/Hans-OS/.claude/worktrees/reverent-carson/frontend/packages/effects/common-ui/src/components/captcha/slider-captcha/index.vue": 161,
+    "/c/Users/hansh/Documents/Personal Assistant/Hans-OS/.claude/worktrees/reverent-carson/frontend/packages/effects/common-ui/src/components/captcha/slider-captcha/slider-captcha-bar.vue": 162,
+    "/c/Users/hansh/Documents/Personal Assistant/Hans-OS/.claude/worktrees/reverent-carson/frontend/packages/effects/common-ui/src/components/captcha/slider-captcha/slider-captcha-action.vue": 163,
+    "/c/Users/hansh/Documents/Personal Assistant/Hans-OS/.claude/worktrees/reverent-carson/frontend/packages/effects/common-ui/src/components/captcha/slider-captcha/slider-captcha-content.vue": 164,
+    "/c/Users/hansh/Documents/Personal Assistant/Hans-OS/.claude/worktrees/reverent-carson/frontend/packages/effects/common-ui/src/components/captcha/slider-rotate-captcha/index.vue": 165,
+    "/c/Users/hansh/Documents/Personal Assistant/Hans-OS/.claude/worktrees/reverent-carson/frontend/packages/effects/common-ui/src/components/captcha/slider-translate-captcha/index.vue": 166,
+    "/c/Users/hansh/Documents/Personal Assistant/Hans-OS/.claude/worktrees/reverent-carson/frontend/playground/src/views/examples/captcha/slider-captcha.vue": 167,
+    "/c/Users/hansh/Documents/Personal Assistant/Hans-OS/.claude/worktrees/reverent-carson/frontend/packages/effects/common-ui/src/components/captcha/hooks/useCaptchaPoints.ts": 169,
+    "/c/Users/hansh/Documents/Personal Assistant/Hans-OS/.claude/worktrees/reverent-carson/frontend/packages/effects/common-ui/src/components/captcha/point-selection-captcha/index.vue": 170,
+    "/c/Users/hansh/Documents/Personal Assistant/Hans-OS/.claude/worktrees/reverent-carson/frontend/packages/effects/common-ui/src": 173,
+    "/c/Users/hansh/Documents/Personal Assistant/Hans-OS/.claude/worktrees/reverent-carson/frontend/packages/effects/common-ui/src/index.ts": 175,
+    "/c/Users/hansh/Documents/Personal Assistant/Hans-OS/.claude/worktrees/reverent-carson/frontend/packages/effects/common-ui/src/components/index.ts": 177,
+    "/c/Users/hansh/Documents/Personal Assistant/Hans-OS/.claude/worktrees/reverent-carson/frontend/packages/effects/common-ui/src/components/captcha/point-selection-captcha/point-selection-captcha-card.vue": 180,
+    "C:\\Users\\hansh\\Documents\\Personal Assistant\\Hans-OS\\.claude\\worktrees\\reverent-carson\\frontend\\apps\\web-antd\\src\\views\\_core\\authentication\\login.vue": 191,
+    "C:\\Users\\hansh\\Documents\\Personal Assistant\\Hans-OS\\.claude\\worktrees\\reverent-carson\\frontend\\apps\\web-ele\\src\\views\\_core\\authentication\\login.vue": 183,
+    "C:\\Users\\hansh\\Documents\\Personal Assistant\\Hans-OS\\.claude\\worktrees\\reverent-carson\\frontend\\apps\\web-naive\\src\\views\\_core\\authentication\\login.vue": 184,
+    "C:\\Users\\hansh\\Documents\\Personal Assistant\\Hans-OS\\.claude\\worktrees\\reverent-carson\\frontend\\apps\\web-tdesign\\src\\views\\_core\\authentication\\login.vue": 185,
+    "C:\\Users\\hansh\\Documents\\Personal Assistant\\Hans-OS\\.claude\\worktrees\\reverent-carson\\frontend\\apps\\web-antdv-next\\src\\views\\_core\\authentication\\login.vue": 186,
+    "C:\\Users\\hansh\\Documents\\Personal Assistant\\Hans-OS\\.claude\\worktrees\\reverent-carson\\frontend\\playground\\src\\views\\_core\\authentication\\login.vue": 187
   }
 }
