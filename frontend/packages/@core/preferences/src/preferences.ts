@@ -22,6 +22,26 @@ const STORAGE_KEYS = {
   THEME: 'preferences-theme',
 } as const;
 
+const LEGACY_LOCALE_MAP = {
+  'zh-CN': 'zh-TW',
+} as const;
+
+const SUPPORTED_LOCALES = new Set(['en-US', 'ko-KR', 'zh-TW'] as const);
+
+function normalizeLocale(locale?: string) {
+  const mappedLocale = locale ? LEGACY_LOCALE_MAP[locale as keyof typeof LEGACY_LOCALE_MAP] : undefined;
+
+  if (mappedLocale) {
+    return mappedLocale;
+  }
+
+  if (locale && SUPPORTED_LOCALES.has(locale as (typeof defaultPreferences.app.locale))) {
+    return locale as typeof defaultPreferences.app.locale;
+  }
+
+  return defaultPreferences.app.locale;
+}
+
 class PreferenceManager {
   private cache: StorageManager;
   private debouncedSave: (preference: Preferences) => void;
@@ -163,7 +183,19 @@ class PreferenceManager {
    * @returns 缓存的偏好设置，如果不存在则返回 null
    */
   private loadFromCache(): null | Preferences {
-    return this.cache.getItem<Preferences>(STORAGE_KEYS.MAIN);
+    const cachedPreferences = this.cache.getItem<Preferences>(STORAGE_KEYS.MAIN);
+
+    if (!cachedPreferences) {
+      return null;
+    }
+
+    return {
+      ...cachedPreferences,
+      app: {
+        ...cachedPreferences.app,
+        locale: normalizeLocale(cachedPreferences.app?.locale),
+      },
+    };
   }
 
   /**
