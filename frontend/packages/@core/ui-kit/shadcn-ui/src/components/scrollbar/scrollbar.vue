@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ClassType } from '@vben-core/typings';
+import type { VbenScrollbarProps } from './scrollbar';
 
 import { computed, ref } from 'vue';
 
@@ -7,19 +7,7 @@ import { cn } from '@vben-core/shared/utils';
 
 import { ScrollArea, ScrollBar } from '../../ui';
 
-interface Props {
-  class?: ClassType;
-  horizontal?: boolean;
-  scrollBarClass?: ClassType;
-  shadow?: boolean;
-  shadowBorder?: boolean;
-  shadowBottom?: boolean;
-  shadowLeft?: boolean;
-  shadowRight?: boolean;
-  shadowTop?: boolean;
-}
-
-const props = withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<VbenScrollbarProps>(), {
   class: '',
   horizontal: false,
   shadow: false,
