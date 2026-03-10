@@ -1,6 +1,6 @@
 {
-  "toolCallCount": 126,
-  "researchOpCount": 87,
+  "toolCallCount": 141,
+  "researchOpCount": 91,
   "editHistory": [],
   "lastReadFiles": {
     "C:\\Users\\hansh\\Documents\\Personal Assistant\\Hans-OS/frontend/.vscode/extensions.json": 16,
@@ -56,6 +56,8 @@
     "C:\\Users\\hansh\\Documents\\Personal Assistant\\Hans-OS\\frontend\\playground\\src\\locales\\langs\\zh-CN\\demos.json": 85,
     "C:\\Users\\hansh\\Documents\\Personal Assistant\\Hans-OS\\frontend\\playground\\src\\locales\\langs\\zh-CN\\page.json": 86,
     "C:\\Users\\hansh\\Documents\\Personal Assistant\\Hans-OS\\frontend\\playground\\src\\views\\dashboard\\workspace\\index.vue": 87,
-    "C:\\Users\\hansh\\Documents\\Personal Assistant\\Hans-OS\\frontend\\apps\\web-antd\\src\\preferences.ts": 92
+    "C:\\Users\\hansh\\Documents\\Personal Assistant\\Hans-OS\\frontend\\apps\\web-antd\\src\\preferences.ts": 92,
+    "C:\\Users\\hansh\\Documents\\Personal Assistant\\Hans-OS\\frontend\\packages\\@core\\ui-kit\\shadcn-ui\\src\\components\\scrollbar\\scrollbar.vue": 136,
+    "C:\\Users\\hansh\\Documents\\Personal Assistant\\Hans-OS\\frontend\\packages\\@core\\ui-kit\\shadcn-ui\\src\\components\\scrollbar\\index.ts": 137
   }
 }
