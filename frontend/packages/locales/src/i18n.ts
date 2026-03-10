@@ -23,6 +23,7 @@ const i18n = createI18n({
 const modules = import.meta.glob('./langs/**/*.json');
 
 const { setSimpleLocale } = useSimpleLocale();
+const fallbackLocale: SupportedLanguagesType = 'zh-TW';
 
 const localesMap = loadLocalesMapFromDir(
   /\.\/langs\/([^/]+)\/(.*)\.json$/,
@@ -100,7 +101,7 @@ function setI18nLanguage(locale: Locale) {
 }
 
 async function setupI18n(app: App, options: LocaleSetupOptions = {}) {
-  const { defaultLocale = 'zh-TW' } = options;
+  const { defaultLocale = fallbackLocale } = options;
   // app可以自行扩展一些第三方库和组件库的国际化
   loadMessages = options.loadMessages || (async () => ({}));
   app.use(i18n);
@@ -126,16 +127,26 @@ async function loadLocaleMessages(lang: SupportedLanguagesType) {
   }
   setSimpleLocale(lang);
 
-  const message = await localesMap[lang]?.();
+  let resolvedLang = lang;
+  let message = await localesMap[lang]?.();
 
-  if (message?.default) {
-    i18n.global.setLocaleMessage(lang, message.default);
+  if (!message?.default && lang !== fallbackLocale) {
+    console.warn(
+      `[i18n] Locale "${lang}" is unavailable. Falling back to "${fallbackLocale}".`,
+    );
+    resolvedLang = fallbackLocale;
+    message = await localesMap[fallbackLocale]?.();
+    setSimpleLocale(fallbackLocale);
   }
 
-  const mergeMessage = await loadMessages(lang);
-  i18n.global.mergeLocaleMessage(lang, mergeMessage);
+  if (message?.default) {
+    i18n.global.setLocaleMessage(resolvedLang, message.default);
+  }
 
-  return setI18nLanguage(lang);
+  const mergeMessage = (await loadMessages(resolvedLang)) ?? {};
+  i18n.global.mergeLocaleMessage(resolvedLang, mergeMessage);
+
+  return setI18nLanguage(resolvedLang);
 }
 
 export {
