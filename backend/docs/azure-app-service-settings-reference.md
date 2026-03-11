@@ -96,7 +96,6 @@
 - 作用：
   - 控制 Swagger 是否開啟
   - 控制 production 的必要設定驗證
-  - 控制 seed 行為
 - 這次建議值：`Production`
 
 ### `PGHOST`
@@ -164,12 +163,10 @@
 
 - 設定位置：Azure App Service Environment variables
 - 用途：指定資料庫提供者，例如 `Postgres` 或 `Sqlite`
-- 生效位置：
-  - [Program.cs](/C:/Users/hansh/Documents/Personal%20Assistant/Hans-OS/backend/src/CGMSportFinance.Api/Program.cs)
-  - [DatabaseSeeder.cs](/C:/Users/hansh/Documents/Personal%20Assistant/Hans-OS/backend/src/CGMSportFinance.Api/Infrastructure/Persistence/Seeding/DatabaseSeeder.cs)
+- 生效位置：[Program.cs](/C:/Users/hansh/Documents/Personal%20Assistant/Hans-OS/backend/src/CGMSportFinance.Api/Program.cs)
 - 作用：
   - 決定註冊哪一種 `DbContext`
-  - 決定 seed 時使用 `MigrateAsync()` 或 `EnsureCreatedAsync()`
+  - 決定啟動時使用 `MigrateAsync()` 或 `EnsureCreatedAsync()`
 - 補充：
   - [appsettings.json](/C:/Users/hansh/Documents/Personal%20Assistant/Hans-OS/backend/src/CGMSportFinance.Api/appsettings.json) 已預設 `Postgres`
   - 只有在你要覆寫成別的 provider 時才需要額外設定
@@ -215,62 +212,7 @@
   - 有預設值 `CGMSportFinance.Frontend`
   - 若 production 前端網域或應用識別不同，建議明確設定
 
-### `BootstrapAdmin__Username`
-
-- 設定位置：Azure App Service Environment variables
-- 用途：production 初始高權限管理者的登入帳號
-- 生效位置：[DatabaseSeeder.cs](/C:/Users/hansh/Documents/Personal%20Assistant/Hans-OS/backend/src/CGMSportFinance.Api/Infrastructure/Persistence/Seeding/DatabaseSeeder.cs)
-- 作用時機：站台啟動、執行 `SeedAsync()` 時
-- 如果 production 沒有任何高權限帳號，且這組設定又缺少：
-  - 啟動 seed 會直接失敗
-
-### `BootstrapAdmin__Email`
-
-- 設定位置：Azure App Service Environment variables
-- 用途：bootstrap admin 的 email
-- 生效位置：[DatabaseSeeder.cs](/C:/Users/hansh/Documents/Personal%20Assistant/Hans-OS/backend/src/CGMSportFinance.Api/Infrastructure/Persistence/Seeding/DatabaseSeeder.cs)
-- 作用時機：建立或更新 bootstrap admin 時
-
-### `BootstrapAdmin__Password`
-
-- 設定位置：Azure App Service Environment variables
-- 用途：bootstrap admin 的初始密碼
-- 生效位置：[DatabaseSeeder.cs](/C:/Users/hansh/Documents/Personal%20Assistant/Hans-OS/backend/src/CGMSportFinance.Api/Infrastructure/Persistence/Seeding/DatabaseSeeder.cs)
-- 作用時機：建立或更新 bootstrap admin 時
-- 建議：
-  - 視為敏感值管理
-  - 第一次登入後應更換
-
-### `BootstrapAdmin__RealName`
-
-- 設定位置：Azure App Service Environment variables
-- 用途：bootstrap admin 顯示名稱
-- 生效位置：[DatabaseSeeder.cs](/C:/Users/hansh/Documents/Personal%20Assistant/Hans-OS/backend/src/CGMSportFinance.Api/Infrastructure/Persistence/Seeding/DatabaseSeeder.cs)
-- 是否必填：否
-
-### `BootstrapAdmin__HomePath`
-
-- 設定位置：Azure App Service Environment variables
-- 用途：bootstrap admin 預設首頁路徑
-- 生效位置：[DatabaseSeeder.cs](/C:/Users/hansh/Documents/Personal%20Assistant/Hans-OS/backend/src/CGMSportFinance.Api/Infrastructure/Persistence/Seeding/DatabaseSeeder.cs)
-- 是否必填：否
-
-### `BootstrapAdmin__Avatar`
-
-- 設定位置：Azure App Service Environment variables
-- 用途：bootstrap admin 頭像路徑或 URL
-- 生效位置：[DatabaseSeeder.cs](/C:/Users/hansh/Documents/Personal%20Assistant/Hans-OS/backend/src/CGMSportFinance.Api/Infrastructure/Persistence/Seeding/DatabaseSeeder.cs)
-- 是否必填：否
-
-### `Seeding__EnableDemoData`
-
-- 設定位置：Azure App Service Environment variables
-- 用途：控制是否建立 demo users
-- 生效位置：[DatabaseSeeder.cs](/C:/Users/hansh/Documents/Personal%20Assistant/Hans-OS/backend/src/CGMSportFinance.Api/Infrastructure/Persistence/Seeding/DatabaseSeeder.cs)
-- 作用時機：站台啟動 seed 階段
-- production 建議值：`false`
-- 為什麼：
-  - production 不應自動建立 `vben`、`admin`、`jack` 這類展示帳號
+> 注意：`BootstrapAdmin__*` 和 `Seeding__*` 設定已移除。角色現由 EF Core Migration 自動建立，使用者帳號需透過 API 或資料庫手動建立。
 
 ## 4. 設定是怎麼被程式讀進來的
 
@@ -309,11 +251,10 @@ ASP.NET Core 這裡的設定來源順序重點是：
 - 由 `Program.cs` 綁定並驗證
 - 作用在 token 簽發與 API 授權驗證
 
-### Seed 與 bootstrap admin
+### 資料初始化
 
-- `BootstrapAdmin__*`
-- `Seeding__EnableDemoData`
-- 由 `DatabaseSeeder.cs` 在啟動時執行
+- 角色由 EF Core Migration `SeedEssentialData` 在第一次 `MigrateAsync()` 時建立
+- 使用者、菜單、權限需透過 API 或資料庫手動管理
 
 ## 6. 這次文件特別要記住的兩個實務重點
 
@@ -342,8 +283,6 @@ ASP.NET Core 這裡的設定來源順序重點是：
   - `PGUSER`
   - `PGPASSWORD`
   - `PGSSLMODE`
-- 不要在 production 開 `Seeding__EnableDemoData=true`
 - 定期輪替：
   - `Jwt__SigningKey`
-  - `BootstrapAdmin__Password`
   - publish profile

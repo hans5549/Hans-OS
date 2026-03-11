@@ -17,8 +17,8 @@
 - production 啟動時會驗證必要設定，避免缺設定卻啟動成功
 - 保留 `/health` 供平台與部署驗證使用
 - Swagger 只在 development 開啟，production 不暴露 `/swagger`
-- production 不再自動建立 demo 帳號
-- production 會依 `BootstrapAdmin` 設定建立或更新 bootstrap admin
+- production 不再自動建立 demo 帳號或 bootstrap admin
+- 角色由 EF Core Migration 建立，使用者需手動建立
 
 ### CI/CD 調整
 
@@ -40,7 +40,6 @@
 
 - GitHub Actions workflow：[deploy-backend.yml](/C:/Users/hansh/Documents/Personal%20Assistant/Hans-OS/.github/workflows/deploy-backend.yml)
 - API 入口與設定驗證：[Program.cs](/C:/Users/hansh/Documents/Personal%20Assistant/Hans-OS/backend/src/CGMSportFinance.Api/Program.cs)
-- 資料初始化與 production seed 行為：[DatabaseSeeder.cs](/C:/Users/hansh/Documents/Personal%20Assistant/Hans-OS/backend/src/CGMSportFinance.Api/Infrastructure/Persistence/Seeding/DatabaseSeeder.cs)
 - 預設設定檔：[appsettings.json](/C:/Users/hansh/Documents/Personal%20Assistant/Hans-OS/backend/src/CGMSportFinance.Api/appsettings.json)
 - Solution 檔案：[CGMSportFinance.sln](/C:/Users/hansh/Documents/Personal%20Assistant/Hans-OS/backend/CGMSportFinance.sln)
 
@@ -48,4 +47,4 @@
 
 1. 先看操作教學，照流程完成 Azure 與 GitHub 的設定
 2. 再看設定說明，理解每個值的用途、作用點與錯誤影響
-3. 需要排錯時，回頭對照 workflow、`Program.cs` 與 `DatabaseSeeder.cs`
+3. 需要排錯時，回頭對照 workflow 與 `Program.cs`
