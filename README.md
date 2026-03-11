@@ -10,29 +10,9 @@ Monorepo bootstrap for `vue-vben-admin` frontend plus an ASP.NET Core 9 backend 
 
 ## Backend
 
-### Seeded users
+### Roles
 
-Development and test environments seed these demo users by default:
-
-- `vben` / `123456`
-- `admin` / `123456`
-- `jack` / `123456`
-
-Production does not create these demo users unless `Seeding__EnableDemoData=true` is explicitly configured.
-
-### Production bootstrap admin
-
-Production startup expects a bootstrap admin to be provided through environment variables when no privileged user exists yet:
-
-- `BootstrapAdmin__Username`
-- `BootstrapAdmin__Email`
-- `BootstrapAdmin__Password`
-
-Optional bootstrap admin settings:
-
-- `BootstrapAdmin__RealName`
-- `BootstrapAdmin__HomePath`
-- `BootstrapAdmin__Avatar`
+Three roles (`super`, `admin`, `user`) are created by the EF Core migration `SeedEssentialData`. No users are seeded — the first admin account must be created manually via API or database after deployment.
 
 ### Run
 
@@ -64,9 +44,6 @@ ASP.NET Core configuration overrides also work:
 - `ConnectionStrings__DefaultConnection`
 - `Frontend__AllowedOrigins__0`
 - `Jwt__SigningKey`
-- `BootstrapAdmin__Username`
-- `BootstrapAdmin__Email`
-- `BootstrapAdmin__Password`
 
 Migrations are stored under `backend/src/CGMSportFinance.Api/Infrastructure/Persistence/Migrations`.
 
@@ -102,5 +79,5 @@ pnpm dev:antd
 ## Notes
 
 - Refresh token rotation uses an HttpOnly cookie named `refresh_token`.
-- Frontend mock mode is disabled in development.
+- Frontend connects directly to the backend API in development.
 - Production deployment guidance lives in [backend/docs/azure-app-service.md](/Users/hansh/Documents/Personal%20Assistant/Hans-OS/backend/docs/azure-app-service.md).

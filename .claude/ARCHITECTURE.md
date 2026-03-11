@@ -55,7 +55,7 @@ CGMSportFinance.Api/
   Infrastructure/
     Configuration/            ← Encrypted config provider
     Identity/                 ← Entity classes (ApplicationUser, Menu, Permission, etc.)
-    Persistence/              ← DbContext, Migrations, Seeding
+    Persistence/              ← DbContext, Migrations
     Security/                 ← JWT token service implementation
 ```
 
@@ -126,9 +126,6 @@ dotnet ef database update --project backend/src/CGMSportFinance.Api
 | `Jwt` | `Issuer`, `Audience`, `SigningKey`, `AccessTokenMinutes` (15), `RefreshTokenDays` (14) |
 | `Frontend` | `AllowedOrigins` (CORS with `AllowCredentials()`) |
 | `Database` | `Provider` ("Postgres" / "Sqlite") |
-| `Seeding` | `EnableDemoData` (bool) |
-| `BootstrapAdmin` | `Username`, `Email`, `Password` (production only) |
-
 All option classes use `.ValidateOnStart()`.
 
 ### Encrypted Secrets
@@ -154,7 +151,6 @@ frontend/
         store/
           auth.ts           ← Pinia auth store (login, logout, fetchUserInfo)
         views/              ← Page components
-    backend-mock/           ← Mock server for frontend-only dev
   packages/                 ← Shared @core, stores, effects
   internal/                 ← Build tooling
 ```
@@ -177,17 +173,17 @@ frontend/
 
 ---
 
-## Roles & Seeding
+## Roles
 
-Three built-in roles seeded on startup:
+Three built-in roles are created by the `SeedEssentialData` EF Core migration:
 
-| Role | Menu Access | Scope |
-|------|------------|-------|
-| `super` | All menus | All permission codes |
-| `admin` | Dashboard, Analytics, Workspace, Demos | Most codes except delete/system |
-| `user` | Dashboard, Analytics, Profile | View-only codes |
+| Role | Scope |
+|------|-------|
+| `super` | Full access |
+| `admin` | Most operations |
+| `user` | View-only |
 
-Demo users (non-production): `vben`/`123456` (super), `admin`/`123456` (admin), `jack`/`123456` (user).
+No users, menus, or permissions are seeded. These are managed via the API/UI after deployment.
 
 ---
 

@@ -4,7 +4,6 @@ using CGMSportFinance.Api.Features.Auth;
 using CGMSportFinance.Api.Infrastructure.Configuration;
 using CGMSportFinance.Api.Infrastructure.Identity;
 using CGMSportFinance.Api.Infrastructure.Persistence;
-using CGMSportFinance.Api.Infrastructure.Persistence.Seeding;
 using CGMSportFinance.Api.Infrastructure.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -22,17 +21,6 @@ builder.Services.AddProblemDetails();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddHealthChecks();
-
-builder.Services
-    .AddOptions<SeedingOptions>()
-    .Bind(builder.Configuration.GetSection(SeedingOptions.SectionName))
-    .ValidateOnStart();
-
-builder.Services
-    .AddOptions<BootstrapAdminOptions>()
-    .Bind(builder.Configuration.GetSection(BootstrapAdminOptions.SectionName))
-    .Validate(options => options.IsEmpty() || options.IsConfigured(), "BootstrapAdmin must include Username, Email, and Password when configured.")
-    .ValidateOnStart();
 
 builder.Services
     .AddOptions<FrontendOptions>()
@@ -93,7 +81,6 @@ builder.Services
     .AddDefaultTokenProviders();
 
 builder.Services.AddScoped<ITokenService, JwtTokenService>();
-builder.Services.AddScoped<IDatabaseSeeder, DatabaseSeeder>();
 builder.Services.AddHttpContextAccessor();
 
 var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>()
@@ -188,10 +175,35 @@ app.UseAuthorization();
 app.MapHealthChecks("/health");
 app.MapControllers();
 
-await using (var scope = app.Services.CreateAsyncScope())
+await InitializeDatabaseAsync(app.Services);
+
+static async Task InitializeDatabaseAsync(IServiceProvider services)
 {
-    var seeder = scope.ServiceProvider.GetRequiredService<IDatabaseSeeder>();
-    await seeder.SeedAsync();
+    await using var scope = services.CreateAsyncScope();
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    var isSqlite = db.Database.ProviderName is not null
+        && db.Database.ProviderName.Contains("Sqlite", StringComparison.OrdinalIgnoreCase);
+
+    if (isSqlite)
+    {
+        await db.Database.EnsureCreatedAsync();
+        // EnsureCreatedAsync does not run migrations, so seed roles manually for dev/test.
+        await SeedRolesIfMissingAsync(scope.ServiceProvider);
+    }
+    else
+    {
+        await db.Database.MigrateAsync();
+    }
+}
+
+static async Task SeedRolesIfMissingAsync(IServiceProvider services)
+{
+    var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
+    foreach (var roleName in (string[])["super", "admin", "user"])
+    {
+        if (!await roleManager.RoleExistsAsync(roleName))
+            await roleManager.CreateAsync(new IdentityRole(roleName));
+    }
 }
 
 app.Run();
