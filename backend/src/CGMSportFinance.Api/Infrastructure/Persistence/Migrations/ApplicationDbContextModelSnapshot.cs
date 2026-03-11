@@ -321,6 +321,31 @@ namespace CGMSportFinance.Api.Infrastructure.Persistence.Migrations
                     b.ToTable("RefreshTokens");
                 });
 
+            modelBuilder.Entity("CGMSportFinance.Api.Infrastructure.Identity.UserProfile", b =>
+                {
+                    b.Property<string>("UserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)");
+
+                    b.Property<string>("Introduction")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<bool>("NotifyAccountPassword")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("NotifySystemMessage")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("NotifyTodoTask")
+                        .HasColumnType("boolean");
+
+                    b.HasKey("UserId");
+
+                    b.ToTable("UserProfiles");
+                });
+
             modelBuilder.Entity("CGMSportFinance.Api.Infrastructure.Identity.RoleMenu", b =>
                 {
                     b.Property<string>("RoleId")
@@ -523,6 +548,17 @@ namespace CGMSportFinance.Api.Infrastructure.Persistence.Migrations
                     b.Navigation("Role");
                 });
 
+            modelBuilder.Entity("CGMSportFinance.Api.Infrastructure.Identity.UserProfile", b =>
+                {
+                    b.HasOne("CGMSportFinance.Api.Infrastructure.Identity.ApplicationUser", "User")
+                        .WithOne("Profile")
+                        .HasForeignKey("CGMSportFinance.Api.Infrastructure.Identity.UserProfile", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("CGMSportFinance.Api.Infrastructure.Identity.RolePermission", b =>
                 {
                     b.HasOne("CGMSportFinance.Api.Infrastructure.Identity.Permission", "Permission")
@@ -595,6 +631,8 @@ namespace CGMSportFinance.Api.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("CGMSportFinance.Api.Infrastructure.Identity.ApplicationUser", b =>
                 {
+                    b.Navigation("Profile");
+
                     b.Navigation("RefreshTokens");
                 });
 

@@ -58,6 +58,7 @@ public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
     {
         await CreateUserAsync(userManager, "admin", "Test Admin", "super");
         await CreateUserAsync(userManager, "vben", "Test Vben", "user");
+        await CreateUserAsync(userManager, "jack", "Test Jack", "user");
     }
 
     private static async Task CreateUserAsync(
