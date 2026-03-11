@@ -20,6 +20,8 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
 
     public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
 
+    public DbSet<UserProfile> UserProfiles => Set<UserProfile>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -29,6 +31,17 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
             entity.Property(user => user.Avatar).HasMaxLength(512);
             entity.Property(user => user.HomePath).HasMaxLength(256);
             entity.Property(user => user.RealName).HasMaxLength(120);
+            entity.HasOne(user => user.Profile)
+                .WithOne(profile => profile.User)
+                .HasForeignKey<UserProfile>(profile => profile.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<UserProfile>(entity =>
+        {
+            entity.HasKey(profile => profile.UserId);
+            entity.Property(profile => profile.UserId).HasMaxLength(450);
+            entity.Property(profile => profile.Introduction).HasMaxLength(2000);
         });
 
         builder.Entity<Permission>(entity =>

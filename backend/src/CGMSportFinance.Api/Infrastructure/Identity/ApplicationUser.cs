@@ -16,5 +16,7 @@ public sealed class ApplicationUser : IdentityUser
     [MaxLength(120)]
     public string RealName { get; set; } = string.Empty;
 
+    public UserProfile? Profile { get; set; }
+
     public ICollection<RefreshToken> RefreshTokens { get; set; } = [];
 }

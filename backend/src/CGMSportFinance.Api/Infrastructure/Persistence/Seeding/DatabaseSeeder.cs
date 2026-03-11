@@ -366,7 +366,7 @@ public sealed class DatabaseSeeder(
     {
         if (ShouldSeedDemoUsers())
         {
-            await EnsureDemoUsersAsync();
+            await EnsureDemoUsersAsync(cancellationToken);
         }
 
         if (!environment.IsProduction())
@@ -376,7 +376,7 @@ public sealed class DatabaseSeeder(
 
         if (bootstrapAdminOptions.Value.IsConfigured())
         {
-            await EnsureBootstrapAdminAsync();
+            await EnsureBootstrapAdminAsync(cancellationToken);
             return;
         }
 
@@ -391,13 +391,13 @@ public sealed class DatabaseSeeder(
         return !environment.IsProduction() || seedingOptions.Value.EnableDemoData;
     }
 
-    private async Task EnsureDemoUsersAsync()
+    private async Task EnsureDemoUsersAsync(CancellationToken cancellationToken)
     {
         var seedUsers = new[]
         {
-            new SeedUser("vben", "123456", "Vben", "/analytics", "https://ui-avatars.com/api/?name=Vben&background=0D8ABC&color=fff", new[] { SuperRoleName }),
-            new SeedUser("admin", "123456", "Admin", "/workspace", "https://ui-avatars.com/api/?name=Admin&background=1F8A70&color=fff", new[] { AdminRoleName }),
-            new SeedUser("jack", "123456", "Jack", "/analytics", "https://ui-avatars.com/api/?name=Jack&background=7C3AED&color=fff", new[] { UserRoleName }),
+            new SeedUser("vben", "123456", "Vben", "/analytics", "https://ui-avatars.com/api/?name=Vben&background=0D8ABC&color=fff", "负责体育金融运营与数据分析。", new[] { SuperRoleName }),
+            new SeedUser("admin", "123456", "Admin", "/workspace", "https://ui-avatars.com/api/?name=Admin&background=1F8A70&color=fff", "管理后台账号与基础配置维护。", new[] { AdminRoleName }),
+            new SeedUser("jack", "123456", "Jack", "/analytics", "https://ui-avatars.com/api/?name=Jack&background=7C3AED&color=fff", "关注日报表、任务提醒与基础运营指标。", new[] { UserRoleName }),
         };
 
         foreach (var seed in seedUsers)
@@ -442,10 +442,12 @@ public sealed class DatabaseSeeder(
             {
                 await EnsureSucceededAsync(userManager.AddToRolesAsync(user, rolesToAdd), $"assign roles to user '{seed.Username}'");
             }
+
+            await EnsureUserProfileAsync(user, seed.Introduction, cancellationToken);
         }
     }
 
-    private async Task EnsureBootstrapAdminAsync()
+    private async Task EnsureBootstrapAdminAsync(CancellationToken cancellationToken)
     {
         var options = bootstrapAdminOptions.Value;
         var user = await FindBootstrapAdminAsync(options);
@@ -502,6 +504,8 @@ public sealed class DatabaseSeeder(
         {
             await EnsureSucceededAsync(userManager.AddToRoleAsync(user, SuperRoleName), $"assign '{SuperRoleName}' role to bootstrap admin '{options.Username}'");
         }
+
+        await EnsureUserProfileAsync(user, "系统引导管理员，可维护基础设置与账号资料。", cancellationToken);
     }
 
     private async Task<ApplicationUser?> FindBootstrapAdminAsync(BootstrapAdminOptions options)
@@ -540,6 +544,28 @@ public sealed class DatabaseSeeder(
         throw new InvalidOperationException($"Failed to {action}: {string.Join(", ", result.Errors.Select(error => error.Description))}");
     }
 
+    private async Task EnsureUserProfileAsync(ApplicationUser user, string introduction, CancellationToken cancellationToken)
+    {
+        var profile = await dbContext.UserProfiles.SingleOrDefaultAsync(item => item.UserId == user.Id, cancellationToken);
+        if (profile is null)
+        {
+            profile = new UserProfile
+            {
+                UserId = user.Id,
+            };
+            dbContext.UserProfiles.Add(profile);
+        }
+
+        if (string.IsNullOrWhiteSpace(profile.Introduction))
+        {
+            profile.Introduction = introduction;
+        }
+
+        profile.NotifyAccountPassword = true;
+        profile.NotifySystemMessage = true;
+        profile.NotifyTodoTask = true;
+    }
+
     private sealed record MenuSeed(
         Guid Id,
         string Name,
@@ -573,5 +599,6 @@ public sealed class DatabaseSeeder(
         string RealName,
         string HomePath,
         string Avatar,
+        string Introduction,
         string[] Roles);
 }

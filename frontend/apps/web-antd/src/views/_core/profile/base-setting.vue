@@ -1,30 +1,26 @@
 <script setup lang="ts">
-import type { BasicOption } from '@vben/types';
-
 import type { VbenFormSchema } from '#/adapter/form';
+import type { ProfileResponse } from '#/api';
 
-import { computed, onMounted, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 import { ProfileBaseSetting } from '@vben/common-ui';
 
-import { getUserInfoApi } from '#/api';
+import { message } from 'ant-design-vue';
+
+import { updateProfileBasicApi } from '#/api';
+
+interface Props {
+  profile: null | ProfileResponse;
+}
+
+const props = defineProps<Props>();
+
+const emit = defineEmits<{
+  updated: [];
+}>();
 
 const profileBaseSettingRef = ref();
-
-const MOCK_ROLES_OPTIONS: BasicOption[] = [
-  {
-    label: '管理员',
-    value: 'super',
-  },
-  {
-    label: '用户',
-    value: 'user',
-  },
-  {
-    label: '测试',
-    value: 'test',
-  },
-];
 
 const formSchema = computed((): VbenFormSchema[] => {
   return [
@@ -36,16 +32,28 @@ const formSchema = computed((): VbenFormSchema[] => {
     {
       fieldName: 'username',
       component: 'Input',
+      componentProps: {
+        disabled: true,
+      },
       label: '用户名',
     },
     {
-      fieldName: 'roles',
-      component: 'Select',
+      fieldName: 'rolesDisplay',
+      component: 'Input',
       componentProps: {
-        mode: 'tags',
-        options: MOCK_ROLES_OPTIONS,
+        disabled: true,
       },
       label: '角色',
+    },
+    {
+      fieldName: 'email',
+      component: 'Input',
+      label: '邮箱',
+    },
+    {
+      fieldName: 'phoneNumber',
+      component: 'Input',
+      label: '手机号码',
     },
     {
       fieldName: 'introduction',
@@ -55,11 +63,40 @@ const formSchema = computed((): VbenFormSchema[] => {
   ];
 });
 
-onMounted(async () => {
-  const data = await getUserInfoApi();
-  profileBaseSettingRef.value.getFormApi().setValues(data);
-});
+watch(
+  () => props.profile,
+  (profile) => {
+    if (!profile || !profileBaseSettingRef.value) {
+      return;
+    }
+
+    profileBaseSettingRef.value.getFormApi().setValues({
+      email: profile.basic.email,
+      introduction: profile.basic.introduction,
+      phoneNumber: profile.basic.phoneNumber,
+      realName: profile.basic.realName,
+      rolesDisplay: profile.basic.roles.join(', '),
+      username: profile.basic.username,
+    });
+  },
+  { immediate: true },
+);
+
+async function handleSubmit(values: Record<string, string>) {
+  await updateProfileBasicApi({
+    email: values.email?.trim() ?? '',
+    introduction: values.introduction?.trim() ?? '',
+    phoneNumber: values.phoneNumber?.trim() ?? '',
+    realName: values.realName?.trim() ?? '',
+  });
+  message.success('基本资料已更新');
+  emit('updated');
+}
 </script>
 <template>
-  <ProfileBaseSetting ref="profileBaseSettingRef" :form-schema="formSchema" />
+  <ProfileBaseSetting
+    ref="profileBaseSettingRef"
+    :form-schema="formSchema"
+    @submit="handleSubmit"
+  />
 </template>

@@ -1,43 +1,61 @@
 <script setup lang="ts">
+import type { ProfileResponse } from '#/api';
+
 import { computed } from 'vue';
 
-import { ProfileSecuritySetting } from '@vben/common-ui';
+interface Props {
+  profile: null | ProfileResponse;
+}
 
-const formSchema = computed(() => {
+const props = defineProps<Props>();
+
+const items = computed(() => {
+  const security = props.profile?.security;
+
   return [
     {
-      value: true,
-      fieldName: 'accountPassword',
+      description: security?.hasPassword
+        ? '当前账号已配置登录密码'
+        : '当前账号尚未配置登录密码',
       label: '账户密码',
-      description: '当前密码强度：强',
+      status: security?.hasPassword ? '已设置' : '未设置',
     },
     {
-      value: true,
-      fieldName: 'securityPhone',
+      description: security?.hasPhoneNumber
+        ? '已绑定手机号码，可在基本资料中维护'
+        : '尚未绑定手机号码，可在基本资料中补充',
       label: '密保手机',
-      description: '已绑定手机：138****8293',
+      status: security?.hasPhoneNumber ? '已绑定' : '未绑定',
     },
     {
-      value: true,
-      fieldName: 'securityQuestion',
-      label: '密保问题',
-      description: '未设置密保问题，密保问题可有效保护账户安全',
-    },
-    {
-      value: true,
-      fieldName: 'securityEmail',
+      description: security?.hasEmail
+        ? '已绑定邮箱，可在基本资料中维护'
+        : '尚未绑定邮箱，可在基本资料中补充',
       label: '备用邮箱',
-      description: '已绑定邮箱：ant***sign.com',
+      status: security?.hasEmail ? '已绑定' : '未绑定',
     },
     {
-      value: false,
-      fieldName: 'securityMfa',
+      description: security?.twoFactorEnabled
+        ? '已启用 MFA 二次验证'
+        : '尚未启用 MFA 二次验证',
       label: 'MFA 设备',
-      description: '未绑定 MFA 设备，绑定后，可以进行二次确认',
+      status: security?.twoFactorEnabled ? '已启用' : '未启用',
     },
   ];
 });
 </script>
 <template>
-  <ProfileSecuritySetting :form-schema="formSchema" />
+  <div class="space-y-4">
+    <div
+      v-for="item in items"
+      :key="item.label"
+      class="flex items-center justify-between rounded-lg border border-border bg-background p-4"
+    >
+      <div class="space-y-1">
+        <div class="text-base font-medium">{{ item.label }}</div>
+        <div class="text-sm text-muted-foreground">{{ item.description }}</div>
+      </div>
+      <div class="text-sm font-medium text-foreground">{{ item.status }}</div>
+    </div>
+  </div>
 </template>
