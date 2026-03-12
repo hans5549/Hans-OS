@@ -39,7 +39,9 @@ Migrations are stored under `backend/src/HansOS.Api/Migrations/` and auto-applie
 
 ## Frontend
 
-`apps/web-antd` runs in backend access mode. Dev API traffic proxied to `http://localhost:5180`.
+`frontend/apps/web-antd` is the production frontend app. It runs in backend access mode and reads the API base URL from `VITE_GLOB_API_URL`.
+
+Local development keeps Vben's `/api` proxy and mock capability so the UI can boot before the backend is finished. Production builds are expected to override `VITE_GLOB_API_URL` in CI.
 
 ```bash
 cd frontend
@@ -48,11 +50,23 @@ pnpm install
 pnpm dev:antd
 ```
 
+For local production-like builds:
+
+```bash
+cd frontend
+$env:VITE_GLOB_API_URL="https://your-api-host/api"
+pnpm build:antd
+```
+
 ## Deployment
 
 - Push to `main` triggers GitHub Actions
-- Backend → Azure App Service (migrations auto-applied on startup)
-- Frontend → Azure Static Web Apps
+- Frontend changes under `frontend/**` deploy to Azure Static Web Apps
+- The frontend workflow builds `frontend/apps/web-antd/dist` and uploads the prebuilt assets
+- Required GitHub secrets:
+  - `AZURE_STATIC_WEB_APPS_API_TOKEN`
+  - `VITE_GLOB_API_URL`
+- Backend deployment stays separate from the frontend workflow
 
 ## Notes
 

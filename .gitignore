@@ -1,23 +1,61 @@
 # .NET
 bin/
 obj/
+TestResults/
 *.user
+*.rsuser
 *.suo
 *.userprefs
 appsettings.Development.json
 appsettings.secrets.*
 
-# Frontend
+# Frontend / Monorepo
 node_modules/
 dist/
+dist-ssr/
+dist.zip
+dist.tar
+dist.war
+coverage/
 .turbo/
+.pnpm-store/
+.cache/
+.temp/
+.nitro/
+.output/
+.eslintcache
+.stylelintcache
 *.local
+.env.local
+.env.*.local
+vite.config.mts.*
+vite.config.mjs.*
+vite.config.js.*
+vite.config.ts.*
 
 # Logs
 logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
-# IDE
+# IDE / Editor
 .vs/
 .vscode/
 .idea/
+.history/
+.cursor/
 *.swp
+*.swo
+
+# Local agent / tool state
+.agent/
+.agents/
+.claude/
+.codex/
+.codex-temp/
+.config/
+skills-lock.json
