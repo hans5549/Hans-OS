@@ -3,7 +3,7 @@ import type { Linter } from 'eslint';
 const restrictedImportIgnores = ['**/vite.config.mts'];
 
 const customConfig: Linter.Config[] = [
-  // shadcn-ui 内部组件是自动生成的，不做太多限制
+  // shadcn-ui 内部元件是自动生成的，不做太多限制
   {
     files: ['packages/@core/ui-kit/shadcn-ui/**/**'],
     rules: {
@@ -67,7 +67,7 @@ const customConfig: Linter.Config[] = [
     },
   },
   {
-    // @core内部组件，不能引入@vben/* 里面的包
+    // @core内部元件，不能引入@vben/* 里面的包
     files: ['packages/@core/**/**'],
     ignores: restrictedImportIgnores,
     rules: {
@@ -86,7 +86,7 @@ const customConfig: Linter.Config[] = [
     },
   },
   {
-    // @core/shared内部组件，不能引入@vben/* 或者 @vben-core/* 里面的包
+    // @core/shared内部元件，不能引入@vben/* 或者 @vben-core/* 里面的包
     files: ['packages/@core/base/**/**'],
     ignores: restrictedImportIgnores,
     rules: {
@@ -133,7 +133,7 @@ const customConfig: Linter.Config[] = [
       ],
     },
   },
-  // 后端模拟代码，不需要太多规则
+  // 后端模拟程式碼，不需要太多规则
   {
     files: ['apps/backend-mock/**/**', 'docs/**/**'],
     rules: {

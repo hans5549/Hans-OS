@@ -28,7 +28,7 @@ class SSE {
    * SSE请求方法
    * @param url - 请求URL
    * @param data - 请求数据
-   * @param requestOptions - SSE请求选项
+   * @param requestOptions - SSE请求選項
    */
   public async requestSSE(
     url: string,
@@ -114,7 +114,7 @@ class SSE {
 
 function safeJoinUrl(baseUrl: string | undefined, url: string): string {
   if (!baseUrl) {
-    return url; // 没有 baseUrl，直接返回 url
+    return url; // 沒有 baseUrl，直接返回 url
   }
 
   // 如果 url 本身就是绝对地址，直接返回
@@ -127,7 +127,7 @@ function safeJoinUrl(baseUrl: string | undefined, url: string): string {
     return new URL(url, baseUrl).toString();
   }
 
-  // 否则，当作路径拼接
+  // 否则，当作路徑拼接
   return `${baseUrl.replace(/\/+$/, '')}/${url.replace(/^\/+/, '')}`;
 }
 

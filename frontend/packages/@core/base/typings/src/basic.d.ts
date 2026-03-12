@@ -13,19 +13,19 @@ interface BasicUserInfo {
    */
   avatar: string;
   /**
-   * 用户昵称
+   * 使用者昵称
    */
   realName: string;
   /**
-   * 用户角色
+   * 使用者角色
    */
   roles?: string[];
   /**
-   * 用户id
+   * 使用者id
    */
   userId: string;
   /**
-   * 用户名
+   * 使用者名
    */
   username: string;
 }

@@ -6,7 +6,7 @@ import depcheck from 'depcheck';
 
 // 默认配置
 const DEFAULT_CONFIG = {
-  // 需要忽略的依赖匹配
+  // 需要忽略的依賴匹配
   ignoreMatches: [
     'vite',
     'vitest',
@@ -52,14 +52,14 @@ interface PackageInfo {
 }
 
 /**
- * 清理依赖检查结果
- * @param unused - 依赖检查结果
+ * 清理依賴檢查结果
+ * @param unused - 依賴檢查结果
  */
 function cleanDepcheckResult(unused: DepcheckResult): void {
-  // 删除file:前缀的依赖提示，该依赖是本地依赖
+  // 删除file:前缀的依賴提示，该依賴是本地依賴
   Reflect.deleteProperty(unused.missing, 'file:');
 
-  // 清理路径依赖
+  // 清理路徑依賴
   Object.keys(unused.missing).forEach((key) => {
     unused.missing[key] = (unused.missing[key] || []).filter(
       (item: string) => !item.startsWith('/'),
@@ -71,9 +71,9 @@ function cleanDepcheckResult(unused: DepcheckResult): void {
 }
 
 /**
- * 格式化依赖检查结果
+ * 格式化依賴檢查结果
  * @param pkgName - 包名
- * @param unused - 依赖检查结果
+ * @param unused - 依賴檢查结果
  */
 function formatDepcheckResult(pkgName: string, unused: DepcheckResult): void {
   const hasIssues =
@@ -107,8 +107,8 @@ function formatDepcheckResult(pkgName: string, unused: DepcheckResult): void {
 }
 
 /**
- * 运行依赖检查
- * @param config - 配置选项
+ * 執行依賴檢查
+ * @param config - 配置選項
  */
 async function runDepcheck(config: DepcheckConfig = {}): Promise<void> {
   try {
@@ -159,7 +159,7 @@ async function runDepcheck(config: DepcheckConfig = {}): Promise<void> {
 }
 
 /**
- * 定义依赖检查命令
+ * 定义依賴檢查命令
  * @param cac - CAC实例
  */
 function defineDepcheckCommand(cac: CAC): void {

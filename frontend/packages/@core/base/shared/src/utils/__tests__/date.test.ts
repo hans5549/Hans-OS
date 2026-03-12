@@ -23,7 +23,7 @@ describe('dateUtils', () => {
   beforeEach(() => {
     // 重置时区
     dayjs.tz.setDefault();
-    setCurrentTimezone(); // 重置为系统默认
+    setCurrentTimezone(); // 重置为系統默认
   });
 
   afterEach(() => {

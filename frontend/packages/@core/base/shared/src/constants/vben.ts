@@ -1,21 +1,21 @@
 /**
- * @zh_CN GITHUB 仓库地址
+ * @zh_TW GITHUB 倉庫地址
  */
 export const VBEN_GITHUB_URL = 'https://github.com/vbenjs/vue-vben-admin';
 
 /**
- * @zh_CN 文档地址
+ * @zh_TW 文档地址
  */
 export const VBEN_DOC_URL = 'https://doc.vben.pro';
 
 /**
- * @zh_CN Vben Logo
+ * @zh_TW Vben Logo
  */
 export const VBEN_LOGO_URL =
   'https://unpkg.com/@vbenjs/static-source@0.1.7/source/logo-v1.webp';
 
 /**
- * @zh_CN Vben Admin 首页地址
+ * @zh_TW Vben Admin 首頁地址
  */
 export const VBEN_PREVIEW_URL = 'https://www.vben.pro';
 

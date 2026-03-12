@@ -47,7 +47,7 @@ const setTimezoneHandler = (handler: Partial<TimezoneHandler>) => {
 };
 
 /**
- * 获取时区处理模块
+ * 取得时区处理模块
  */
 const getTimezoneHandler = () => {
   return {
@@ -92,7 +92,7 @@ const useTimezoneStore = defineStore(
     }
 
     /**
-     * 获取时区选项
+     * 取得时区選項
      * Get the timezone options
      */
     async function getTimezoneOptions() {
@@ -125,7 +125,7 @@ const useTimezoneStore = defineStore(
 
 export { setTimezoneHandler, useTimezoneStore };
 
-// 解决热更新问题
+// 解决热更新問題
 const hot = import.meta.hot;
 if (hot) {
   hot.accept(acceptHMRUpdate(useTimezoneStore, hot));

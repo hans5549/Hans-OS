@@ -2,9 +2,9 @@
 import { isFunction, isObject, isString } from '@vue/shared';
 
 /**
- * 检查传入的值是否为undefined。
+ * 檢查传入的值是否为undefined。
  *
- * @param {unknown} value 要检查的值。
+ * @param {unknown} value 要檢查的值。
  * @returns {boolean} 如果值是undefined，返回true，否则返回false。
  */
 function isUndefined(value?: unknown): value is undefined {
@@ -12,7 +12,7 @@ function isUndefined(value?: unknown): value is undefined {
 }
 
 /**
- * 检查传入的值是否为boolean
+ * 檢查传入的值是否为boolean
  * @param value
  * @returns 如果值是布尔值，返回true，否则返回false。
  */
@@ -21,17 +21,17 @@ function isBoolean(value: unknown): value is boolean {
 }
 
 /**
- * 检查传入的值是否为空。
+ * 檢查传入的值是否为空。
  *
- * 以下情况将被认为是空：
+ * 以下情況将被认为是空：
  * - 值为null。
  * - 值为undefined。
  * - 值为一个空字符串。
  * - 值为一个长度为0的数组。
- * - 值为一个没有元素的Map或Set。
- * - 值为一个没有属性的对象。
+ * - 值为一个沒有元素的Map或Set。
+ * - 值为一个沒有属性的物件。
  *
- * @param {T} value 要检查的值。
+ * @param {T} value 要檢查的值。
  * @returns {boolean} 如果值为空，返回true，否则返回false。
  */
 function isEmpty<T = unknown>(value?: T): value is T {
@@ -55,9 +55,9 @@ function isEmpty<T = unknown>(value?: T): value is T {
 }
 
 /**
- * 检查传入的字符串是否为有效的HTTP或HTTPS URL。
+ * 檢查传入的字符串是否为有效的HTTP或HTTPS URL。
  *
- * @param {string} url 要检查的字符串。
+ * @param {string} url 要檢查的字符串。
  * @return {boolean} 如果字符串是有效的HTTP或HTTPS URL，返回true，否则返回false。
  */
 function isHttpUrl(url?: string): boolean {
@@ -70,10 +70,10 @@ function isHttpUrl(url?: string): boolean {
 }
 
 /**
- * 检查传入的值是否为window对象。
+ * 檢查传入的值是否为window物件。
  *
- * @param {any} value 要检查的值。
- * @returns {boolean} 如果值是window对象，返回true，否则返回false。
+ * @param {any} value 要檢查的值。
+ * @returns {boolean} 如果值是window物件，返回true，否则返回false。
  */
 function isWindow(value: any): value is Window {
   return (
@@ -82,12 +82,12 @@ function isWindow(value: any): value is Window {
 }
 
 /**
- * 检查当前运行环境是否为Mac OS。
+ * 檢查目前執行环境是否为Mac OS。
  *
- * 这个函数通过检查navigator.userAgent字符串来判断当前运行环境。
- * 如果userAgent字符串中包含"macintosh"或"mac os x"（不区分大小写），则认为当前环境是Mac OS。
+ * 这个函数通过檢查navigator.userAgent字符串来判断目前執行环境。
+ * 如果userAgent字符串中包含"macintosh"或"mac os x"（不区分大小写），则认为目前环境是Mac OS。
  *
- * @returns {boolean} 如果当前环境是Mac OS，返回true，否则返回false。
+ * @returns {boolean} 如果目前环境是Mac OS，返回true，否则返回false。
  */
 function isMacOs(): boolean {
   const macRegex = /macintosh|mac os x/i;
@@ -95,12 +95,12 @@ function isMacOs(): boolean {
 }
 
 /**
- * 检查当前运行环境是否为Windows OS。
+ * 檢查目前執行环境是否为Windows OS。
  *
- * 这个函数通过检查navigator.userAgent字符串来判断当前运行环境。
- * 如果userAgent字符串中包含"windows"或"win32"（不区分大小写），则认为当前环境是Windows OS。
+ * 这个函数通过檢查navigator.userAgent字符串来判断目前執行环境。
+ * 如果userAgent字符串中包含"windows"或"win32"（不区分大小写），则认为目前环境是Windows OS。
  *
- * @returns {boolean} 如果当前环境是Windows OS，返回true，否则返回false。
+ * @returns {boolean} 如果目前环境是Windows OS，返回true，否则返回false。
  */
 function isWindowsOs(): boolean {
   const windowsRegex = /windows|win32/i;
@@ -108,7 +108,7 @@ function isWindowsOs(): boolean {
 }
 
 /**
- * 检查传入的值是否为数字
+ * 檢查传入的值是否为数字
  * @param value
  */
 function isNumber(value: any): value is number {

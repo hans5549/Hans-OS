@@ -66,7 +66,7 @@ async function zipFolder(
 
     archive.pipe(output);
 
-    // 使用 directory 方法以流的方式压缩文件夹，减少内存消耗
+    // 使用 directory 方法以流的方式压缩資料夾，减少内存消耗
     archive.directory(folderPath, false);
 
     // 流式处理完成

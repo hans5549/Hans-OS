@@ -9,13 +9,13 @@ const formSchema = computed(() => {
       value: true,
       fieldName: 'accountPassword',
       label: '账户密码',
-      description: '其他用户的消息将以站内信的形式通知',
+      description: '其他使用者的消息将以站内信的形式通知',
     },
     {
       value: true,
       fieldName: 'systemMessage',
-      label: '系统消息',
-      description: '系统消息将以站内信的形式通知',
+      label: '系統消息',
+      description: '系統消息将以站内信的形式通知',
     },
     {
       value: true,

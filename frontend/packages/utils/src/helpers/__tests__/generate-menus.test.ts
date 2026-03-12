@@ -12,7 +12,7 @@ describe('generateMenus', () => {
   // 模拟路由数据
   const mockRoutes = [
     {
-      meta: { icon: 'home-icon', title: '首页' },
+      meta: { icon: 'home-icon', title: '首頁' },
       name: 'home',
       path: '/home',
     },
@@ -46,7 +46,7 @@ describe('generateMenus', () => {
         badgeType: undefined,
         badgeVariants: undefined,
         icon: 'home-icon',
-        name: '首页',
+        name: '首頁',
         order: undefined,
         parent: undefined,
         parents: undefined,

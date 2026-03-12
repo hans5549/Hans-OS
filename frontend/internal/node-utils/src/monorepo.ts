@@ -19,7 +19,7 @@ function findMonorepoRoot(cwd: string = process.cwd()) {
 }
 
 /**
- * 获取大仓的所有包
+ * 取得大仓的所有包
  */
 function getPackagesSync() {
   const root = findMonorepoRoot();
@@ -27,7 +27,7 @@ function getPackagesSync() {
 }
 
 /**
- * 获取大仓的所有包
+ * 取得大仓的所有包
  */
 async function getPackages() {
   const root = findMonorepoRoot();
@@ -36,7 +36,7 @@ async function getPackages() {
 }
 
 /**
- * 获取大仓指定的包
+ * 取得大仓指定的包
  */
 async function getPackage(pkgName: string) {
   const { packages } = await getPackages();

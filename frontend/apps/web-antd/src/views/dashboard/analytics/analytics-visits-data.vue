@@ -12,7 +12,7 @@ onMounted(() => {
   renderEcharts({
     legend: {
       bottom: 0,
-      data: ['访问', '趋势'],
+      data: ['訪問', '趋势'],
     },
     radar: {
       indicator: [
@@ -52,7 +52,7 @@ onMounted(() => {
             itemStyle: {
               color: '#b6a2de',
             },
-            name: '访问',
+            name: '訪問',
             value: [90, 50, 86, 40, 50, 20],
           },
           {

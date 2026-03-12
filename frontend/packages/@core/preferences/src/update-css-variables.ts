@@ -7,7 +7,7 @@ import { BUILT_IN_THEME_PRESETS } from './constants';
 
 /**
  * 更新主题的 CSS 变量以及其他 CSS 变量
- * @param preferences - 当前偏好设置对象，它的主题值将被用来设置文档的主题。
+ * @param preferences - 目前偏好设置物件，它的主题值将被用来设置文档的主题。
  */
 function updateCSSVariables(preferences: Preferences) {
   // 当修改到颜色变量时，更新 css 变量
@@ -34,7 +34,7 @@ function updateCSSVariables(preferences: Preferences) {
     }
   }
 
-  // 获取当前的内置主题
+  // 取得目前的内置主题
   const currentBuiltType = [...BUILT_IN_THEME_PRESETS].find(
     (item) => item.type === builtinType,
   );
@@ -83,7 +83,7 @@ function updateCSSVariables(preferences: Preferences) {
 
 /**
  * 更新主要的 CSS 变量
- * @param  preference - 当前偏好设置对象，它的颜色值将被转换成 HSL 格式并设置为 CSS 变量。
+ * @param  preference - 目前偏好设置物件，它的颜色值将被转换成 HSL 格式并设置为 CSS 变量。
  */
 function updateMainColorVariables(preference: Preferences) {
   if (!preference.theme) {

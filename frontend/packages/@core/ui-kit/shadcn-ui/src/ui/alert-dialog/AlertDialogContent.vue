@@ -42,7 +42,7 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits);
 
 const contentRef = ref<InstanceType<typeof AlertDialogContent> | null>(null);
 function onAnimationEnd(event: AnimationEvent) {
-  // 只有在 contentRef 的动画结束时才触发 opened/closed 事件
+  // 只有在 contentRef 的动画结束时才觸發 opened/closed 事件
   if (event.target === contentRef.value?.$el) {
     if (props.open) {
       emits('opened');

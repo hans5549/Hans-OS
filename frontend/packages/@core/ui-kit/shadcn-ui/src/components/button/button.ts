@@ -33,7 +33,7 @@ export interface VbenButtonGroupProps extends Pick<
 > {
   /** 单选模式下允许清除选中 */
   allowClear?: boolean;
-  /** 值改变前的回调 */
+  /** 值改变前的回呼 */
   beforeChange?: (
     value: ValueType,
     isChecked: boolean,
@@ -46,9 +46,9 @@ export interface VbenButtonGroupProps extends Pick<
   maxCount?: number;
   /** 是否允许多选 */
   multiple?: boolean;
-  /** 选项 */
+  /** 選項 */
   options?: { [key: string]: any; label: CustomRenderType; value: ValueType }[];
-  /** 显示图标 */
+  /** 顯示图标 */
   showIcon?: boolean;
   /** 尺寸 */
   size?: 'large' | 'middle' | 'small';

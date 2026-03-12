@@ -8,7 +8,7 @@ export interface VisibleDomRect {
 }
 
 /**
- * 获取元素可见信息
+ * 取得元素可见信息
  * @param element
  */
 export function getElementVisibleRect(
@@ -86,7 +86,7 @@ export function needsScrollbar() {
   const doc = document.documentElement;
   const body = document.body;
 
-  // 检查 body 的 overflow-y 样式
+  // 檢查 body 的 overflow-y 样式
   const overflowY = window.getComputedStyle(body).overflowY;
 
   // 如果明确设置了需要滚动条的样式
@@ -94,14 +94,14 @@ export function needsScrollbar() {
     return doc.scrollHeight > window.innerHeight;
   }
 
-  // 在其他情况下，根据 scrollHeight 和 innerHeight 比较判断
+  // 在其他情況下，根據 scrollHeight 和 innerHeight 比较判断
   return doc.scrollHeight > window.innerHeight;
 }
 
 export function triggerWindowResize(): void {
-  // 创建一个新的 resize 事件
+  // 建立一个新的 resize 事件
   const resizeEvent = new Event('resize');
 
-  // 触发 window 的 resize 事件
+  // 觸發 window 的 resize 事件
   window.dispatchEvent(resizeEvent);
 }

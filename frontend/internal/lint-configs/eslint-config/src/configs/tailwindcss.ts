@@ -15,7 +15,7 @@ export async function tailwindcss(): Promise<Linter.Config[]> {
       plugins: {
         'better-tailwindcss': pluginBetterTailwindcss,
       },
-      // shadcn-ui 内部组件是自动生成的，不做太多限制
+      // shadcn-ui 内部元件是自动生成的，不做太多限制
       ignores: ['packages/@core/ui-kit/shadcn-ui/**/**'],
       settings: {
         'better-tailwindcss': {

@@ -41,7 +41,7 @@ interface Props {
    */
   tooltip?: boolean;
   /**
-   * 是否只在文本被截断时显示提示框
+   * 是否只在文本被截断时顯示提示框
    * @default false
    */
   tooltipWhenEllipsis?: boolean;
@@ -121,7 +121,7 @@ const checkEllipsis = () => {
   const widthDiff = element.scrollWidth - element.clientWidth;
   const heightDiff = element.scrollHeight - element.clientHeight;
 
-  // 使用足够大的差异阈值确保只有真正被截断的文本才会显示 tooltip
+  // 使用足够大的差异阈值確保只有真正被截断的文本才会顯示 tooltip
   isEllipsis.value =
     props.line === 1
       ? widthDiff > props.ellipsisThreshold

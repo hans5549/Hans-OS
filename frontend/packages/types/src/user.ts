@@ -1,13 +1,13 @@
 import type { BasicUserInfo } from '@vben-core/typings';
 
-/** 用户信息 */
+/** 使用者信息 */
 interface UserInfo extends BasicUserInfo {
   /**
-   * 用户描述
+   * 使用者描述
    */
   desc: string;
   /**
-   * 首页地址
+   * 首頁地址
    */
   homePath: string;
 

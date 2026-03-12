@@ -23,15 +23,15 @@ import AnalyticsVisits from './analytics-visits.vue';
 const overviewItems: AnalysisOverviewItem[] = [
   {
     icon: SvgCardIcon,
-    title: '用户量',
-    totalTitle: '总用户量',
+    title: '使用者量',
+    totalTitle: '总使用者量',
     totalValue: 120_000,
     value: 2000,
   },
   {
     icon: SvgCakeIcon,
-    title: '访问量',
-    totalTitle: '总访问量',
+    title: '訪問量',
+    totalTitle: '总訪問量',
     totalValue: 500_000,
     value: 20_000,
   },
@@ -57,7 +57,7 @@ const chartTabs: TabOption[] = [
     value: 'trends',
   },
   {
-    label: '月访问量',
+    label: '月訪問量',
     value: 'visits',
   },
 ];
@@ -76,13 +76,13 @@ const chartTabs: TabOption[] = [
     </AnalysisChartsTabs>
 
     <div class="mt-5 w-full md:flex">
-      <AnalysisChartCard class="mt-5 md:mt-0 md:mr-4 md:w-1/3" title="访问数量">
+      <AnalysisChartCard class="mt-5 md:mt-0 md:mr-4 md:w-1/3" title="訪問数量">
         <AnalyticsVisitsData />
       </AnalysisChartCard>
-      <AnalysisChartCard class="mt-5 md:mt-0 md:mr-4 md:w-1/3" title="访问来源">
+      <AnalysisChartCard class="mt-5 md:mt-0 md:mr-4 md:w-1/3" title="訪問来源">
         <AnalyticsVisitsSource />
       </AnalysisChartCard>
-      <AnalysisChartCard class="mt-5 md:mt-0 md:w-1/3" title="访问来源">
+      <AnalysisChartCard class="mt-5 md:mt-0 md:w-1/3" title="訪問来源">
         <AnalyticsVisitsSales />
       </AnalysisChartCard>
     </div>

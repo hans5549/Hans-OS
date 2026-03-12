@@ -17,11 +17,11 @@ it('updateCSSVariables should update CSS variables in :root selector', () => {
   // 调用函数来更新CSS变量
   updateCSSVariables(updatedVariables, 'custom-styles');
 
-  // 获取更新后的样式内容
+  // 取得更新后的样式内容
   const styleElement = document.querySelector('#custom-styles');
   const updatedStyleContent = styleElement ? styleElement.textContent : '';
 
-  // 检查更新后的样式内容是否包含正确的更新值
+  // 檢查更新后的样式内容是否包含正确的更新值
   expect(
     updatedStyleContent?.includes('primaryColor: blue;') &&
       updatedStyleContent?.includes('secondaryColor: green;') &&

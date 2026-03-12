@@ -42,7 +42,7 @@ export function vbenAlert(
       if (isString(arg1)) {
         options.title = arg1;
       } else if (!isString(arg1)) {
-        // 如果第二个参数是对象，则合并到选项中
+        // 如果第二个参数是物件，则合并到選項中
         Object.assign(options, arg1);
       }
     }
@@ -50,16 +50,16 @@ export function vbenAlert(
     if (arg2 && !isString(arg2)) {
       Object.assign(options, arg2);
     }
-    // 创建容器元素
+    // 建立容器元素
     const container = document.createElement('div');
     document.body.append(container);
 
-    // 创建一个引用，用于在回调中访问实例
+    // 建立一个引用，用于在回呼中訪問实例
     const alertRef = { container, instance: null as any };
 
     const props: AlertProps & Recordable<any> = {
       onClosed: (isConfirm: boolean) => {
-        // 移除组件实例以及创建的所有dom（恢复页面到打开前的状态）
+        // 移除元件实例以及建立的所有dom（還原頁面到開啟前的状态）
         // 从alerts数组中移除该实例
         alerts.value = alerts.value.filter((item) => item !== alertRef);
 
@@ -69,7 +69,7 @@ export function vbenAlert(
           container.remove();
         }
 
-        // 解析 Promise，传递用户操作结果
+        // 解析 Promise，传递使用者操作结果
         if (isConfirm) {
           resolve();
         } else {
@@ -81,13 +81,13 @@ export function vbenAlert(
       title: options.title ?? $t.value('prompt'),
     };
 
-    // 创建Alert组件的VNode
+    // 建立Alert元件的VNode
     const vnode = h(Alert, props);
 
-    // 渲染组件到容器
+    // 渲染元件到容器
     render(vnode, container);
 
-    // 保存组件实例引用
+    // 保存元件实例引用
     alertRef.instance = vnode.component?.proxy as Component;
 
     // 将实例和容器添加到alerts数组中
@@ -161,18 +161,18 @@ export async function vbenPrompt<T = any>(
       },
     };
 
-    // 设置当前值
+    // 设置目前值
 
     // 设置更新处理函数
 
-    // 创建输入组件
+    // 建立输入元件
     inputComponentRef.value = h(
       _component || Input,
       currentProps,
       componentSlots,
     );
 
-    // 返回包含静态内容和输入组件的数组
+    // 返回包含静态内容和输入元件的数组
     return h(
       'div',
       { class: 'flex flex-col gap-2' },

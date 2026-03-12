@@ -121,7 +121,7 @@ const computedSchema = computed(
       const keepIndex = keepFormItemIndex.value;
 
       const hidden =
-        // 折叠状态 & 显示折叠按钮 & 当前索引大于保留索引
+        // 折叠状态 & 顯示折叠按钮 & 目前索引大于保留索引
         props.showCollapseButton && !!formCollapsed.value && keepIndex
           ? keepIndex <= index
           : false;

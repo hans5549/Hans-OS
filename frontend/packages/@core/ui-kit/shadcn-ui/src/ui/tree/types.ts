@@ -4,11 +4,11 @@ import type { FlattenedItem } from 'reka-ui';
 import type { Recordable } from '@vben-core/typings';
 
 export interface TreeProps {
-  /** 单选时允许取消已有选项 */
+  /** 单选时允许取消已有選項 */
   allowClear?: boolean;
   /** 非关联选择时，自动选中上级节点 */
   autoCheckParent?: boolean;
-  /** 显示边框 */
+  /** 顯示边框 */
   bordered?: boolean;
   /** 取消父子关联选择 */
   checkStrictly?: boolean;
@@ -31,7 +31,7 @@ export interface TreeProps {
   labelField?: string;
   /** 是否多选 */
   multiple?: boolean;
-  /** 显示由iconField指定的图标 */
+  /** 顯示由iconField指定的图标 */
   showIcon?: boolean;
   /** 启用展开收缩动画 */
   transition?: boolean;

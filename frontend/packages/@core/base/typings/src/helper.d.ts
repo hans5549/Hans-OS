@@ -35,7 +35,7 @@ type DeepReadonly<
     : T;
 
 /**
- * 任意类型的异步函数
+ * 任意类型的非同步函数
  */
 
 type AnyPromiseFunction<T extends any[] = any[], R = void> = (
@@ -65,12 +65,12 @@ type Nullable<T> = null | T;
 type NonNullable<T> = T extends null | undefined ? never : T;
 
 /**
- * 字符串类型对象
+ * 字符串类型物件
  */
 type Recordable<T> = Record<string, T>;
 
 /**
- * 字符串类型对象（只读）
+ * 字符串类型物件（只读）
  */
 interface ReadonlyRecordable<T = any> {
   readonly [key: string]: T;

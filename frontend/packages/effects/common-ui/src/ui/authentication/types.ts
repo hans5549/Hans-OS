@@ -1,68 +1,68 @@
 interface AuthenticationProps {
   /**
-   * @zh_CN 验证码登录路径
+   * @zh_TW 驗證碼登入路徑
    */
   codeLoginPath?: string;
   /**
-   * @zh_CN 忘记密码路径
+   * @zh_TW 忘记密码路徑
    */
   forgetPasswordPath?: string;
 
   /**
-   * @zh_CN 是否处于加载处理状态
+   * @zh_TW 是否处于載入处理状态
    */
   loading?: boolean;
 
   /**
-   * @zh_CN 二维码登录路径
+   * @zh_TW 二維碼登入路徑
    */
   qrCodeLoginPath?: string;
 
   /**
-   * @zh_CN 注册路径
+   * @zh_TW 註冊路徑
    */
   registerPath?: string;
 
   /**
-   * @zh_CN 是否显示验证码登录
+   * @zh_TW 是否顯示驗證碼登入
    */
   showCodeLogin?: boolean;
   /**
-   * @zh_CN 是否显示忘记密码
+   * @zh_TW 是否顯示忘记密码
    */
   showForgetPassword?: boolean;
 
   /**
-   * @zh_CN 是否显示二维码登录
+   * @zh_TW 是否顯示二維碼登入
    */
   showQrcodeLogin?: boolean;
 
   /**
-   * @zh_CN 是否显示注册按钮
+   * @zh_TW 是否顯示註冊按钮
    */
   showRegister?: boolean;
 
   /**
-   * @zh_CN 是否显示记住账号
+   * @zh_TW 是否顯示记住账号
    */
   showRememberMe?: boolean;
 
   /**
-   * @zh_CN 是否显示第三方登录
+   * @zh_TW 是否顯示第三方登入
    */
   showThirdPartyLogin?: boolean;
 
   /**
-   * @zh_CN 登录框子标题
+   * @zh_TW 登入框子标题
    */
   subTitle?: string;
 
   /**
-   * @zh_CN 登录框标题
+   * @zh_TW 登入框标题
    */
   title?: string;
   /**
-   * @zh_CN 提交按钮文本
+   * @zh_TW 提交按钮文本
    */
   submitButtonText?: string;
 }

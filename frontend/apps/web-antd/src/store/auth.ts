@@ -23,9 +23,9 @@ export const useAuthStore = defineStore('auth', () => {
   const loginLoading = ref(false);
 
   /**
-   * 异步处理登录操作
+   * 非同步处理登入操作
    * Asynchronously handle the login process
-   * @param params 登录表单数据
+   * @param params 登入表单数据
    */
   async function authLogin(
     params: Recordable<any>,
@@ -38,11 +38,11 @@ export const useAuthStore = defineStore('auth', () => {
         params as AuthApi.LoginParams,
       );
 
-      // 如果成功获取到 accessToken
+      // 如果成功取得到 accessToken
       if (accessToken) {
         accessStore.setAccessToken(accessToken);
 
-        // 获取用户信息并存储到 accessStore 中
+        // 取得使用者信息并存储到 accessStore 中
         const [fetchUserInfoResult, accessCodes] = await Promise.all([
           fetchUserInfo(),
           getAccessCodesApi(),
@@ -89,7 +89,7 @@ export const useAuthStore = defineStore('auth', () => {
     resetAllStores();
     accessStore.setLoginExpired(false);
 
-    // 回登录页带上当前路由地址
+    // 回登入页带上目前路由地址
     await router.replace({
       path: LOGIN_PATH,
       query: redirect

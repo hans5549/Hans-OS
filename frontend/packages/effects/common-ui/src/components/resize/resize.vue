@@ -736,7 +736,7 @@ const move = (ev: MouseEvent & TouchEvent) => {
 
   ev.stopPropagation();
 
-  // touches 兼容性代码
+  // touches 兼容性程式碼
   const pageX = ev.pageX === undefined ? ev.touches![0]!.pageX : ev.pageX;
   const pageY = ev.pageY === undefined ? ev.touches![0]!.pageY : ev.pageY;
 

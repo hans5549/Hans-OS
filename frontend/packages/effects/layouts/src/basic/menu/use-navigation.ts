@@ -23,13 +23,13 @@ function useNavigation() {
     initRouteMetaMap();
   });
 
-  // 检查是否应该在新窗口打开
+  // 檢查是否应该在新窗口開啟
   const shouldOpenInNewWindow = (path: string): boolean => {
     if (isHttpUrl(path)) {
       return true;
     }
     const route = routeMetaMap.get(path);
-    // 如果有外链或者设置了在新窗口打开，返回 true
+    // 如果有外链或者设置了在新窗口開啟，返回 true
     return !!(route?.meta?.link || route?.meta?.openInNewWindow);
   };
 
@@ -42,7 +42,7 @@ function useNavigation() {
       const route = routeMetaMap.get(path);
       const { openInNewWindow = false, query = {}, link } = route?.meta ?? {};
 
-      // 检查是否有外链
+      // 檢查是否有外链
       if (link && typeof link === 'string') {
         openWindow(link, { target: '_blank' });
         return;

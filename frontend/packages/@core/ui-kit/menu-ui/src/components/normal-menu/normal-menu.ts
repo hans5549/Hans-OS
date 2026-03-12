@@ -14,7 +14,7 @@ interface NormalMenuProps {
    */
   menus?: MenuRecordRaw[];
   /**
-   * @zh_CN 是否圆润风格
+   * @zh_TW 是否圆润风格
    * @default true
    */
   rounded?: boolean;

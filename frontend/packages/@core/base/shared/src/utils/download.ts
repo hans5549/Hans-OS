@@ -10,7 +10,7 @@ const DEFAULT_FILENAME = 'downloaded_file';
 
 /**
  * 通过 URL 下载文件，支持跨域
- * @throws {Error} - 当下载失败时抛出错误
+ * @throws {Error} - 当下载失敗时抛出错误
  */
 export async function downloadFileFromUrl({
   fileName,
@@ -91,7 +91,7 @@ export function downloadFileFromBlobPart({
       ? source
       : new Blob([source], { type: 'application/octet-stream' });
 
-  // 创建对象 URL 并触发下载
+  // 建立物件 URL 并觸發下载
   const url = URL.createObjectURL(blob);
   triggerDownload(url, fileName);
 }
@@ -122,7 +122,7 @@ export function urlToBase64(url: string, mineType?: string): Promise<string> {
 }
 
 /**
- * 通用下载触发函数
+ * 通用下载觸發函数
  * @param href - 文件下载的 URL
  * @param fileName - 下载文件的名称，如果未提供则自动识别
  * @param revokeDelay - 清理 URL 的延迟时间 (毫秒)
@@ -148,7 +148,7 @@ export function triggerDownload(
   link.click();
   link.remove();
 
-  // 清理临时 URL 以释放内存
+  // 清理暫時 URL 以释放内存
   setTimeout(() => URL.revokeObjectURL(href), revokeDelay);
 }
 

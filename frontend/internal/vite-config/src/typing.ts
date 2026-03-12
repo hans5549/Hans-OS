@@ -10,7 +10,7 @@ import type { Options as PwaPluginOptions } from 'vite-plugin-pwa';
 
 /**
  * ImportMap 配置接口
- * @description 用于配置模块导入映射，支持自定义导入路径和范围
+ * @description 用于配置模块匯入映射，支持自定义匯入路徑和范围
  * @example
  * ```typescript
  * {
@@ -26,16 +26,16 @@ import type { Options as PwaPluginOptions } from 'vite-plugin-pwa';
  * ```
  */
 interface IImportMap {
-  /** 模块导入映射 */
+  /** 模块匯入映射 */
   imports?: Record<string, string>;
-  /** 作用域特定的导入映射 */
+  /** 作用域特定的匯入映射 */
   scopes?: {
     [scope: string]: Record<string, string>;
   };
 }
 
 /**
- * 打印插件配置选项
+ * 打印插件配置選項
  * @description 用于配置控制台打印信息
  */
 interface PrintPluginOptions {
@@ -54,7 +54,7 @@ interface PrintPluginOptions {
 }
 
 /**
- * Nitro Mock 插件配置选项
+ * Nitro Mock 插件配置選項
  * @description 用于配置 Nitro Mock 服务器的行为
  */
 interface NitroMockPluginOptions {
@@ -78,7 +78,7 @@ interface NitroMockPluginOptions {
 }
 
 /**
- * 归档插件配置选项
+ * 归档插件配置選項
  * @description 用于配置构建产物的压缩归档
  */
 interface ArchiverPluginOptions {
@@ -96,7 +96,7 @@ interface ArchiverPluginOptions {
 
 /**
  * ImportMap 插件配置
- * @description 用于配置模块的 CDN 导入
+ * @description 用于配置模块的 CDN 匯入
  */
 interface ImportmapPluginOptions {
   /**
@@ -107,7 +107,7 @@ interface ImportmapPluginOptions {
   defaultProvider?: 'esm.sh' | 'jspm.io';
   /**
    * ImportMap 配置数组
-   * @description 配置需要从 CDN 导入的包
+   * @description 配置需要从 CDN 匯入的包
    * @example
    * ```typescript
    * [
@@ -126,23 +126,23 @@ interface ImportmapPluginOptions {
 
 /**
  * 条件插件配置
- * @description 用于根据条件动态加载插件
+ * @description 用于根據条件动态載入插件
  */
 interface ConditionPlugin {
   /**
    * 判断条件
-   * @description 当条件为 true 时加载插件
+   * @description 当条件为 true 时載入插件
    */
   condition?: boolean;
   /**
-   * 插件对象
+   * 插件物件
    * @description 返回插件数组或 Promise
    */
   plugins: () => PluginOption[] | PromiseLike<PluginOption[]>;
 }
 
 /**
- * 通用插件配置选项
+ * 通用插件配置選項
  * @description 所有插件共用的基础配置
  */
 interface CommonPluginOptions {
@@ -172,16 +172,16 @@ interface CommonPluginOptions {
    */
   mode?: string;
   /**
-   * 是否开启依赖分析
+   * 是否开启依賴分析
    * @default false
-   * @description 使用 rollup-plugin-visualizer 分析依赖
+   * @description 使用 rollup-plugin-visualizer 分析依賴
    */
   visualizer?: boolean | PluginVisualizerOptions;
 }
 
 /**
- * 应用插件配置选项
- * @description 用于配置应用构建时的插件选项
+ * 应用插件配置選項
+ * @description 用于配置应用构建时的插件選項
  */
 interface ApplicationPluginOptions extends CommonPluginOptions {
   /**
@@ -233,7 +233,7 @@ interface ApplicationPluginOptions extends CommonPluginOptions {
    */
   importmapOptions?: ImportmapPluginOptions;
   /**
-   * 是否注入应用加载动画
+   * 是否注入应用載入动画
    * @default true
    */
   injectAppLoading?: boolean;
@@ -275,15 +275,15 @@ interface ApplicationPluginOptions extends CommonPluginOptions {
    */
   pwaOptions?: Partial<PwaPluginOptions>;
   /**
-   * 是否开启 VXE Table 懒加载
+   * 是否开启 VXE Table 懒載入
    * @default false
    */
   vxeTableLazyImport?: boolean;
 }
 
 /**
- * 库插件配置选项
- * @description 用于配置库构建时的插件选项
+ * 库插件配置選項
+ * @description 用于配置库构建时的插件選項
  */
 interface LibraryPluginOptions extends CommonPluginOptions {
   /**
@@ -295,12 +295,12 @@ interface LibraryPluginOptions extends CommonPluginOptions {
 }
 
 /**
- * 应用配置选项类型
+ * 应用配置選項类型
  */
 type ApplicationOptions = ApplicationPluginOptions;
 
 /**
- * 库配置选项类型
+ * 库配置選項类型
  */
 type LibraryOptions = LibraryPluginOptions;
 

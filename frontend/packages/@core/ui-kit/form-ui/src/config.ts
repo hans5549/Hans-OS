@@ -79,7 +79,7 @@ export function setupVbenForm<
       COMPONENT_BIND_EVENT_MAP[key] = baseModelPropName;
     }
 
-    // 覆盖特殊组件的modelPropName
+    // 覆盖特殊元件的modelPropName
     if (modelPropNameMap && modelPropNameMap[key]) {
       COMPONENT_BIND_EVENT_MAP[key] = modelPropNameMap[key];
     }

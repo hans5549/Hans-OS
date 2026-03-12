@@ -7,7 +7,7 @@ export interface JsonViewerProps {
   copyable?: boolean;
   /** 是否排序 */
   sort?: boolean;
-  /** 显示边框 */
+  /** 顯示边框 */
   boxed?: boolean;
   /** 主题 */
   theme?: string;
@@ -17,9 +17,9 @@ export interface JsonViewerProps {
   timeformat?: (time: Date | number | string) => string;
   /** 预览模式 */
   previewMode?: boolean;
-  /** 显示数组索引 */
+  /** 顯示数组索引 */
   showArrayIndex?: boolean;
-  /** 显示双引号 */
+  /** 顯示双引号 */
   showDoubleQuotes?: boolean;
 }
 
@@ -39,6 +39,6 @@ export interface JsonViewerValue {
 export interface JsonViewerToggle {
   /** 鼠标事件 */
   event: MouseEvent;
-  /** 当前展开状态 */
+  /** 目前展开状态 */
   open: boolean;
 }

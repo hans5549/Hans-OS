@@ -22,7 +22,7 @@ export interface VxePaginationInfo {
 }
 
 interface ToolbarConfigOptions extends VxeGridPropTypes.ToolbarConfig {
-  /** 是否显示切换搜索表单的按钮 */
+  /** 是否顯示切换搜索表单的按钮 */
   search?: boolean;
 }
 
@@ -49,7 +49,7 @@ export interface VxeGridProps<
    */
   tableTitleHelp?: string;
   /**
-   * 组件class
+   * 元件class
    */
   class?: ClassType;
   /**
@@ -69,7 +69,7 @@ export interface VxeGridProps<
    */
   formOptions?: VbenFormProps<D>;
   /**
-   * 显示搜索表单
+   * 顯示搜索表单
    */
   showSearchForm?: boolean;
   /**

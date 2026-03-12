@@ -1,27 +1,27 @@
 export const backtopProps = {
   /**
-   * @zh_CN bottom distance.
+   * @zh_TW bottom distance.
    */
   bottom: {
     default: 40,
     type: Number,
   },
   /**
-   * @zh_CN right distance.
+   * @zh_TW right distance.
    */
   right: {
     default: 40,
     type: Number,
   },
   /**
-   * @zh_CN the target to trigger scroll.
+   * @zh_TW the target to trigger scroll.
    */
   target: {
     default: '',
     type: String,
   },
   /**
-   * @zh_CN the button will not show until the scroll height reaches this value.
+   * @zh_TW the button will not show until the scroll height reaches this value.
    */
   visibilityHeight: {
     default: 200,

@@ -68,7 +68,7 @@ interface VbenLayoutProps {
    */
   headerHidden?: boolean;
   /**
-   * header 显示模式
+   * header 顯示模式
    * @default 'fixed'
    */
   headerMode?: LayoutHeaderModeType;
@@ -77,17 +77,17 @@ interface VbenLayoutProps {
    */
   headerTheme?: ThemeModeType;
   /**
-   * 是否显示header切换侧边栏按钮
+   * 是否顯示header切换侧边栏按钮
    * @default
    */
   headerToggleSidebarButton?: boolean;
   /**
-   * header是否显示
+   * header是否顯示
    * @default true
    */
   headerVisible?: boolean;
   /**
-   * 是否移动端显示
+   * 是否移动端顯示
    * @default false
    */
   isMobile?: boolean;
@@ -112,7 +112,7 @@ interface VbenLayoutProps {
    */
   sidebarCollapsedButton?: boolean;
   /**
-   * 侧边菜单是否折叠时，是否显示title
+   * 侧边菜单是否折叠时，是否顯示title
    * @default true
    */
   sidebarCollapseShowTitle?: boolean;

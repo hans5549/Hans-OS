@@ -10,7 +10,7 @@ interface Props {
   fixed?: boolean;
   height: number;
   /**
-   * 是否显示
+   * 是否顯示
    * @default true
    */
   show?: boolean;

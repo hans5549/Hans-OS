@@ -68,7 +68,7 @@ export function useWatermark() {
     }
   }
 
-  // 只在第一次调用时注册卸载钩子，防止重复注册以致于在路由切换时销毁了水印
+  // 只在第一次调用时註冊卸载钩子，防止重复註冊以致于在路由切换时销毁了水印
   if (!unmountedHooked.value) {
     unmountedHooked.value = true;
     onUnmounted(() => {

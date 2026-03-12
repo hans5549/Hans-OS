@@ -48,7 +48,7 @@ function isZIndexExcludeClass(element: Element) {
 }
 
 /**
- * 获取最大的zIndex值
+ * 取得最大的zIndex值
  */
 function calcZIndex() {
   let maxZ = 0;

@@ -6,7 +6,7 @@ import type {
 import type {
   DatasetComponentOption,
   GridComponentOption,
-  // 组件类型的定义后缀都为 ComponentOption
+  // 元件类型的定义后缀都为 ComponentOption
   TitleComponentOption,
   TooltipComponentOption,
 } from 'echarts/components';
@@ -14,14 +14,14 @@ import type { ComposeOption } from 'echarts/core';
 
 import { BarChart, LineChart, PieChart, RadarChart } from 'echarts/charts';
 import {
-  // 数据集组件
+  // 数据集元件
   DatasetComponent,
   GridComponent,
   LegendComponent,
   TitleComponent,
   ToolboxComponent,
   TooltipComponent,
-  // 内置数据转换器组件 (filter, sort)
+  // 内置数据转换器元件 (filter, sort)
   TransformComponent,
 } from 'echarts/components';
 import * as echarts from 'echarts/core';
@@ -32,7 +32,7 @@ import {
 } from 'echarts/features';
 import { CanvasRenderer } from 'echarts/renderers';
 
-// 通过 ComposeOption 来组合出一个只有必须组件和图表的 Option 类型
+// 通过 ComposeOption 来组合出一个只有必须元件和圖表的 Option 类型
 export type ECOption = ComposeOption<
   | BarSeriesOption
   | DatasetComponentOption
@@ -42,7 +42,7 @@ export type ECOption = ComposeOption<
   | TooltipComponentOption
 >;
 
-// 注册必须的组件
+// 註冊必须的元件
 echarts.use([
   TitleComponent,
   PieChart,

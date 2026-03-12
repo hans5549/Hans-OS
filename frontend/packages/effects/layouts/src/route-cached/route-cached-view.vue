@@ -62,7 +62,7 @@ const computedCachedRoutes = computed(() => {
 });
 
 /**
- * 是否显示
+ * 是否顯示
  */
 const computedShowView = computed(() => unref(computedCachedRoutes).length > 0);
 

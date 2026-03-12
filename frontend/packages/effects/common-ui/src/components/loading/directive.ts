@@ -93,14 +93,14 @@ const spinningDirective: Directive = {
 };
 
 type loadingDirectiveParams = {
-  /** 是否注册loading指令。如果提供一个string，则将指令注册为指定的名称 */
+  /** 是否註冊loading指令。如果提供一个string，则将指令註冊为指定的名称 */
   loading?: boolean | string;
-  /** 是否注册spinning指令。如果提供一个string，则将指令注册为指定的名称 */
+  /** 是否註冊spinning指令。如果提供一个string，则将指令註冊为指定的名称 */
   spinning?: boolean | string;
 };
 
 /**
- * 注册loading指令
+ * 註冊loading指令
  * @param app
  * @param params
  */
@@ -108,7 +108,7 @@ export function registerLoadingDirective(
   app: App,
   params?: loadingDirectiveParams,
 ) {
-  // 注入一个样式供指令使用，确保容器是相对定位
+  // 注入一个样式供指令使用，確保容器是相对定位
   const style = document.createElement('style');
   style.id = CLASS_NAME_RELATIVE;
   style.innerHTML = `

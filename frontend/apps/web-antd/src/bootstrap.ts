@@ -17,10 +17,10 @@ import App from './app.vue';
 import { router } from './router';
 
 async function bootstrap(namespace: string) {
-  // 初始化组件适配器
+  // 初始化元件适配器
   await initComponentAdapter();
 
-  // 初始化表单组件
+  // 初始化表单元件
   await initSetupVbenForm();
 
   // // 设置弹窗的默认配置
@@ -34,9 +34,9 @@ async function bootstrap(namespace: string) {
 
   const app = createApp(App);
 
-  // 注册v-loading指令
+  // 註冊v-loading指令
   registerLoadingDirective(app, {
-    loading: 'loading', // 在这里可以自定义指令名称，也可以明确提供false表示不注册这个指令
+    loading: 'loading', // 在這裡可以自定义指令名称，也可以明确提供false表示不註冊这个指令
     spinning: 'spinning',
   });
 
@@ -46,7 +46,7 @@ async function bootstrap(namespace: string) {
   // 配置 pinia-tore
   await initStores(app, { namespace });
 
-  // 安装权限指令
+  // 安装權限指令
   registerAccessDirective(app);
 
   // 初始化 tippy

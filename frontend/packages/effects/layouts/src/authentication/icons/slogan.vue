@@ -2220,7 +2220,7 @@
         />
 
         <linearGradient
-          id="路径_1_"
+          id="路徑_1_"
           gradientTransform="matrix(-65.0245 0 0 -44.112 16953.9395 71322.6641)"
           gradientUnits="userSpaceOnUse"
           x1="259.3418"
@@ -2233,13 +2233,13 @@
         </linearGradient>
 
         <path
-          id="路径"
+          id="路徑"
           d="
 			M84.5,110.9c-11.6-15.5-17.4-14.7-17.4,2.4c0,25.7-11.4,29.9-19.6,17.1c-8.2-12.9-23.3-14.6-28,13.6"
           enable-background="new    "
           fill="none"
           opacity="0.6"
-          stroke="url(#路径_1_)"
+          stroke="url(#路徑_1_)"
           stroke-linecap="round"
           stroke-width="3.5247"
         />
@@ -4197,7 +4197,7 @@
           />
 
           <linearGradient
-            id="路径-2_1_"
+            id="路徑-2_1_"
             gradientTransform="matrix(117.4617 0 0 -144.8008 62535.8438 248597.6562)"
             gradientUnits="userSpaceOnUse"
             x1="-531.8884"
@@ -4209,13 +4209,13 @@
             <stop offset="1" style="stop-color: #fff; stop-opacity: 0" />
           </linearGradient>
           <path
-            id="路径-2"
+            id="路徑-2"
             clip-rule="evenodd"
             d="M0.6,0.5v77.2l117,67.6l0.5-42
 				c-3.3-3.2-5.5-5.6-6.5-7.3c-4.4-7.6-5.6-14.4-6.1-18.2c-1.1-7.7-9.1-26.4-15.2-23.3c-6.1,3.1-10.8,27.4-17.9,23.3
 				c-7-4-15.5-32-17.3-39.4S46,22.8,41.4,29.7c-1,1.5-4.9,9.1-6,11.5c-7.7,15.9-13.7,7.5-19.1-5C14.1,31.1,9.8,15.4,6.2,6.8
 				C5,3.9,3.2,1.8,0.6,0.5z"
-            fill="url(#路径-2_1_)"
+            fill="url(#路徑-2_1_)"
             fill-rule="evenodd"
           />
           <g id="编组-7" transform="translate(41.723113, 19.522022)">

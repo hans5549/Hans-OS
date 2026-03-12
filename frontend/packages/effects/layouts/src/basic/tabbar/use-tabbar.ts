@@ -45,7 +45,7 @@ export function useTabbar() {
   } = useTabs();
 
   /**
-   * 当前路径对应的tab的key
+   * 目前路徑对应的tab的key
    */
   const currentActive = computed(() => {
     return getTabKey(route);
@@ -74,7 +74,7 @@ export function useTabbar() {
     tabbarStore.setAffixTabs(affixTabs);
   };
 
-  // 点击tab,跳转路由
+  // 点击tab,跳轉路由
   const handleClick = (key: string) => {
     const { fullPath, path } = tabbarStore.getTabByKey(key);
     router.push(fullPath || path);

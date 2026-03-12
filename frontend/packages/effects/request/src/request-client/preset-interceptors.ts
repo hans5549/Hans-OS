@@ -11,11 +11,11 @@ export const defaultResponseInterceptor = ({
   dataField = 'data',
   successCode = 0,
 }: {
-  /** 响应数据中代表访问结果的字段名 */
+  /** 响应数据中代表訪問结果的字段名 */
   codeField: string;
-  /** 响应数据中装载实际数据的字段名，或者提供一个函数从响应数据中解析需要返回的数据 */
+  /** 响应数据中装载實際数据的字段名，或者提供一个函数从响应数据中解析需要返回的数据 */
   dataField: ((response: any) => any) | string;
-  /** 当codeField所指定的字段值与successCode相同时，代表接口访问成功。如果提供一个函数，则返回true代表接口访问成功 */
+  /** 当codeField所指定的字段值与successCode相同时，代表接口訪問成功。如果提供一个函数，则返回true代表接口訪問成功 */
   successCode: ((code: any) => boolean) | number | string;
 }): ResponseInterceptorConfig => {
   return {
@@ -65,7 +65,7 @@ export const authenticateResponseInterceptor = ({
         throw error;
       }
       // 判断是否启用了 refreshToken 功能
-      // 如果没有启用或者已经是重试请求了，直接跳转到重新登录
+      // 如果沒有启用或者已经是重试请求了，直接跳轉到重新登入
       if (!enableRefreshToken || config.__isRetryRequest) {
         await doReAuthenticate();
         throw error;
@@ -82,7 +82,7 @@ export const authenticateResponseInterceptor = ({
 
       // 标记开始刷新 token
       client.isRefreshing = true;
-      // 标记当前请求为重试请求，避免无限循环
+      // 标记目前请求为重试请求，避免无限循环
       config.__isRetryRequest = true;
 
       try {
@@ -95,7 +95,7 @@ export const authenticateResponseInterceptor = ({
 
         return client.request(error.config.url, { ...error.config });
       } catch (refreshError) {
-        // 如果刷新 token 失败，处理错误（如强制登出或跳转登录页面）
+        // 如果刷新 token 失敗，處理錯誤（如強制登出或跳轉登入頁面）
         client.refreshTokenQueue.forEach((callback) => callback(''));
         client.refreshTokenQueue = [];
         console.error('Refresh token failed, please login again.');

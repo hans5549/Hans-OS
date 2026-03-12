@@ -45,7 +45,7 @@ props.formApi?.mount?.(form, componentRefMap);
 
 const handleUpdateCollapsed = (value: boolean) => {
   props.formApi?.setState({ collapsed: value });
-  // 触发收起展开状态变化回调
+  // 觸發收起展开状态变化回呼
   forward.value.handleCollapsedChange?.(value);
 };
 
@@ -92,7 +92,7 @@ onMounted(async () => {
           });
 
           if (changedFields.length > 0) {
-            // 调用handleValuesChange回调，传入所有表单值的深拷贝和变更的字段列表
+            // 调用handleValuesChange回呼，传入所有表单值的深拷贝和变更的字段清單
             const values = await forward.value.formApi?.getValues();
             forward.value.handleValuesChange(
               cloneDeep(values ?? {}) as Record<string, any>,

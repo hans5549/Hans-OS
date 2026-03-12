@@ -6,12 +6,12 @@ import { cn } from '@vben-core/shared/utils';
 interface Props {
   class?: string;
   /**
-   * @zh_CN 最小加载时间
+   * @zh_TW 最小載入时间
    * @en_US Minimum loading time
    */
   minLoadingTime?: number;
   /**
-   * @zh_CN loading状态开启
+   * @zh_TW loading状态开启
    */
   spinning?: boolean;
 }

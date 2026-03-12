@@ -124,7 +124,7 @@ export function useTabsViewScroll(props: TabsProps) {
   }
 
   /**
-   * 计算tabs 宽度，用于判断是否显示左右滚动按钮
+   * 计算tabs 宽度，用于判断是否顯示左右滚动按钮
    */
   async function calcShowScrollbarButton() {
     if (!scrollViewportEl.value) {

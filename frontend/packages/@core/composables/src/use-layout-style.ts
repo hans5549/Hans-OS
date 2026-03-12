@@ -15,7 +15,7 @@ import { getElementVisibleRect } from '@vben-core/shared/utils';
 import { useCssVar, useDebounceFn } from '@vueuse/core';
 
 /**
- * @zh_CN content style
+ * @zh_TW content style
  */
 export function useLayoutContentStyle() {
   let resizeObserver: null | ResizeObserver = null;

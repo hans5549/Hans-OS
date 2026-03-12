@@ -37,7 +37,7 @@ const searchResults = ref<MenuRecordRaw[]>([]);
 
 const handleSearch = useThrottleFn(search, 200);
 
-// 搜索函数，用于根据搜索关键词查找匹配的菜单项
+// 搜索函数，用于根據搜索关键词查找匹配的菜单项
 function search(searchKey: string) {
   // 去除搜索关键词的前后空格
   searchKey = searchKey.trim();
@@ -48,7 +48,7 @@ function search(searchKey: string) {
     return;
   }
 
-  // 使用搜索关键词创建正则表达式
+  // 使用搜索关键词建立正则表达式
   const reg = createSearchReg(searchKey);
 
   // 初始化结果数组
@@ -175,18 +175,18 @@ const code = new Set([
 
 // 转换函数，用于转义特殊字符
 function transform(c: string) {
-  // 如果字符在特殊字符列表中，返回转义后的字符
+  // 如果字符在特殊字符清單中，返回转义后的字符
   // 如果不在，返回字符本身
   return code.has(c) ? `\\${c}` : c;
 }
 
-// 创建搜索正则表达式
+// 建立搜索正则表达式
 function createSearchReg(key: string) {
   // 将输入的字符串拆分为单个字符
   // 对每个字符进行转义
-  // 然后用'.*'连接所有字符，创建正则表达式
+  // 然后用'.*'连接所有字符，建立正则表达式
   const keys = [...key].map((item) => transform(item)).join('.*');
-  // 返回创建的正则表达式
+  // 返回建立的正则表达式
   return new RegExp(`.*${keys}.*`);
 }
 
@@ -237,7 +237,7 @@ onMounted(() => {
           </span>
         </p>
       </div>
-      <!-- 历史搜索记录 & 没有搜索结果 -->
+      <!-- 历史搜索记录 & 沒有搜索结果 -->
       <div
         v-if="!keyword && searchResults.length === 0"
         class="text-center text-muted-foreground"

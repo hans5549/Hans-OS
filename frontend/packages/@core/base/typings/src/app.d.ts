@@ -43,9 +43,9 @@ type LayoutHeaderModeType = 'auto' | 'auto-scroll' | 'fixed' | 'static';
 type LayoutHeaderMenuAlignType = 'center' | 'end' | 'start';
 
 /**
- * 登录过期模式
+ * 登入过期模式
  * modal 弹窗模式
- * page 页面模式
+ * page 頁面模式
  */
 type LoginExpiredModeType = 'modal' | 'page';
 
@@ -57,10 +57,10 @@ type LoginExpiredModeType = 'modal' | 'page';
 type BreadcrumbStyleType = 'background' | 'normal';
 
 /**
- * 权限模式
- * backend 后端权限模式
- * frontend 前端权限模式
- * mixed 混合权限模式
+ * 權限模式
+ * backend 后端權限模式
+ * frontend 前端權限模式
+ * mixed 混合權限模式
  */
 type AccessModeType = 'backend' | 'frontend' | 'mixed';
 
@@ -81,12 +81,12 @@ type NavigationStyleType = 'plain' | 'rounded';
 type TabsStyleType = 'brisk' | 'card' | 'chrome' | 'plain';
 
 /**
- * 页面切换动画
+ * 頁面切换动画
  */
 type PageTransitionType = 'fade' | 'fade-down' | 'fade-slide' | 'fade-up';
 
 /**
- * 页面切换动画
+ * 頁面切换动画
  * panel-center 居中布局
  * panel-left 居左布局
  * panel-right 居右布局
@@ -94,7 +94,7 @@ type PageTransitionType = 'fade' | 'fade-down' | 'fade-slide' | 'fade-up';
 type AuthPageLayoutType = 'panel-center' | 'panel-left' | 'panel-right';
 
 /**
- * 时区选项
+ * 时区選項
  */
 interface TimezoneOption {
   label: string;

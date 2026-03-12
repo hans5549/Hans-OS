@@ -17,7 +17,7 @@ function useExtraMenu(useRootMenus?: ComputedRef<MenuRecordRaw[]>) {
 
   const menus = computed(() => useRootMenus?.value ?? accessStore.accessMenus);
 
-  /** 记录当前顶级菜单下哪个子菜单最后激活 */
+  /** 记录目前顶级菜单下哪个子菜单最后激活 */
   const defaultSubMap = new Map<string, string>();
   const extraRootMenus = ref<MenuRecordRaw[]>([]);
   const route = useRoute();

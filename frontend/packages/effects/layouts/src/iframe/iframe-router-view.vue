@@ -62,7 +62,7 @@ function hideLoading(index: number) {
 
 function showSpinning(index: number) {
   const curSpinning = spinningList.value[index];
-  // 首次加载时显示loading
+  // 首次載入时顯示loading
   return curSpinning === undefined ? true : curSpinning;
 }
 </script>
