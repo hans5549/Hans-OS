@@ -31,7 +31,7 @@ if (!command) process.exit(0);
 
 const BLOCKED_COMMANDS = [
   {
-    pattern: /git\s+add\s+(\.|--all|-A)\b/i,
+    pattern: /git\s+add\s+(-A\b|--all\b|\.(\s|"|'|$))/i,
     message: `BLOCKED: 'git add .' and 'git add -A' are forbidden.
 Stage specific files only: git add file1.cs file2.cs
 Use 'git status' to review first.`,
