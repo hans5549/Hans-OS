@@ -9,6 +9,8 @@ export const overridesPreferences = defineOverridesPreferences({
   app: {
     // Backend-driven routing: menus fetched from GET /menu/all
     accessMode: 'backend',
+    // Match the actual backend route path (not '/analytics')
+    defaultHomePath: '/dashboard/analytics',
     // Enable refresh token flow (HttpOnly cookie)
     enableRefreshToken: true,
     // Default locale

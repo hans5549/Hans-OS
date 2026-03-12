@@ -9,7 +9,7 @@ public sealed class ApplicationUser : IdentityUser
     public string Avatar { get; set; } = string.Empty;
 
     [MaxLength(256)]
-    public string HomePath { get; set; } = "/analytics";
+    public string HomePath { get; set; } = "/dashboard/analytics";
 
     public bool IsActive { get; set; } = true;
 
