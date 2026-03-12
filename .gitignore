@@ -1,0 +1,23 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+*.userprefs
+appsettings.Development.json
+appsettings.secrets.*
+
+# Frontend
+node_modules/
+dist/
+.turbo/
+*.local
+
+# Logs
+logs/
+
+# IDE
+.vs/
+.vscode/
+.idea/
+*.swp
