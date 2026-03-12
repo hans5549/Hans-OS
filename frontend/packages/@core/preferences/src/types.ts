@@ -16,14 +16,14 @@ import type {
   ThemeModeType,
 } from '@vben-core/typings';
 
-type SupportedLanguagesType = 'en-US' | 'zh-CN';
+type SupportedLanguagesType = 'en-US' | 'zh-TW';
 
 interface AppPreferences {
-  /** 权限模式 */
+  /** 權限模式 */
   accessMode: AccessModeType;
-  /** 登录注册页面布局 */
+  /** 登入註冊頁面布局 */
   authPageLayout: AuthPageLayoutType;
-  /** 检查更新轮询时间 */
+  /** 檢查更新轮询时间 */
   checkUpdatesInterval: number;
   /** 是否开启灰色模式 */
   colorGrayMode: boolean;
@@ -47,22 +47,22 @@ interface AppPreferences {
   contentPaddingTop: number;
   // /** 应用默认头像 */
   defaultAvatar: string;
-  /** 默认首页地址 */
+  /** 默认首頁地址 */
   defaultHomePath: string;
   // /** 开启动态标题 */
   dynamicTitle: boolean;
-  /** 是否开启检查更新 */
+  /** 是否开启檢查更新 */
   enableCheckUpdates: boolean;
-  /** 是否显示复制偏好设置按钮 */
+  /** 是否顯示复制偏好设置按钮 */
   enableCopyPreferences: boolean;
-  /** 是否显示偏好设置 */
+  /** 是否顯示偏好设置 */
   enablePreferences: boolean;
   /**
-   * @zh_CN 是否开启refreshToken
+   * @zh_TW 是否啟用 refreshToken
    */
   enableRefreshToken: boolean;
   /**
-   * @zh_CN 是否开启首选项导航栏吸顶效果
+   * @zh_TW 是否啟用偏好設定導覽列吸頂效果
    */
   enableStickyPreferencesNavigationBar: boolean;
   /** 是否移动端 */
@@ -71,18 +71,18 @@ interface AppPreferences {
   layout: LayoutType;
   /** 支持的语言 */
   locale: SupportedLanguagesType;
-  /** 登录过期模式 */
+  /** 登入过期模式 */
   loginExpiredMode: LoginExpiredModeType;
   /** 应用名 */
   name: string;
   /** 偏好设置按钮位置 */
   preferencesButtonPosition: PreferencesButtonPositionType;
   /**
-   * @zh_CN 是否开启水印
+   * @zh_TW 是否啟用浮水印
    */
   watermark: boolean;
   /**
-   * @zh_CN 水印文案
+   * @zh_TW 浮水印文案
    */
   watermarkContent: string;
   /** z-index */
@@ -94,7 +94,7 @@ interface BreadcrumbPreferences {
   enable: boolean;
   /** 面包屑是否只有一个时隐藏 */
   hideOnlyOne: boolean;
-  /** 面包屑首页图标是否可见 */
+  /** 面包屑首頁图标是否可见 */
   showHome: boolean;
   /** 面包屑图标是否可见 */
   showIcon: boolean;
@@ -115,7 +115,7 @@ interface CopyrightPreferences {
   icp: string;
   /** 备案号链接 */
   icpLink: string;
-  /** 设置面板是否显示*/
+  /** 设置面板是否顯示*/
   settingShow?: boolean;
 }
 
@@ -137,7 +137,7 @@ interface HeaderPreferences {
   hidden: boolean;
   /** 顶栏菜单位置 */
   menuAlign: LayoutHeaderMenuAlignType;
-  /** header显示模式 */
+  /** header顯示模式 */
   mode: LayoutHeaderModeType;
 }
 
@@ -168,7 +168,7 @@ interface SidebarPreferences {
   collapsed: boolean;
   /** 侧边栏折叠按钮是否可见 */
   collapsedButton: boolean;
-  /** 侧边栏折叠时，是否显示title */
+  /** 侧边栏折叠时，是否顯示title */
   collapsedShowTitle: boolean;
   /** 侧边栏折叠宽度 */
   collapseWidth: number;
@@ -197,7 +197,7 @@ interface ShortcutKeyPreferences {
   enable: boolean;
   /** 是否启用全局锁屏快捷键 */
   globalLockScreen: boolean;
-  /** 是否启用全局注销快捷键 */
+  /** 是否啟用全域登出快捷鍵 */
   globalLogout: boolean;
   /** 是否启用全局偏好设置快捷键 */
   globalPreferences: boolean;
@@ -222,15 +222,15 @@ interface TabbarPreferences {
   persist: boolean;
   /** 是否开启多标签页图标 */
   showIcon: boolean;
-  /** 显示最大化按钮 */
+  /** 顯示最大化按钮 */
   showMaximize: boolean;
-  /** 显示更多按钮 */
+  /** 顯示更多按钮 */
   showMore: boolean;
-  /** 显示刷新按钮 */
+  /** 顯示刷新按钮 */
   showRefresh: boolean;
   /** 标签页风格 */
   styleType: TabsStyleType;
-  /** 是否开启访问历史记录 */
+  /** 是否开启訪問历史记录 */
   visitHistory: boolean;
   /** 是否开启鼠标滚轮响应 */
   wheelable: boolean;
@@ -249,7 +249,7 @@ interface ThemePreferences {
   colorWarning: string;
   /** 字体大小（单位：px） */
   fontSize: number;
-  /** 当前主题 */
+  /** 目前主题 */
   mode: ThemeModeType;
   /** 圆角 */
   radius: string;
@@ -262,13 +262,13 @@ interface ThemePreferences {
 }
 
 interface TransitionPreferences {
-  /** 页面切换动画是否启用 */
+  /** 頁面切换动画是否启用 */
   enable: boolean;
-  // /** 是否开启页面加载loading */
+  // /** 是否开启頁面載入loading */
   loading: boolean;
-  /** 页面切换动画 */
+  /** 頁面切换动画 */
   name: PageTransitionType | string;
-  /** 是否开启页面加载进度动画 */
+  /** 是否开启頁面載入进度动画 */
   progress: boolean;
 }
 
@@ -281,15 +281,15 @@ interface WidgetPreferences {
   languageToggle: boolean;
   /** 是否开启锁屏功能 */
   lockScreen: boolean;
-  /** 是否显示通知部件 */
+  /** 是否顯示通知部件 */
   notification: boolean;
-  /** 显示刷新按钮 */
+  /** 顯示刷新按钮 */
   refresh: boolean;
-  /** 是否显示侧边栏显示/隐藏部件 */
+  /** 是否顯示侧边栏顯示/隐藏部件 */
   sidebarToggle: boolean;
-  /** 是否显示主题切换部件 */
+  /** 是否顯示主题切换部件 */
   themeToggle: boolean;
-  /** 是否显示时区部件 */
+  /** 是否顯示时区部件 */
   timezone: boolean;
 }
 

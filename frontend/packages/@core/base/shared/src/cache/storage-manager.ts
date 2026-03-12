@@ -47,13 +47,13 @@ class StorageManager {
       const key = this.storage.key(i);
       if (key && key.startsWith(this.prefix)) {
         const shortKey = key.replace(this.prefix, '');
-        this.getItem(shortKey); // 调用 getItem 方法检查并移除过期项
+        this.getItem(shortKey); // 调用 getItem 方法檢查并移除过期项
       }
     }
   }
 
   /**
-   * 获取存储项
+   * 取得存储项
    * @param key 键
    * @param defaultValue 当项不存在或已过期时返回的默认值
    * @returns 值，如果项已过期或解析错误则返回默认值
@@ -74,7 +74,7 @@ class StorageManager {
       return item.value;
     } catch (error) {
       console.error(`Error parsing item with key "${fullKey}":`, error);
-      this.storage.removeItem(fullKey); // 如果解析失败，删除该项
+      this.storage.removeItem(fullKey); // 如果解析失敗，删除该项
       return defaultValue;
     }
   }
@@ -106,7 +106,7 @@ class StorageManager {
   }
 
   /**
-   * 获取完整的存储键
+   * 取得完整的存储键
    * @param key 原始键
    * @returns 带前缀的完整键
    */

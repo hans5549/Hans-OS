@@ -24,11 +24,11 @@ export interface CaptchaPoint extends CaptchaData {
 }
 export interface PointSelectionCaptchaCardProps {
   /**
-   * 验证码图片
+   * 驗證碼图片
    */
   captchaImage: string;
   /**
-   * 验证码图片高度
+   * 驗證碼图片高度
    * @default '220px'
    */
   height?: number | string;
@@ -48,7 +48,7 @@ export interface PointSelectionCaptchaCardProps {
    */
   title?: string;
   /**
-   * 验证码图片宽度
+   * 驗證碼图片宽度
    * @default '300px'
    */
   width?: number | string;
@@ -93,13 +93,13 @@ export interface SliderCaptchaProps {
   contentStyle?: CSSProperties;
 
   /**
-   * @description 组件的样式
+   * @description 元件的样式
    * @default {}
    */
   wrapperStyle?: CSSProperties;
 
   /**
-   * @description 是否作为插槽使用，用于联动组件，可参考旋转校验组件
+   * @description 是否作为插槽使用，用于联动元件，可参考旋转校验元件
    * @default false
    */
   isSlot?: boolean;

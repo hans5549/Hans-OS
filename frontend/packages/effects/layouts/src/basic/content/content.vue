@@ -22,7 +22,7 @@ const { getCachedTabs, getExcludeCachedTabs, renderRouteView } =
 const { getEnabledTransition, getTransitionName } = useLayoutHook();
 
 /**
- * 是否显示component
+ * 是否顯示component
  * @param route
  */
 const showComponent = (route: RouteLocationNormalizedLoadedGeneric) => {

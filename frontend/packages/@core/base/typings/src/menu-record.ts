@@ -2,7 +2,7 @@ import type { Component } from 'vue';
 import type { RouteRecordRaw } from 'vue-router';
 
 /**
- * 扩展路由原始对象
+ * 扩展路由原始物件
  */
 type ExRouteRecordRaw = RouteRecordRaw & {
   parent?: string;
@@ -26,7 +26,7 @@ interface MenuRecordBadgeRaw {
 }
 
 /**
- * 菜单原始对象
+ * 菜单原始物件
  */
 interface MenuRecordRaw extends MenuRecordBadgeRaw {
   /**
@@ -55,19 +55,19 @@ interface MenuRecordRaw extends MenuRecordBadgeRaw {
    */
   order?: number;
   /**
-   * 父级路径
+   * 父级路徑
    */
   parent?: string;
   /**
-   * 所有父级路径
+   * 所有父级路徑
    */
   parents?: string[];
   /**
-   * 菜单路径，唯一，可当作key
+   * 菜单路徑，唯一，可当作key
    */
   path: string;
   /**
-   * 是否显示菜单
+   * 是否顯示菜单
    * @default true
    */
   show?: boolean;

@@ -1,5 +1,5 @@
 /**
- * 参考 https://github.com/jspm/vite-plugin-jspm，调整为需要的功能
+ * 参考 https://github.com/jspm/vite-plugin-jspm，調整为需要的功能
  */
 import type { GeneratorOptions } from '@jspm/generator';
 import type { Plugin } from 'vite';

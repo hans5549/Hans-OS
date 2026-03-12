@@ -41,7 +41,7 @@ describe('loadScript', () => {
     let capturedScript: HTMLScriptElement | null = null;
 
     // 拦截 append，捕获 script 元素但不插入 DOM，
-    // 防止 happy-dom v20+ 自动触发 load 事件
+    // 防止 happy-dom v20+ 自动觸發 load 事件
     const appendSpy = vi
       .spyOn(document.head, 'append')
       .mockImplementation((...nodes) => {

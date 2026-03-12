@@ -52,7 +52,7 @@ export default function useDependencies(
   const dynamicRules = ref<FormSchemaRuleType>();
 
   const triggerFieldValues = computed(() => {
-    // 该字段可能会被多个字段触发
+    // 该字段可能会被多个字段觸發
     const triggerFields = getDependencies()?.triggerFields ?? [];
     return triggerFields.map((dep) => {
       return resolveValueByFieldName(values.value, dep);

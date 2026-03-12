@@ -26,7 +26,7 @@ export function setDefaultModalProps(props: Partial<ModalProps>) {
 export function useVbenModal<TParentModalProps extends ModalProps = ModalProps>(
   options: ModalApiOptions = {},
 ) {
-  // Modal一般会抽离出来，所以如果有传入 connectedComponent，则表示为外部调用，与内部组件进行连接
+  // Modal一般会抽离出来，所以如果有传入 connectedComponent，则表示为外部调用，与内部元件进行连接
   // 外部的Modal通过provide/inject传递api
 
   const { connectedComponent } = options;

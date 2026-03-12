@@ -61,7 +61,7 @@ export class FormApi {
   public store: Store<VbenFormProps>;
 
   /**
-   * 组件实例映射
+   * 元件实例映射
    */
   private componentRefMap: Map<string, unknown> = new Map();
 
@@ -92,9 +92,9 @@ export class FormApi {
   }
 
   /**
-   * 获取字段组件实例
+   * 取得字段元件实例
    * @param fieldName 字段名
-   * @returns 组件实例
+   * @returns 元件实例
    */
   getFieldComponentRef<T = ComponentPublicInstance>(
     fieldName: string,
@@ -122,7 +122,7 @@ export class FormApi {
   }
 
   /**
-   * 获取当前聚焦的字段，如果没有聚焦的字段则返回undefined
+   * 取得目前聚焦的字段，如果沒有聚焦的字段则返回undefined
    */
   getFocusedField() {
     for (const fieldName of this.componentRefMap.keys()) {
@@ -219,7 +219,7 @@ export class FormApi {
   }
 
   /**
-   * 根据字段名移除表单项
+   * 根據字段名移除表单项
    * @param fields
    */
   async removeSchemaByFields(fields: string[]) {
@@ -254,7 +254,7 @@ export class FormApi {
 
   /**
    * 滚动到第一个错误字段
-   * @param errors 验证错误对象
+   * @param errors 验证错误物件
    */
   scrollToFirstError(errors: Record<string, any> | string) {
     // https://github.com/logaretm/vee-validate/discussions/3835
@@ -269,7 +269,7 @@ export class FormApi {
       `[name="${firstErrorFieldName}"]`,
     ) as HTMLElement;
 
-    // 如果通过 name 属性找不到，尝试通过组件引用查找, 正常情况下不会走到这，怕哪天 vee-validate 改了 name 属性有个兜底的
+    // 如果通过 name 属性找不到，尝试通过元件引用查找, 正常情況下不会走到这，怕哪天 vee-validate 改了 name 属性有个兜底的
     if (!el) {
       const componentRef = this.getFieldComponentRef(firstErrorFieldName);
       if (componentRef && componentRef.$el instanceof HTMLElement) {
@@ -278,7 +278,7 @@ export class FormApi {
     }
 
     if (el) {
-      // 滚动到错误字段，添加一些偏移量以确保字段完全可见
+      // 滚动到错误字段，添加一些偏移量以確保字段完全可见
       el.scrollIntoView({
         behavior: 'smooth',
         block: 'center',
@@ -329,8 +329,8 @@ export class FormApi {
 
     /**
      * 合并算法有待改进，目前的算法不支持object类型的值。
-     * antd的日期时间相关组件的值类型为dayjs对象
-     * element-plus的日期时间相关组件的值类型可能为Date对象
+     * antd的日期时间相关元件的值类型为dayjs物件
+     * element-plus的日期时间相关元件的值类型可能为Date物件
      * 以上两种类型需要排除深度合并
      */
     const fieldMergeFn = createMerge((obj, key, value) => {
@@ -465,11 +465,11 @@ export class FormApi {
         if (Array.isArray(value)) {
           return value.join(sep);
         } else if (typeof value === 'string') {
-          // 处理空字符串的情况
+          // 处理空字符串的情況
           if (value === '') {
             return [];
           }
-          // 处理复杂分隔符的情况
+          // 处理复杂分隔符的情況
           const escapedSeparator = sep.replaceAll(
             /[.*+?^${}()|[\]\\]/g,
             String.raw`\$&`,
@@ -498,7 +498,7 @@ export class FormApi {
     arrayToStringFields.forEach((fieldConfig) => {
       if (Array.isArray(fieldConfig)) {
         const [fields, separator = ','] = fieldConfig;
-        // 根据类型定义，fields 应该始终是字符串数组
+        // 根據类型定义，fields 应该始终是字符串数组
         if (!Array.isArray(fields)) {
           console.warn(
             `Invalid field configuration: fields should be an array of strings, got ${typeof fields}`,

@@ -17,7 +17,7 @@ const MOCK_ROLES_OPTIONS: BasicOption[] = [
     value: 'super',
   },
   {
-    label: '用户',
+    label: '使用者',
     value: 'user',
   },
   {
@@ -36,7 +36,7 @@ const formSchema = computed((): VbenFormSchema[] => {
     {
       fieldName: 'username',
       component: 'Input',
-      label: '用户名',
+      label: '使用者名',
     },
     {
       fieldName: 'roles',

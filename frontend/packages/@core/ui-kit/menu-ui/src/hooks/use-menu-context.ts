@@ -7,14 +7,14 @@ import { findComponentUpward } from '../utils';
 const menuContextKey = Symbol('menuContext');
 
 /**
- * @zh_CN Provide menu context
+ * @zh_TW Provide menu context
  */
 function createMenuContext(injectMenuData: MenuProvider) {
   provide(menuContextKey, injectMenuData);
 }
 
 /**
- * @zh_CN Provide menu context
+ * @zh_TW Provide menu context
  */
 function createSubMenuContext(injectSubMenuData: SubMenuProvider) {
   const instance = getCurrentInstance();
@@ -23,7 +23,7 @@ function createSubMenuContext(injectSubMenuData: SubMenuProvider) {
 }
 
 /**
- * @zh_CN Inject menu context
+ * @zh_TW Inject menu context
  */
 function useMenuContext() {
   const instance = getCurrentInstance();
@@ -35,7 +35,7 @@ function useMenuContext() {
 }
 
 /**
- * @zh_CN Inject menu context
+ * @zh_TW Inject menu context
  */
 function useSubMenuContext() {
   const instance = getCurrentInstance();

@@ -9,7 +9,7 @@ const formSchema = computed(() => {
       value: true,
       fieldName: 'accountPassword',
       label: '账户密码',
-      description: '当前密码强度：强',
+      description: '目前密码强度：强',
     },
     {
       value: true,
@@ -20,8 +20,8 @@ const formSchema = computed(() => {
     {
       value: true,
       fieldName: 'securityQuestion',
-      label: '密保问题',
-      description: '未设置密保问题，密保问题可有效保护账户安全',
+      label: '密保問題',
+      description: '未设置密保問題，密保問題可有效保护账户安全',
     },
     {
       value: true,

@@ -40,7 +40,7 @@ const { authPanelCenter, authPanelLeft, authPanelRight, isDark } =
   usePreferences();
 
 /**
- * @zh_CN 根据主题选择合适的 logo 图标
+ * @zh_TW 根據主题选择合适的 logo 图标
  */
 const logoSrc = computed(() => {
   // 如果是暗色主题且提供了 logoDark，则使用暗色主题的 logo
@@ -103,7 +103,7 @@ const logoSrc = computed(() => {
       </div>
     </slot>
 
-    <!-- 系统介绍 -->
+    <!-- 系統介绍 -->
     <div v-if="!authPanelCenter" class="relative hidden w-0 flex-1 lg:block">
       <div
         class="absolute inset-0 size-full bg-background-deep dark:bg-[#070709]"

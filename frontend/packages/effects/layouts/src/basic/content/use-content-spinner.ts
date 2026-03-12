@@ -7,10 +7,10 @@ function useContentSpinner() {
   const spinning = ref(false);
   const startTime = ref(0);
   const router = useRouter();
-  const minShowTime = 500; // 最小显示时间
+  const minShowTime = 500; // 最小顯示时间
   const enableLoading = computed(() => preferences.transition.loading);
 
-  // 结束加载动画
+  // 结束載入动画
   const onEnd = () => {
     if (!enableLoading.value) {
       return;

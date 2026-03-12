@@ -18,7 +18,7 @@ export async function run(options: RunOptions) {
   //   (item) => item.packageJson.name === '@vben/website',
   // );
 
-  // 只显示有对应命令的包
+  // 只顯示有对应命令的包
   const selectPkgs = packages.filter((pkg) => {
     return (pkg?.packageJson as Record<string, any>)?.scripts?.[command];
   });

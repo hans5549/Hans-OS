@@ -6,7 +6,7 @@ function updateCSSVariables(
   variables: { [key: string]: string },
   id = '__vben-styles__',
 ): void {
-  // 获取或创建内联样式表元素
+  // 取得或建立内联样式表元素
   const styleElement =
     document.querySelector(`#${id}`) || document.createElement('style');
 

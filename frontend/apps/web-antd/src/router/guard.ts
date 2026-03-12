@@ -15,13 +15,13 @@ import { generateAccess } from './access';
  * @param router
  */
 function setupCommonGuard(router: Router) {
-  // 记录已经加载的页面
+  // 记录已经載入的頁面
   const loadedPaths = new Set<string>();
 
   router.beforeEach((to) => {
     to.meta.loaded = loadedPaths.has(to.path);
 
-    // 页面加载进度条
+    // 頁面載入进度条
     if (!to.meta.loaded && preferences.transition.progress) {
       startProgress();
     }
@@ -29,11 +29,11 @@ function setupCommonGuard(router: Router) {
   });
 
   router.afterEach((to) => {
-    // 记录页面是否加载,如果已经加载，后续的页面切换动画等效果不在重复执行
+    // 记录頁面是否載入,如果已经載入，后续的頁面切换动画等效果不在重复执行
 
     loadedPaths.add(to.path);
 
-    // 关闭页面加载进度条
+    // 关闭頁面載入进度条
     if (preferences.transition.progress) {
       stopProgress();
     }
@@ -41,7 +41,7 @@ function setupCommonGuard(router: Router) {
 }
 
 /**
- * 权限访问守卫配置
+ * 權限訪問守卫配置
  * @param router
  */
 function setupAccessGuard(router: Router) {
@@ -50,7 +50,7 @@ function setupAccessGuard(router: Router) {
     const userStore = useUserStore();
     const authStore = useAuthStore();
 
-    // 基本路由，这些路由不需要进入权限拦截
+    // 基本路由，这些路由不需要进入權限拦截
     if (coreRouteNames.includes(to.name as string)) {
       if (to.path === LOGIN_PATH && accessStore.accessToken) {
         return decodeURIComponent(
@@ -62,14 +62,14 @@ function setupAccessGuard(router: Router) {
       return true;
     }
 
-    // accessToken 检查
+    // accessToken 檢查
     if (!accessStore.accessToken) {
-      // 明确声明忽略权限访问权限，则可以访问
+      // 明确声明忽略權限訪問權限，则可以訪問
       if (to.meta.ignoreAccess) {
         return true;
       }
 
-      // 没有访问权限，跳转登录页面
+  // 沒有存取權限，跳轉登入頁面
       if (to.fullPath !== LOGIN_PATH) {
         return {
           path: LOGIN_PATH,
@@ -78,7 +78,7 @@ function setupAccessGuard(router: Router) {
             to.fullPath === preferences.app.defaultHomePath
               ? {}
               : { redirect: encodeURIComponent(to.fullPath) },
-          // 携带当前跳转的页面，登录后重新跳转该页面
+          // 攜帶目前跳轉的頁面，登入后重新跳轉该頁面
           replace: true,
         };
       }
@@ -91,7 +91,7 @@ function setupAccessGuard(router: Router) {
     }
 
     // 生成路由表
-    // 当前登录用户拥有的角色标识列表
+    // 目前登入使用者擁有的角色識別清單
     const userInfo = userStore.userInfo || (await authStore.fetchUserInfo());
     const userRoles = userInfo.roles ?? [];
 
@@ -99,7 +99,7 @@ function setupAccessGuard(router: Router) {
     const { accessibleMenus, accessibleRoutes } = await generateAccess({
       roles: userRoles,
       router,
-      // 则会在菜单中显示，但是访问会被重定向到403
+      // 则会在菜单中顯示，但是訪問会被重定向到403
       routes: accessRoutes,
     });
 
@@ -120,13 +120,13 @@ function setupAccessGuard(router: Router) {
 }
 
 /**
- * 项目守卫配置
+ * 專案守卫配置
  * @param router
  */
 function createRouterGuard(router: Router) {
   /** 通用 */
   setupCommonGuard(router);
-  /** 权限访问 */
+  /** 權限訪問 */
   setupAccessGuard(router);
 }
 

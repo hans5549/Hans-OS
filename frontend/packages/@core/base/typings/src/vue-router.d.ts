@@ -7,7 +7,7 @@ interface RouteMeta {
    */
   activeIcon?: string;
   /**
-   * 当前激活的菜单，有时候不想激活现有菜单，需要激活父级菜单时使用
+   * 目前激活的菜单，有时候不想激活现有菜单，需要激活父级菜单时使用
    */
   activePath?: string;
   /**
@@ -21,7 +21,7 @@ interface RouteMeta {
    */
   affixTabOrder?: number;
   /**
-   * 需要特定的角色标识才可以访问
+   * 需要特定的角色識別才可以訪問
    * @default []
    */
   authority?: string[];
@@ -48,26 +48,26 @@ interface RouteMeta {
    */
   domCached?: boolean;
   /**
-   * 路由的完整路径作为key（默认true）
+   * 路由的完整路徑作为key（默认true）
    */
   fullPathKey?: boolean;
   /**
-   * 当前路由的子级在菜单中不展现
+   * 目前路由的子级在菜单中不展现
    * @default false
    */
   hideChildrenInMenu?: boolean;
   /**
-   * 当前路由在面包屑中不展现
+   * 目前路由在面包屑中不展现
    * @default false
    */
   hideInBreadcrumb?: boolean;
   /**
-   * 当前路由在菜单中不展现
+   * 目前路由在菜单中不展现
    * @default false
    */
   hideInMenu?: boolean;
   /**
-   * 当前路由在标签页不展现
+   * 目前路由在标签页不展现
    * @default false
    */
   hideInTab?: boolean;
@@ -80,7 +80,7 @@ interface RouteMeta {
    */
   iframeSrc?: string;
   /**
-   * 忽略权限，直接可以访问
+   * 忽略權限，直接可以訪問
    * @default false
    */
   ignoreAccess?: boolean;
@@ -89,20 +89,20 @@ interface RouteMeta {
    */
   keepAlive?: boolean;
   /**
-   * 外链-跳转路径
+   * 外链-跳轉路徑
    */
   link?: string;
   /**
-   * 路由是否已经加载过
+   * 路由是否已经載入过
    */
   loaded?: boolean;
   /**
-   * 标签页最大打开数量
+   * 标签页最大開啟数量
    * @default -1
    */
   maxNumOfOpenTab?: number;
   /**
-   * 菜单可以看到，但是访问会被重定向到403
+   * 菜单可以看到，但是訪問会被重定向到403
    */
   menuVisibleWithForbidden?: boolean;
   /**
@@ -110,7 +110,7 @@ interface RouteMeta {
    */
   noBasicLayout?: boolean;
   /**
-   * 在新窗口打开
+   * 在新窗口開啟
    */
   openInNewWindow?: boolean;
   /**
@@ -118,7 +118,7 @@ interface RouteMeta {
    */
   order?: number;
   /**
-   * 菜单所携带的参数
+   * 菜单所攜帶的参数
    */
   query?: Recordable;
   /**

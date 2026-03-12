@@ -8,7 +8,7 @@ import { useVbenModal } from '@vben-core/popup-ui';
 interface Props {
   // 轮询时间，分钟
   checkUpdatesInterval?: number;
-  // 检查更新的地址
+  // 檢查更新的地址
   checkUpdateUrl?: string;
 }
 
@@ -64,7 +64,7 @@ async function checkForUpdates() {
     return;
   }
 
-  // 首次运行时不提示更新
+  // 首次執行时不提示更新
   if (!lastVersionTag.value) {
     lastVersionTag.value = versionTag;
     return;
@@ -85,7 +85,7 @@ function start() {
     return;
   }
 
-  // 每 checkUpdatesInterval(默认值为1) 分钟检查一次
+  // 每 checkUpdatesInterval(默认值为1) 分钟檢查一次
   timer.value = setInterval(
     checkForUpdates,
     props.checkUpdatesInterval * 60 * 1000,

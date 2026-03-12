@@ -8,7 +8,7 @@ import {
 } from '@vben-core/shared/utils';
 
 /**
- * 依次从插槽、attrs、props、state 中获取值
+ * 依次从插槽、attrs、props、state 中取得值
  * @param key
  * @param props
  * @param state
@@ -23,7 +23,7 @@ export function usePriorityValue<
   const attrs = useAttrs() as T;
 
   const value = computed((): T[K] => {
-    // props不管有没有传，都会有默认值，会影响这里的顺序，
+    // props不管有沒有传，都会有默认值，会影响這裡的顺序，
     // 通过判断原始props是否有值来判断是否传入
     const rawProps = (instance?.vnode?.props || {}) as T;
 
@@ -48,7 +48,7 @@ export function usePriorityValue<
 }
 
 /**
- * 批量获取state中的值（每个值都是ref）
+ * 批量取得state中的值（每个值都是ref）
  * @param props
  * @param state
  */
@@ -66,7 +66,7 @@ export function usePriorityValues<
 }
 
 /**
- * 批量获取state中的值（集中在一个computed，用于透传）
+ * 批量取得state中的值（集中在一个computed，用于透传）
  * @param props
  * @param state
  */

@@ -16,7 +16,7 @@ export interface ModalProps {
    */
   appendToMain?: boolean;
   /**
-   * 是否显示边框
+   * 是否顯示边框
    * @default false
    */
   bordered?: boolean;
@@ -33,7 +33,7 @@ export interface ModalProps {
   class?: string;
 
   /**
-   * 是否显示右上角的关闭按钮
+   * 是否顯示右上角的关闭按钮
    * @default true
    */
   closable?: boolean;
@@ -75,7 +75,7 @@ export interface ModalProps {
    */
   draggable?: boolean;
   /**
-   * 是否显示底部
+   * 是否顯示底部
    * @default true
    */
   footer?: boolean;
@@ -86,23 +86,23 @@ export interface ModalProps {
    */
   fullscreen?: boolean;
   /**
-   * 是否显示全屏按钮
+   * 是否顯示全屏按钮
    * @default true
    */
   fullscreenButton?: boolean;
   /**
-   * 是否显示顶栏
+   * 是否顯示顶栏
    * @default true
    */
   header?: boolean;
   headerClass?: string;
   /**
-   * 弹窗是否显示
+   * 弹窗是否顯示
    * @default false
    */
   loading?: boolean;
   /**
-   * 是否显示遮罩
+   * 是否顯示遮罩
    * @default true
    */
   modal?: boolean;
@@ -115,12 +115,12 @@ export interface ModalProps {
    */
   overlayBlur?: number;
   /**
-   * 是否显示取消按钮
+   * 是否顯示取消按钮
    * @default true
    */
   showCancelButton?: boolean;
   /**
-   * 是否显示确认按钮
+   * 是否顯示确认按钮
    * @default true
    */
   showConfirmButton?: boolean;
@@ -143,7 +143,7 @@ export interface ModalProps {
 }
 
 export interface ModalState extends ModalProps {
-  /** 弹窗打开状态 */
+  /** 弹窗開啟状态 */
   isOpen?: boolean;
   /**
    * 共享数据
@@ -159,35 +159,35 @@ export type ExtendedModalApi = ModalApi & {
 
 export interface ModalApiOptions extends ModalState {
   /**
-   * 独立的弹窗组件
+   * 独立的弹窗元件
    */
   connectedComponent?: Component;
   /**
-   * 关闭前的回调，返回 false 可以阻止关闭
+   * 关闭前的回呼，返回 false 可以阻止关闭
    * @returns
    */
   onBeforeClose?: () => MaybePromise<boolean | undefined>;
   /**
-   * 点击取消按钮的回调
+   * 点击取消按钮的回呼
    */
   onCancel?: () => void;
   /**
-   * 弹窗关闭动画结束的回调
+   * 弹窗关闭动画结束的回呼
    * @returns
    */
   onClosed?: () => void;
   /**
-   * 点击确定按钮的回调
+   * 点击确定按钮的回呼
    */
   onConfirm?: () => void;
   /**
-   * 弹窗状态变化回调
+   * 弹窗状态变化回呼
    * @param isOpen
    * @returns
    */
   onOpenChange?: (isOpen: boolean) => void;
   /**
-   * 弹窗打开动画结束的回调
+   * 弹窗開啟动画结束的回呼
    * @returns
    */
   onOpened?: () => void;

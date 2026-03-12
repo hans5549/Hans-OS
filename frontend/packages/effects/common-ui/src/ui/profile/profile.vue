@@ -18,7 +18,7 @@ defineOptions({
 });
 
 withDefaults(defineProps<Props>(), {
-  title: '关于项目',
+  title: '关于專案',
   tabs: () => [],
 });
 

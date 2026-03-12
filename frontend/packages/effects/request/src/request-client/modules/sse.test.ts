@@ -19,7 +19,7 @@ beforeEach(() => {
   );
 });
 
-// 创建 fetch mock
+// 建立 fetch mock
 const createFetchMock = (chunks: string[], ok = true) => {
   const encoder = new TextEncoder();
   let index = 0;
@@ -102,7 +102,7 @@ describe('sSE', () => {
       fulfilled: interceptor,
     });
 
-    // 创建 fetch mock，并挂到全局
+    // 建立 fetch mock，并挂到全局
     const fetchMock = createFetchMock(['data']);
     vi.stubGlobal('fetch', fetchMock);
 

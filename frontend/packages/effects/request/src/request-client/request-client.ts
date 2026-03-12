@@ -52,7 +52,7 @@ class RequestClient {
   public upload: FileUploader['upload'];
 
   /**
-   * 构造函数，用于创建Axios实例
+   * 建構函式，用于建立Axios实例
    * @param options - Axios请求配置，可选
    */
   constructor(options: RequestClientOptions = {}) {
@@ -111,7 +111,7 @@ class RequestClient {
   }
 
   /**
-   * 获取基础URL
+   * 取得基础URL
    */
   public getBaseUrl() {
     return this.instance.defaults.baseURL;

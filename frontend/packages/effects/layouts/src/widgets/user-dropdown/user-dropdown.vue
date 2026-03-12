@@ -36,7 +36,7 @@ interface Props {
    */
   avatar?: string;
   /**
-   * @zh_CN 描述
+   * @zh_TW 描述
    */
   description?: string;
   /**
@@ -60,9 +60,9 @@ interface Props {
    * 文本
    */
   text?: string;
-  /** 触发方式 */
+  /** 觸發方式 */
   trigger?: 'both' | 'click' | 'hover';
-  /** hover触发时，延迟响应的时间 */
+  /** hover觸發时，延迟响应的时间 */
   hoverDelay?: number;
 }
 

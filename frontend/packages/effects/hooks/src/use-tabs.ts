@@ -55,7 +55,7 @@ export function useTabs() {
   }
 
   /**
-   * 设置当前标签页的标题
+   * 设置目前标签页的标题
    *
    * @description 支持设置静态标题字符串或动态计算标题
    * @description 动态标题会在每次渲染时重新计算,适用于多语言或状态相关的标题
@@ -82,7 +82,7 @@ export function useTabs() {
   }
 
   /**
-   * 获取操作是否禁用
+   * 取得操作是否禁用
    * @param tab
    */
   function getTabDisableState(tab: RouteLocationNormalized = route) {
@@ -96,7 +96,7 @@ export function useTabs() {
     const affixTab = meta?.affixTab ?? false;
     const isCurrentTab = route.path === tab.path;
 
-    // 当前处于最左侧或者减去固定标签页的数量等于0
+    // 目前处于最左侧或者减去固定标签页的数量等于0
     const disabledCloseLeft =
       index === 0 || index - affixTabs.length <= 0 || !isCurrentTab;
 

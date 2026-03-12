@@ -30,14 +30,14 @@ describe('useAccessStore', () => {
     expect(store.accessToken).toBe('xyz789');
   });
 
-  // 测试设置空的访问菜单列表
+  // 测试设置空的訪問菜单清單
   it('handles empty accessMenus correctly', () => {
     const store = useAccessStore();
     store.setAccessMenus([]);
     expect(store.accessMenus).toEqual([]);
   });
 
-  // 测试设置空的访问路由列表
+  // 测试设置空的訪問路由清單
   it('handles empty accessRoutes correctly', () => {
     const store = useAccessStore();
     store.setAccessRoutes([]);

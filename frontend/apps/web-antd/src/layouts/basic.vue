@@ -34,7 +34,7 @@ const notifications = ref<NotificationItem[]>([
   {
     id: 2,
     avatar: 'https://avatar.vercel.sh/1',
-    date: '刚刚',
+    date: '剛剛',
     isRead: false,
     message: '描述信息描述信息描述信息',
     title: '朱偏右 回复了你',
@@ -50,7 +50,7 @@ const notifications = ref<NotificationItem[]>([
   {
     id: 4,
     avatar: 'https://avatar.vercel.sh/satori',
-    date: '1天前',
+    date: '1 天前',
     isRead: false,
     message: '描述信息描述信息描述信息',
     title: '代办提醒',
@@ -58,19 +58,19 @@ const notifications = ref<NotificationItem[]>([
   {
     id: 5,
     avatar: 'https://avatar.vercel.sh/satori',
-    date: '1天前',
+    date: '1 天前',
     isRead: false,
     message: '描述信息描述信息描述信息',
-    title: '跳转Workspace示例',
+    title: '跳轉Workspace示例',
     link: '/workspace',
   },
   {
     id: 6,
     avatar: 'https://avatar.vercel.sh/satori',
-    date: '1天前',
+    date: '1 天前',
     isRead: false,
     message: '描述信息描述信息描述信息',
-    title: '跳转外部链接示例',
+    title: '跳轉外部链接示例',
     link: 'https://doc.vben.pro',
   },
 ]);

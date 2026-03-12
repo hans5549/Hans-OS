@@ -122,7 +122,7 @@ export class DrawerApi {
   }
 
   /**
-   * 弹窗关闭动画播放完毕后的回调
+   * 弹窗关闭动画播放完毕后的回呼
    */
   onClosed() {
     if (!this.state.isOpen) {
@@ -138,7 +138,7 @@ export class DrawerApi {
   }
 
   /**
-   * 弹窗打开动画播放完毕后的回调
+   * 弹窗開啟动画播放完毕后的回呼
    */
   onOpened() {
     if (this.state.isOpen) {

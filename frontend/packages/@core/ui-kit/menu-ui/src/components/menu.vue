@@ -226,7 +226,7 @@ watch(activePath, () => {
 function initMenu() {
   const parentPaths = getActivePaths();
 
-  // 展开该菜单项的路径上所有子菜单
+  // 展开该菜单项的路徑上所有子菜单
   // expand all subMenus of the menu item
   parentPaths.forEach((path) => {
     const subMenu = subMenus.value[path];

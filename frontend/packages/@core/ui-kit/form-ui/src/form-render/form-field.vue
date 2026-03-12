@@ -68,7 +68,7 @@ const FieldComponent = computed(() => {
     ? componentMap.value[component]
     : component;
   if (!finalComponent) {
-    // 组件未注册
+    // 元件未註冊
     console.warn(`Component ${component} is not registered`);
   }
   return finalComponent;
@@ -212,7 +212,7 @@ function fieldBindEvent(slotProps: Record<string, any>) {
     (isString(component) ? componentBindEventMap.value?.[component] : null);
 
   let value = modelValue;
-  // antd design 的一些组件会传递一个 event 对象
+  // antd design 的一些元件会传递一个 event 物件
   if (modelValue && isObject(modelValue) && bindEventField) {
     value = isEventObjectLike(modelValue)
       ? modelValue?.target?.[bindEventField]
@@ -265,7 +265,7 @@ function autofocus() {
   if (
     fieldComponentRef.value &&
     isFunction(fieldComponentRef.value.focus) &&
-    // 检查当前是否有元素被聚焦
+    // 檢查目前是否有元素被聚焦
     document.activeElement !== fieldComponentRef.value
   ) {
     fieldComponentRef.value?.focus?.();

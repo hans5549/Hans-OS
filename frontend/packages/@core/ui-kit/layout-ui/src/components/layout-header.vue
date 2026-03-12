@@ -17,7 +17,7 @@ interface Props {
    */
   isMobile: boolean;
   /**
-   * 是否显示
+   * 是否顯示
    */
   show: boolean;
   /**

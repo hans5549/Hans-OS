@@ -17,11 +17,11 @@ import { useToggle } from '@vueuse/core';
 
 interface Props {
   /**
-   * 显示圆点
+   * 顯示圆点
    */
   dot?: boolean;
   /**
-   * 消息列表
+   * 消息清單
    */
   notifications?: NotificationItem[];
 }
@@ -62,7 +62,7 @@ function handleClear() {
 }
 
 function handleClick(item: NotificationItem) {
-  // 如果通知项有链接，点击时跳转
+  // 如果通知项有链接，点击时跳轉
   if (item.link) {
     navigateTo(item.link, item.query, item.state);
   }
@@ -74,7 +74,7 @@ function navigateTo(
   state?: Record<string, any>,
 ) {
   if (link.startsWith('http://') || link.startsWith('https://')) {
-    // 外部链接，在新标签页打开
+    // 外部链接，在新标签页開啟
     window.open(link, '_blank');
   } else {
     // 内部路由链接，支持 query 参数和 state

@@ -1,24 +1,24 @@
 /**
- * @zh_CN 栈数据结构
+ * @zh_TW 栈数据结构
  */
 export class Stack<T> {
   /**
-   * @zh_CN 栈内元素数量
+   * @zh_TW 栈内元素数量
    */
   get size() {
     return this.items.length;
   }
   /**
-   * @zh_CN 是否去重
+   * @zh_TW 是否去重
    */
   private readonly dedup: boolean;
   /**
-   * @zh_CN 栈内元素
+   * @zh_TW 栈内元素
    */
   private items: T[] = [];
 
   /**
-   * @zh_CN 栈的最大容量
+   * @zh_TW 栈的最大容量
    */
   private readonly maxSize?: number;
 
@@ -28,14 +28,14 @@ export class Stack<T> {
   }
 
   /**
-   * @zh_CN 清空栈内元素
+   * @zh_TW 清空栈内元素
    */
   clear() {
     this.items.length = 0;
   }
 
   /**
-   * @zh_CN 查看栈顶元素
+   * @zh_TW 查看栈顶元素
    * @returns 栈顶元素
    */
   peek(): T | undefined {
@@ -43,7 +43,7 @@ export class Stack<T> {
   }
 
   /**
-   * @zh_CN 出栈
+   * @zh_TW 出栈
    * @returns 栈顶元素
    */
   pop(): T | undefined {
@@ -51,7 +51,7 @@ export class Stack<T> {
   }
 
   /**
-   * @zh_CN 入栈
+   * @zh_TW 入栈
    * @param items 要入栈的元素
    */
   push(...items: T[]) {
@@ -70,22 +70,22 @@ export class Stack<T> {
     });
   }
   /**
-   * @zh_CN 移除栈内元素
-   * @param itemList 要移除的元素列表
+   * @zh_TW 移除栈内元素
+   * @param itemList 要移除的元素清單
    */
   remove(...itemList: T[]) {
     this.items = this.items.filter((i) => !itemList.includes(i));
   }
   /**
-   * @zh_CN 保留栈内元素
-   * @param itemList 要保留的元素列表
+   * @zh_TW 保留栈内元素
+   * @param itemList 要保留的元素清單
    */
   retain(itemList: T[]) {
     this.items = this.items.filter((i) => itemList.includes(i));
   }
 
   /**
-   * @zh_CN 转换为数组
+   * @zh_TW 转换为数组
    * @returns 栈内元素数组
    */
   toArray(): T[] {
@@ -94,7 +94,7 @@ export class Stack<T> {
 }
 
 /**
- * @zh_CN 创建一个栈实例
+ * @zh_TW 建立一个栈实例
  * @param dedup 是否去重
  * @param maxSize 栈的最大容量
  * @returns 栈实例

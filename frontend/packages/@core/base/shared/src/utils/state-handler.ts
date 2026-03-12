@@ -12,7 +12,7 @@ export class StateHandler {
     this.clearPromises();
   }
 
-  // 触发状态为 false 时，reject
+  // 觸發状态为 false 时，reject
   setConditionFalse() {
     this.condition = false;
     if (this.rejectCondition) {
@@ -21,7 +21,7 @@ export class StateHandler {
     }
   }
 
-  // 触发状态为 true 时，resolve
+  // 觸發状态为 true 时，resolve
   setConditionTrue() {
     this.condition = true;
     if (this.resolveCondition) {

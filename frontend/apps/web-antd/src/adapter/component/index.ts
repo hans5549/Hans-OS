@@ -1,6 +1,6 @@
 /**
- * 通用组件共同的使用的基础组件，原先放在 adapter/form 内部，限制了使用范围，这里提取出来，方便其他地方使用
- * 可用于 vben-form、vben-modal、vben-drawer 等组件使用,
+ * 通用元件共同的使用的基础元件，原先放在 adapter/form 内部，限制了使用范围，這裡提取出来，方便其他地方使用
+ * 可用于 vben-form、vben-modal、vben-drawer 等元件使用,
  */
 
 /* eslint-disable vue/one-component-per-file */
@@ -105,7 +105,7 @@ const withDefaultPlaceholder = <T extends Component>(
         props?.placeholder ||
         attrs?.placeholder ||
         $t(`ui.placeholder.${type}`);
-      // 透传组件暴露的方法
+      // 透传元件暴露的方法
       const innerRef = ref();
       expose(
         new Proxy(
@@ -127,7 +127,7 @@ const withDefaultPlaceholder = <T extends Component>(
 };
 
 const withPreviewUpload = () => {
-  // 检查是否为图片文件的辅助函数
+  // 檢查是否为图片文件的辅助函数
   const isImageFile = (file: UploadFile): boolean => {
     const imageExtensions = new Set([
       'bmp',
@@ -154,7 +154,7 @@ const withPreviewUpload = () => {
     }
     return file.type.startsWith('image/');
   };
-  // 创建默认的上传按钮插槽
+  // 建立默认的上传按钮插槽
   const createDefaultSlotsWithUpload = (
     listType: string,
     placeholder: string,
@@ -188,7 +188,7 @@ const withPreviewUpload = () => {
     visible: Ref<boolean>,
     fileList: Ref<UploadProps['fileList']>,
   ) => {
-    // 如果当前文件不是图片，直接打开
+    // 如果目前文件不是图片，直接開啟
     if (!isImageFile(file)) {
       if (file.url) {
         window.open(file.url, '_blank');
@@ -219,7 +219,7 @@ const withPreviewUpload = () => {
       isImageFile(element),
     );
 
-    // 为所有没有预览地址的图片生成预览
+    // 为所有沒有预览地址的图片生成预览
     for (const imgFile of imageFiles) {
       if (!imgFile.url && !imgFile.preview && imgFile.originFileObj) {
         imgFile.preview = (await getBase64(imgFile.originFileObj)) as string;
@@ -228,7 +228,7 @@ const withPreviewUpload = () => {
     const container: HTMLElement | null = document.createElement('div');
     document.body.append(container);
 
-    // 用于追踪组件是否已卸载
+    // 用于追踪元件是否已卸载
     let isUnmounted = false;
 
     const PreviewWrapper = {
@@ -241,12 +241,12 @@ const withPreviewUpload = () => {
               class: 'hidden',
               preview: {
                 visible: visible.value,
-                // 设置初始显示的图片索引
+                // 设置初始顯示的图片索引
                 current: imageFiles.findIndex((f) => f.uid === file.uid),
                 onVisibleChange: (value: boolean) => {
                   visible.value = value;
                   if (!value) {
-                    // 延迟清理，确保动画完成
+                    // 延迟清理，確保动画完成
                     setTimeout(() => {
                       if (!isUnmounted && container) {
                         isUnmounted = true;
@@ -274,13 +274,13 @@ const withPreviewUpload = () => {
     render(h(PreviewWrapper), container);
   };
 
-  // 图片裁剪操作
+  // 图片裁切操作
   const cropImage = (file: File, aspectRatio: string | undefined) => {
     return new Promise((resolve, reject) => {
       const container: HTMLElement | null = document.createElement('div');
       document.body.append(container);
 
-      // 用于追踪组件是否已卸载
+      // 用于追踪元件是否已卸载
       let isUnmounted = false;
       let objectUrl: null | string = null;
 
@@ -289,7 +289,7 @@ const withPreviewUpload = () => {
 
       const closeModal = () => {
         open.value = false;
-        // 延迟清理，确保动画完成
+        // 延迟清理，確保动画完成
         setTimeout(() => {
           if (!isUnmounted && container) {
             if (objectUrl) {
@@ -398,7 +398,7 @@ const withPreviewUpload = () => {
           file.status = 'removed';
           return false;
         }
-        // 多选或者非图片不唤起裁剪框
+        // 多选或者非图片不唤起裁切框
         if (
           attrs.crop &&
           !attrs.multiple &&
@@ -406,7 +406,7 @@ const withPreviewUpload = () => {
           isImageFile(file)
         ) {
           file.status = 'removed';
-          // antd Upload组件问题 file参数获取的是UploadFile类型对象无法取到File类型 所以通过originFileList[0]获取
+          // antd Upload元件問題 file参数取得的是UploadFile类型物件无法取到File类型 所以通过originFileList[0]取得
           const blob = await cropImage(originFileList[0], aspectRatio.value);
           return new Promise((resolve, reject) => {
             if (!blob) {
@@ -482,7 +482,7 @@ const withPreviewUpload = () => {
   });
 };
 
-// 这里需要自行根据业务组件库进行适配，需要用到的组件都需要在这里类型说明
+// 這裡需要自行根據业务元件库进行适配，需要用到的元件都需要在這裡类型说明
 export type ComponentType =
   | 'ApiCascader'
   | 'ApiSelect'
@@ -515,7 +515,7 @@ export type ComponentType =
 
 async function initComponentAdapter() {
   const components: Partial<Record<ComponentType, Component>> = {
-    // 如果你的组件体积比较大，可以使用异步加载
+    // 如果你的元件体积比较大，可以使用非同步載入
     // Button: () =>
     // import('xxx').then((res) => res.Button),
 
@@ -576,7 +576,7 @@ async function initComponentAdapter() {
     Upload: withPreviewUpload(),
   };
 
-  // 将组件注册到全局共享状态中
+  // 将元件註冊到全局共享状态中
   globalShareState.setComponents(components);
 
   // 定义全局共享状态中的消息提示

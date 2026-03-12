@@ -10,7 +10,7 @@ export function useLayout(props: VbenLayoutProps) {
   );
 
   /**
-   * 是否全屏显示content，不需要侧边、底部、顶部、tab区域
+   * 是否全屏顯示content，不需要侧边、底部、顶部、tab区域
    */
   const isFullContent = computed(() => currentLayout.value === 'full-content');
 

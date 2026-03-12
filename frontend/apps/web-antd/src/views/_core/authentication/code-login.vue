@@ -50,9 +50,9 @@ const formSchema = computed((): VbenFormSchema[] => {
   ];
 });
 /**
- * 异步处理登录操作
+ * 非同步处理登入操作
  * Asynchronously handle the login process
- * @param values 登录表单数据
+ * @param values 登入表单数据
  */
 async function handleLogin(values: Recordable<any>) {
   // eslint-disable-next-line no-console

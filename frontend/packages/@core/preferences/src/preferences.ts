@@ -48,14 +48,14 @@ class PreferenceManager {
   };
 
   /**
-   * 获取初始化偏好设置
+   * 取得初始化偏好设置
    */
   getInitialPreferences = () => {
     return this.initialPreferences;
   };
 
   /**
-   * 获取当前偏好设置（只读）
+   * 取得目前偏好设置（只读）
    */
   getPreferences = () => {
     return readonly(this.state);
@@ -79,7 +79,7 @@ class PreferenceManager {
     // 合并初始偏好设置
     this.initialPreferences = merge({}, overrides, defaultPreferences);
 
-    // 加载缓存的偏好设置并与初始配置合并
+    // 載入缓存的偏好设置并与初始配置合并
     const cachedPreferences = this.loadFromCache() || {};
     const mergedPreference = merge(
       {},
@@ -93,7 +93,7 @@ class PreferenceManager {
     // 设置监听器
     this.setupWatcher();
 
-    // 初始化平台标识
+    // 初始化平台識別
     this.initPlatform();
 
     this.isInitialized = true;
@@ -109,7 +109,7 @@ class PreferenceManager {
     // 保存偏好设置至缓存
     this.saveToCache(this.state);
 
-    // 直接触发 UI 更新
+    // 直接觸發 UI 更新
     this.handleUpdates(this.state);
   };
 
@@ -118,11 +118,11 @@ class PreferenceManager {
    * @param updates - 要更新的偏好设置
    */
   updatePreferences = (updates: DeepPartial<Preferences>) => {
-    // 深度合并更新内容和当前状态
+    // 深度合并更新内容和目前状态
     const mergedState = merge({}, updates, markRaw(this.state));
     Object.assign(this.state, mergedState);
 
-    // 根据更新的值执行更新
+    // 根據更新的值执行更新
     this.handleUpdates(updates);
 
     // 保存到缓存
@@ -152,14 +152,14 @@ class PreferenceManager {
   }
 
   /**
-   * 初始化平台标识
+   * 初始化平台識別
    */
   private initPlatform() {
     document.documentElement.dataset.platform = isMacOs() ? 'macOs' : 'window';
   }
 
   /**
-   * 从缓存加载偏好设置
+   * 从缓存載入偏好设置
    * @returns 缓存的偏好设置，如果不存在则返回 null
    */
   private loadFromCache(): null | Preferences {
@@ -177,7 +177,7 @@ class PreferenceManager {
   }
 
   /**
-   * 监听状态和系统偏好设置的变化
+   * 监听状态和系統偏好设置的变化
    */
   private setupWatcher() {
     if (this.isInitialized) {
@@ -198,17 +198,17 @@ class PreferenceManager {
       { immediate: true },
     );
 
-    // 监听系统主题偏好设置变化
+    // 监听系統主题偏好设置变化
     window
       .matchMedia('(prefers-color-scheme: dark)')
       .addEventListener('change', ({ matches: isDark }) => {
-        // 仅在自动模式下跟随系统主题
+        // 仅在自动模式下跟随系統主题
         if (this.state.theme.mode === 'auto') {
-          // 先应用实际的主题
+          // 先应用實際的主题
           this.updatePreferences({
             theme: { mode: isDark ? 'dark' : 'light' },
           });
-          // 再恢复为 auto 模式，保持跟随系统的状态
+          // 再還原为 auto 模式，保持跟随系統的状态
           this.updatePreferences({
             theme: { mode: 'auto' },
           });
@@ -217,7 +217,7 @@ class PreferenceManager {
   }
 
   /**
-   * 更新页面颜色模式（灰色、色弱）
+   * 更新頁面颜色模式（灰色、色弱）
    * @param preference - 偏好设置
    */
   private updateColorMode(preference: Preferences) {

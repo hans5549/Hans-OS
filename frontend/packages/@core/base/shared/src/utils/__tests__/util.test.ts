@@ -26,7 +26,7 @@ describe('bindMethods', () => {
     // 解构方法
     const { getValue } = instance;
 
-    // 检查 getValue 是否能正确调用，并且 this 绑定了 instance
+    // 檢查 getValue 是否能正确调用，并且 this 绑定了 instance
     expect(getValue()).toBe('initial');
   });
 
@@ -35,7 +35,7 @@ describe('bindMethods', () => {
 
     const { getValue, setValue } = instance;
 
-    // 检查 getValue 和 setValue 方法是否正确绑定了 this
+    // 檢查 getValue 和 setValue 方法是否正确绑定了 this
     setValue('newValue');
     expect(getValue()).toBe('newValue');
   });
@@ -43,14 +43,14 @@ describe('bindMethods', () => {
   it('should not bind non-function properties', () => {
     const instance = new TestClass('initial');
 
-    // 检查普通属性是否保持原样
+    // 檢查普通属性是否保持原样
     expect(instance.value).toBe('initial');
   });
 
   it('should not bind constructor method', () => {
     const instance = new TestClass('test');
 
-    // 检查 constructor 是否没有被绑定
+    // 檢查 constructor 是否沒有被绑定
     expect(instance.constructor.name).toBe('TestClass');
   });
 

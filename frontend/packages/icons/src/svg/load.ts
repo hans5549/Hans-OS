@@ -48,7 +48,7 @@ function parseSvg(svgData: string): IconifyIconStructure {
 }
 
 /**
- * 自定义的svg图片转化为组件
+ * 自定义的svg图片转化为元件
  * @example ./svg/avatar.svg
  * <Icon icon="svg:avatar"></Icon>
  */

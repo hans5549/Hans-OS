@@ -141,7 +141,7 @@ const getSideCollapseWidth = computed(() => {
 });
 
 /**
- * 动态获取侧边区域是否可见
+ * 动态取得侧边区域是否可见
  */
 const sidebarEnableState = computed(() => {
   return !isHeaderNav.value && sidebarEnable.value;
@@ -156,7 +156,7 @@ const sidebarMarginTop = computed(() => {
 });
 
 /**
- * 动态获取侧边宽度
+ * 动态取得侧边宽度
  */
 const getSidebarWidth = computed(() => {
   const { isMobile, sidebarHidden, sidebarMixedWidth, sidebarWidth } = props;
@@ -187,7 +187,7 @@ const getSidebarWidth = computed(() => {
 });
 
 /**
- * 获取扩展区域宽度
+ * 取得扩展区域宽度
  */
 const sidebarExtraWidth = computed(() => {
   const { sidebarExtraCollapsedWidth, sidebarWidth } = props;
@@ -287,7 +287,7 @@ const tabbarStyle = computed((): CSSProperties => {
       ? props.sidebarWidth
       : getSideCollapseWidth.value;
 
-    // 设置 marginLeft，根据侧边栏是否折叠来决定
+    // 设置 marginLeft，根據侧边栏是否折叠来决定
     marginLeft = sidebarCollapse.value
       ? getSideCollapseWidth.value
       : onHoveringWidth;
@@ -295,7 +295,7 @@ const tabbarStyle = computed((): CSSProperties => {
     // 设置 tabbar 的宽度，计算方式为 100% 减去侧边栏的宽度
     width = `calc(100% - ${sidebarCollapse.value ? getSidebarWidth.value : onHoveringWidth}px)`;
   } else {
-    // 默认情况下，tabbar 的宽度为 100%
+    // 默认情況下，tabbar 的宽度为 100%
     width = '100%';
   }
 

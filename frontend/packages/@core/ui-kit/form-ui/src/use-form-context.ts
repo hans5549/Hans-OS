@@ -52,7 +52,7 @@ export function useFormInitial(
       if (Reflect.has(item, 'defaultValue')) {
         set(initialValues, item.fieldName, item.defaultValue);
       } else if (item.rules && !isString(item.rules)) {
-        // 检查规则是否适合提取默认值
+        // 檢查规则是否适合提取默认值
         const customDefaultValue = getCustomDefaultValue(item.rules);
         zodObject[item.fieldName] = item.rules;
         if (customDefaultValue !== undefined) {
@@ -74,9 +74,9 @@ export function useFormInitial(
     if (rule instanceof ZodString) {
       return ''; // 默认为空字符串
     } else if (rule instanceof ZodNumber) {
-      return null; // 默认为 null（避免显示 0）
+      return null; // 默认为 null（避免顯示 0）
     } else if (rule instanceof ZodObject) {
-      // 递归提取嵌套对象的默认值
+      // 递归提取嵌套物件的默认值
       const defaultValues: Record<string, any> = {};
       for (const [key, valueSchema] of Object.entries(rule.shape)) {
         defaultValues[key] = getCustomDefaultValue(valueSchema);

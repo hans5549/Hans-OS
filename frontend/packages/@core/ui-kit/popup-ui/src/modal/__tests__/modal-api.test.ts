@@ -38,7 +38,7 @@ describe('modalApi', () => {
 
   beforeEach(() => {
     modalApi = new ModalApi();
-    // 获取 modalApi 内的 state
+    // 取得 modalApi 内的 state
     modalState = modalApi.store.state;
   });
 

@@ -166,7 +166,7 @@ defineExpose({
       </VbenButton>
     </div>
 
-    <!-- 第三方登录 -->
+    <!-- 第三方登入 -->
     <slot name="third-party-login">
       <ThirdPartyLogin v-if="showThirdPartyLogin" />
     </slot>

@@ -104,7 +104,7 @@ function removeSubMenu(subMenu: MenuItemRegistered) {
 function handleClick() {
   const mode = rootMenu?.props.mode;
   if (
-    // 当前菜单禁用时，不展开
+    // 目前菜单禁用时，不展开
     props.disabled ||
     (rootMenu?.props.collapse && mode === 'vertical') ||
     // 水平模式下不展开

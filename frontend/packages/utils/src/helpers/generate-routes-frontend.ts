@@ -10,7 +10,7 @@ async function generateRoutesByFrontend(
   roles: string[],
   forbiddenComponent?: RouteRecordRaw['component'],
 ): Promise<RouteRecordRaw[]> {
-  // 根据角色标识过滤路由表,判断当前用户是否拥有指定权限
+  // 根據角色識別过滤路由表,判断目前使用者是否擁有指定權限
   const finalRoutes = filterTree(routes, (route) => {
     return hasAuthority(route, roles);
   });
@@ -19,7 +19,7 @@ async function generateRoutesByFrontend(
     return finalRoutes;
   }
 
-  // 如果有禁止访问的页面，将禁止访问的页面替换为403页面
+  // 如果有禁止訪問的頁面，将禁止訪問的頁面替换为403頁面
   return mapTree(finalRoutes, (route) => {
     if (menuHasVisibleWithForbidden(route)) {
       route.component = forbiddenComponent;
@@ -29,7 +29,7 @@ async function generateRoutesByFrontend(
 }
 
 /**
- * 判断路由是否有权限访问
+ * 判断路由是否有權限訪問
  * @param route
  * @param access
  */
@@ -44,7 +44,7 @@ function hasAuthority(route: RouteRecordRaw, access: string[]) {
 }
 
 /**
- * 判断路由是否在菜单中显示，但是访问会被重定向到403
+ * 判断路由是否在菜单中顯示，但是訪問会被重定向到403
  * @param route
  */
 function menuHasVisibleWithForbidden(route: RouteRecordRaw) {

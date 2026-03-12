@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using HansOS.Api.Common;
 using HansOS.Api.Features.Auth;
@@ -6,6 +7,7 @@ using HansOS.Api.Infrastructure.Persistence;
 using HansOS.Api.Infrastructure.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Localization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -36,6 +38,20 @@ try
     builder.Services.AddControllers();
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddHttpContextAccessor();
+    builder.Services.AddLocalization();
+    builder.Services.Configure<RequestLocalizationOptions>(options =>
+    {
+        var supportedCultures = new[]
+        {
+            new CultureInfo("en-US"),
+            new CultureInfo("zh-TW"),
+        };
+
+        options.DefaultRequestCulture = new RequestCulture("zh-TW");
+        options.SupportedCultures = supportedCultures;
+        options.SupportedUICultures = supportedCultures;
+        options.ApplyCurrentCultureToResponseHeaders = true;
+    });
 
     // ── Health Checks ────────────────────────────────────────────────────────
 
@@ -175,6 +191,8 @@ try
                 httpContext.User?.FindFirst("sub")?.Value ?? "anonymous");
         };
     });
+
+    app.UseRequestLocalization();
 
     if (app.Environment.IsDevelopment())
     {

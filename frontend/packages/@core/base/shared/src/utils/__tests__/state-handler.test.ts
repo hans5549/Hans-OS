@@ -6,9 +6,9 @@ describe('stateHandler', () => {
   it('should resolve when condition is set to true', async () => {
     const handler = new StateHandler();
 
-    // 模拟异步设置 condition 为 true
+    // 模拟非同步设置 condition 为 true
     setTimeout(() => {
-      handler.setConditionTrue(); // 明确触发 condition 为 true
+      handler.setConditionTrue(); // 明确觸發 condition 为 true
     }, 10);
 
     // 等待条件被设置为 true
@@ -28,9 +28,9 @@ describe('stateHandler', () => {
   it('should reject when condition is set to false after waiting', async () => {
     const handler = new StateHandler();
 
-    // 模拟异步设置 condition 为 false
+    // 模拟非同步设置 condition 为 false
     setTimeout(() => {
-      handler.setConditionFalse(); // 明确触发 condition 为 false
+      handler.setConditionFalse(); // 明确觸發 condition 为 false
     }, 10);
 
     // 等待过程中，期望 Promise 被 reject
@@ -48,7 +48,7 @@ describe('stateHandler', () => {
 
   it('should resolve when condition is set to true after reset', async () => {
     const handler = new StateHandler();
-    handler.reset(); // 确保初始为 false
+    handler.reset(); // 確保初始为 false
 
     setTimeout(() => {
       handler.setConditionTrue(); // 重置后设置为 true

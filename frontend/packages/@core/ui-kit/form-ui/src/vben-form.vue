@@ -41,7 +41,7 @@ provideFormProps([props, form]);
 
 const handleUpdateCollapsed = (value: boolean) => {
   currentCollapsed.value = value;
-  // 触发收起展开状态变化回调
+  // 觸發收起展开状态变化回呼
   props.handleCollapsedChange?.(value);
 };
 

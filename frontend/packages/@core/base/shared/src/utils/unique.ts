@@ -1,8 +1,8 @@
 /**
- * 根据指定字段对对象数组进行去重
- * @param arr 要去重的对象数组
+ * 根據指定字段对物件数组进行去重
+ * @param arr 要去重的物件数组
  * @param key 去重依据的字段名
- * @returns 去重后的对象数组
+ * @returns 去重后的物件数组
  */
 function uniqueByField<T>(arr: T[], key: keyof T): T[] {
   const seen = new Map<any, T>();

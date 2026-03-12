@@ -10,56 +10,56 @@ export type TabsEmits = {
 export interface TabsProps {
   active?: string;
   /**
-   * @zh_CN content class
+   * @zh_TW content class
    * @default tabs-chrome
    */
   contentClass?: string;
   /**
-   * @zh_CN 右键菜单
+   * @zh_TW 右键菜单
    */
   contextMenus?: (data: any) => IContextMenuItem[];
   /**
-   * @zh_CN 是否可以拖拽
+   * @zh_TW 是否可以拖拽
    */
   draggable?: boolean;
   /**
-   * @zh_CN 间隙
+   * @zh_TW 间隙
    * @default 7
    * 仅限 tabs-chrome
    */
   gap?: number;
   /**
-   * @zh_CN tab 最大宽度
+   * @zh_TW tab 最大宽度
    * 仅限 tabs-chrome
    */
   maxWidth?: number;
   /**
-   * @zh_CN 点击中键时关闭Tab
+   * @zh_TW 点击中键时关闭Tab
    */
   middleClickToClose?: boolean;
 
   /**
-   * @zh_CN tab最小宽度
+   * @zh_TW tab最小宽度
    * 仅限 tabs-chrome
    */
   minWidth?: number;
 
   /**
-   * @zh_CN 是否显示图标
+   * @zh_TW 是否顯示图标
    */
   showIcon?: boolean;
   /**
-   * @zh_CN 标签页风格
+   * @zh_TW 标签页风格
    */
   styleType?: TabsStyleType;
 
   /**
-   * @zh_CN 选项卡数据
+   * @zh_TW 選項卡数据
    */
   tabs?: TabDefinition[];
 
   /**
-   * @zh_CN 是否响应滚轮事件
+   * @zh_TW 是否响应滚轮事件
    */
   wheelable?: boolean;
 }

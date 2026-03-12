@@ -20,7 +20,7 @@ export interface DrawerProps {
   cancelText?: string;
   class?: ClassType;
   /**
-   * 是否显示关闭按钮
+   * 是否顯示关闭按钮
    * @default true
    */
   closable?: boolean;
@@ -57,7 +57,7 @@ export interface DrawerProps {
    */
   destroyOnClose?: boolean;
   /**
-   * 是否显示底部
+   * 是否顯示底部
    * @default true
    */
   footer?: boolean;
@@ -66,7 +66,7 @@ export interface DrawerProps {
    */
   footerClass?: ClassType;
   /**
-   * 是否显示顶栏
+   * 是否顯示顶栏
    * @default true
    */
   header?: boolean;
@@ -75,12 +75,12 @@ export interface DrawerProps {
    */
   headerClass?: ClassType;
   /**
-   * 弹窗是否显示
+   * 弹窗是否顯示
    * @default false
    */
   loading?: boolean;
   /**
-   * 是否显示遮罩
+   * 是否顯示遮罩
    * @default true
    */
   modal?: boolean;
@@ -100,12 +100,12 @@ export interface DrawerProps {
   placement?: DrawerPlacement;
 
   /**
-   * 是否显示取消按钮
+   * 是否顯示取消按钮
    * @default true
    */
   showCancelButton?: boolean;
   /**
-   * 是否显示确认按钮
+   * 是否顯示确认按钮
    * @default true
    */
   showConfirmButton?: boolean;
@@ -128,7 +128,7 @@ export interface DrawerProps {
 }
 
 export interface DrawerState extends DrawerProps {
-  /** 弹窗打开状态 */
+  /** 弹窗開啟状态 */
   isOpen?: boolean;
   /**
    * 共享数据
@@ -144,35 +144,35 @@ export type ExtendedDrawerApi = DrawerApi & {
 
 export interface DrawerApiOptions extends DrawerState {
   /**
-   * 独立的抽屉组件
+   * 独立的抽屉元件
    */
   connectedComponent?: Component;
   /**
-   * 关闭前的回调，返回 false 可以阻止关闭
+   * 关闭前的回呼，返回 false 可以阻止关闭
    * @returns
    */
   onBeforeClose?: () => MaybePromise<boolean | undefined>;
   /**
-   * 点击取消按钮的回调
+   * 点击取消按钮的回呼
    */
   onCancel?: () => void;
   /**
-   * 弹窗关闭动画结束的回调
+   * 弹窗关闭动画结束的回呼
    * @returns
    */
   onClosed?: () => void;
   /**
-   * 点击确定按钮的回调
+   * 点击确定按钮的回呼
    */
   onConfirm?: () => void;
   /**
-   * 弹窗状态变化回调
+   * 弹窗状态变化回呼
    * @param isOpen
    * @returns
    */
   onOpenChange?: (isOpen: boolean) => void;
   /**
-   * 弹窗打开动画结束的回调
+   * 弹窗開啟动画结束的回呼
    * @returns
    */
   onOpened?: () => void;

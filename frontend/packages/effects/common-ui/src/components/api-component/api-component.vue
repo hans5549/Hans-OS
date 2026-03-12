@@ -20,11 +20,11 @@ type OptionsItem = {
 };
 
 interface Props {
-  /** 组件 */
+  /** 元件 */
   component: Component;
   /** 是否将value从数字转为string */
   numberToString?: boolean;
-  /** 获取options数据的函数 */
+  /** 取得options数据的函数 */
   api?: (arg?: any) => Promise<OptionsItem[] | Record<string, any>>;
   /** 传递给api的参数 */
   params?: Record<string, any>;
@@ -32,36 +32,36 @@ interface Props {
   resultField?: string;
   /** label字段名 */
   labelField?: string;
-  /** children字段名，需要层级数据的组件可用 */
+  /** children字段名，需要层级数据的元件可用 */
   childrenField?: string;
   /** value字段名 */
   valueField?: string;
   /** disabled字段名 */
   disabledField?: string;
-  /** 组件接收options数据的属性名 */
+  /** 元件接收options数据的属性名 */
   optionsPropName?: string;
   /** 是否立即调用api */
   immediate?: boolean;
   /** 每次`visibleEvent`事件发生时都重新请求数据 */
   alwaysLoad?: boolean;
-  /** 在api请求之前的回调函数 */
+  /** 在api请求之前的回呼函数 */
   beforeFetch?: AnyPromiseFunction<any, any>;
-  /** 在api请求之后的回调函数 */
+  /** 在api请求之后的回呼函数 */
   afterFetch?: AnyPromiseFunction<any, any>;
-  /** 直接传入选项数据，也作为api返回空数据时的后备数据 */
+  /** 直接传入選項数据，也作为api返回空数据时的后备数据 */
   options?: OptionsItem[];
-  /** 组件的插槽名称，用来显示一个"加载中"的图标 */
+  /** 元件的插槽名称，用来顯示一个"載入中"的图标 */
   loadingSlot?: string;
-  /** 触发api请求的事件名 */
+  /** 觸發api请求的事件名 */
   visibleEvent?: string;
-  /** 组件的v-model属性名，默认为modelValue。部分组件可能为value */
+  /** 元件的v-model属性名，默认为modelValue。部分元件可能为value */
   modelPropName?: string;
   /**
    * 自动选择
-   * - `first`：自动选择第一个选项
-   * - `last`：自动选择最后一个选项
-   * - `one`: 当请求的结果只有一个选项时，自动选择该选项
-   * - 函数：自定义选择逻辑，函数的参数为请求的结果数组，返回值为选择的选项
+   * - `first`：自动选择第一个選項
+   * - `last`：自动选择最后一个選項
+   * - `one`: 当请求的结果只有一个選項时，自动选择该選項
+   * - 函数：自定义选择逻辑，函数的参数为请求的结果数组，返回值为选择的選項
    * - false：不自动选择(默认)
    */
   autoSelect?:
@@ -105,7 +105,7 @@ const attrs = useAttrs();
 const innerParams = ref({});
 const refOptions = ref<OptionsItem[]>([]);
 const loading = ref(false);
-// 首次是否加载过了
+// 首次是否載入过了
 const isFirstLoaded = ref(false);
 // 标记是否有待处理的请求
 const hasPendingRequest = ref(false);
@@ -165,7 +165,7 @@ async function fetchApi() {
     return;
   }
 
-  // 如果正在加载，标记有待处理的请求并返回
+  // 如果正在載入，标记有待处理的请求并返回
   if (loading.value) {
     hasPendingRequest.value = true;
     return;
@@ -198,10 +198,10 @@ async function fetchApi() {
     isFirstLoaded.value = false;
   } finally {
     loading.value = false;
-    // 如果有待处理的请求，立即触发新的请求
+    // 如果有待处理的请求，立即觸發新的请求
     if (hasPendingRequest.value) {
       hasPendingRequest.value = false;
-      // 使用 nextTick 确保状态更新完成后再触发新请求
+      // 使用 nextTick 確保状态更新完成后再觸發新请求
       await nextTick();
       fetchApi();
     }
@@ -270,11 +270,11 @@ function emitChange() {
 }
 const componentRef = ref();
 defineExpose({
-  /** 获取options数据 */
+  /** 取得options数据 */
   getOptions: () => unref(getOptions),
-  /** 获取当前值 */
+  /** 取得目前值 */
   getValue: () => unref(modelValue),
-  /** 获取被包装的组件实例 */
+  /** 取得被包装的元件实例 */
   getComponentRef: <T = any,>() => componentRef.value as T,
   /** 更新Api参数 */
   updateParam(newParams: Record<string, any>) {

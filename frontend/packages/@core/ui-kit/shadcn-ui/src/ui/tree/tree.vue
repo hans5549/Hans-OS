@@ -469,7 +469,7 @@ defineExpose({
   transform: scaleY(0.01) translate(30px, 0);
 }
 
-/* 3. 确保离开的项目被移除出了布局流
+/* 3. 確保离开的專案被移除出了布局流
       以便正确地计算移动时的动画效果。 */
 .fade-leave-active {
   position: absolute;

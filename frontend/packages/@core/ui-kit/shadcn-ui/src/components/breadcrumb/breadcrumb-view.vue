@@ -29,7 +29,7 @@ const forward = useForwardPropsEmits(props, emit);
   />
 </template>
 <style lang="scss" scoped>
-/** 修复全局引入Antd时，ol和ul的默认样式会被修改的问题 */
+/** 修復全局引入Antd时，ol和ul的默认样式会被修改的問題 */
 .vben-breadcrumb {
   :deep(ol),
   :deep(ul) {

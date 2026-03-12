@@ -4,9 +4,9 @@ interface TreeConfigOptions {
 }
 
 /**
- * @zh_CN 遍历树形结构，并返回所有节点中指定的值。
+ * @zh_TW 遍历树形结构，并返回所有节点中指定的值。
  * @param tree 树形结构数组
- * @param getValue 获取节点值的函数
+ * @param getValue 取得节点值的函数
  * @param options 作为子节点数组的可选属性名称。
  * @returns 所有节点中指定的值的数组
  */
@@ -41,7 +41,7 @@ function traverseTreeValues<T, V>(
 }
 
 /**
- * 根据条件过滤给定树结构的节点，并以原有顺序返回所有匹配节点的数组。
+ * 根據条件过滤给定树结构的节点，并以原有顺序返回所有匹配节点的数组。
  * @param tree 要过滤的树结构的根节点数组。
  * @param filter 用于匹配每个节点的条件。
  * @param options 作为子节点数组的可选属性名称。
@@ -72,7 +72,7 @@ function filterTree<T extends Record<string, any>>(
 }
 
 /**
- * 根据条件重新映射给定树结构的节
+ * 根據条件重新映射给定树结构的节
  * @param tree 要过滤的树结构的根节点数组。
  * @param mapper 用于map每个节点的条件。
  * @param options 作为子节点数组的可选属性名称。
@@ -98,7 +98,7 @@ function mapTree<T, V extends Record<string, any>>(
  * 对树形结构数据进行递归排序
  * @param treeData - 树形数据数组
  * @param sortFunction - 排序函数，用于定义排序规则
- * @param options - 配置选项，包括子节点属性名
+ * @param options - 配置選項，包括子节点属性名
  * @returns 排序后的树形数据
  */
 function sortTree<T extends Record<string, any>>(

@@ -1,10 +1,10 @@
 {
-  "title": "演示",
+  "title": "展示",
   "antd": "Ant Design Vue",
   "vben": {
-    "title": "项目",
-    "about": "关于",
-    "document": "文档",
+    "title": "專案",
+    "about": "關於",
+    "document": "文件",
     "antdv": "Ant Design Vue 版本",
     "antdv-next": "Antdv Next 版本",
     "naive-ui": "Naive UI 版本",

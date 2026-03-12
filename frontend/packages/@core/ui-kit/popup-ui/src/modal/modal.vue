@@ -160,10 +160,10 @@ watch(
 // );
 
 /**
- * 在开启keepAlive情况下 直接通过浏览器按钮/手势等返回 不会关闭弹窗
+ * 在开启keepAlive情況下 直接通过浏览器按钮/手势等返回 不会关闭弹窗
  */
 onDeactivated(() => {
-  // 如果弹窗没有被挂载到内容区域，则关闭弹窗
+  // 如果弹窗沒有被挂载到内容区域，则关闭弹窗
   if (!appendToMain.value) {
     props.modalApi?.close();
   }

@@ -1,11 +1,11 @@
 interface PinInputProps {
   class?: any;
   /**
-   * 验证码长度
+   * 驗證碼长度
    */
   codeLength?: number;
   /**
-   * 发送验证码按钮文本
+   * 发送驗證碼按钮文本
    */
   createText?: (countdown: number) => string;
   /**
@@ -13,12 +13,12 @@ interface PinInputProps {
    */
   disabled?: boolean;
   /**
-   * 自定义验证码发送逻辑
+   * 自定义驗證碼发送逻辑
    * @returns
    */
   handleSendCode?: () => Promise<void>;
   /**
-   * 发送验证码按钮loading
+   * 发送驗證碼按钮loading
    */
   loading?: boolean;
   /**

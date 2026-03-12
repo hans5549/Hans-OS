@@ -91,8 +91,8 @@ type FormItemDependenciesConditionWithProps = (
 
 export interface FormItemDependencies {
   /**
-   * 组件参数
-   * @returns 组件参数
+   * 元件参数
+   * @returns 元件参数
    */
   componentProps?: FormItemDependenciesConditionWithProps;
   /**
@@ -120,11 +120,11 @@ export interface FormItemDependencies {
    */
   show?: boolean | FormItemDependenciesCondition;
   /**
-   * 任意触发都会执行
+   * 任意觸發都会执行
    */
   trigger?: FormItemDependenciesCondition<void>;
   /**
-   * 触发字段
+   * 觸發字段
    */
   triggerFields: string[];
 }
@@ -138,7 +138,7 @@ type ComponentProps =
 
 export interface FormCommonConfig {
   /**
-   * 在Label后显示一个冒号
+   * 在Label后顯示一个冒号
    */
   colon?: boolean;
   /**
@@ -241,13 +241,13 @@ export type ArrayToStringFields = Array<
 export interface FormSchema<
   T extends BaseFormComponentType = BaseFormComponentType,
 > extends FormCommonConfig {
-  /** 组件 */
+  /** 元件 */
   component: Component | T;
-  /** 组件参数 */
+  /** 元件参数 */
   componentProps?: ComponentProps;
   /** 默认值 */
   defaultValue?: any;
-  /** 依赖 */
+  /** 依賴 */
   dependencies?: FormItemDependencies;
   /** 描述 */
   description?: CustomRenderType;
@@ -259,7 +259,7 @@ export interface FormSchema<
   hide?: boolean;
   /** 表单项 */
   label?: CustomRenderType;
-  // 自定义组件内部渲染
+  // 自定义元件内部渲染
   renderComponentContent?: RenderComponentContentType;
   /** 字段规则 */
   rules?: FormSchemaRuleType;
@@ -289,12 +289,12 @@ export interface FormRenderProps<
    */
   collapsedRows?: number;
   /**
-   * 是否触发resize事件
+   * 是否觸發resize事件
    * @default false
    */
   collapseTriggerResize?: boolean;
   /**
-   * 表单项通用后备配置，当子项目没配置时使用这里的配置，子项目配置优先级高于此配置
+   * 表单项通用后备配置，当子專案没配置时使用這裡的配置，子專案配置优先级高于此配置
    */
   commonConfig?: FormCommonConfig;
   /**
@@ -302,11 +302,11 @@ export interface FormRenderProps<
    */
   compact?: boolean;
   /**
-   * 组件v-model事件绑定
+   * 元件v-model事件绑定
    */
   componentBindEventMap?: Partial<Record<BaseFormComponentType, string>>;
   /**
-   * 组件集合
+   * 元件集合
    */
   componentMap: Record<BaseFormComponentType, Component>;
   /**
@@ -327,7 +327,7 @@ export interface FormRenderProps<
   schema?: FormSchema<T>[];
 
   /**
-   * 是否显示展开/折叠
+   * 是否顯示展开/折叠
    */
   showCollapseButton?: boolean;
   /**
@@ -359,11 +359,11 @@ export interface VbenFormProps<
   actionButtonsReverse?: boolean;
   /**
    * 操作按钮组的样式
-   * newLine: 在新行显示。rowEnd: 在行内显示，靠右对齐（默认）。inline: 使用grid默认样式
+   * newLine: 在新行顯示。rowEnd: 在行内顯示，靠右对齐（默认）。inline: 使用grid默认样式
    */
   actionLayout?: 'inline' | 'newLine' | 'rowEnd';
   /**
-   * 操作按钮组显示位置，默认靠右显示
+   * 操作按钮组顯示位置，默认靠右顯示
    */
   actionPosition?: 'center' | 'left' | 'right';
   /**
@@ -380,19 +380,19 @@ export interface VbenFormProps<
    */
   fieldMappingTime?: FieldMappingTime;
   /**
-   * 表单收起展开状态变化回调
+   * 表单收起展开状态变化回呼
    */
   handleCollapsedChange?: (collapsed: boolean) => void;
   /**
-   * 表单重置回调
+   * 表单重置回呼
    */
   handleReset?: HandleResetFn;
   /**
-   * 表单提交回调
+   * 表单提交回呼
    */
   handleSubmit?: HandleSubmitFn;
   /**
-   * 表单值变化回调
+   * 表单值变化回呼
    */
   handleValuesChange?: (
     values: Record<string, any>,
@@ -404,13 +404,13 @@ export interface VbenFormProps<
   resetButtonOptions?: ActionButtonOptions;
 
   /**
-   * 验证失败时是否自动滚动到第一个错误字段
+   * 验证失敗时是否自动滚动到第一个错误字段
    * @default false
    */
   scrollToFirstError?: boolean;
 
   /**
-   * 是否显示默认操作按钮
+   * 是否顯示默认操作按钮
    * @default true
    */
   showDefaultActions?: boolean;

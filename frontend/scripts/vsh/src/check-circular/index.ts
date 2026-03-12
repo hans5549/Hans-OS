@@ -20,7 +20,7 @@ const DEFAULT_CONFIG = {
     'packages/@core/ui-kit/menu-ui/src/',
     'packages/@core/ui-kit/popup-ui/src/',
   ],
-  threshold: 0, // 循环依赖的阈值
+  threshold: 0, // 循环依賴的阈值
 } as const;
 
 // 类型定义
@@ -42,8 +42,8 @@ interface CommandOptions {
 const cache = new Map<string, CircularDependencyResult[]>();
 
 /**
- * 格式化循环依赖的输出
- * @param circles - 循环依赖结果
+ * 格式化循环依賴的输出
+ * @param circles - 循环依賴结果
  */
 function formatCircles(circles: CircularDependencyResult[]): void {
   if (circles.length === 0) {
@@ -59,10 +59,10 @@ function formatCircles(circles: CircularDependencyResult[]): void {
 }
 
 /**
- * 检查项目中的循环依赖
- * @param options - 检查选项
- * @param options.staged - 是否只检查暂存区文件
- * @param options.verbose - 是否显示详细信息
+ * 檢查專案中的循环依賴
+ * @param options - 檢查選項
+ * @param options.staged - 是否只檢查暂存区文件
+ * @param options.verbose - 是否顯示详细信息
  * @param options.config - 自定义配置
  * @returns Promise<void>
  */
@@ -81,7 +81,7 @@ async function checkCircular({
     // 生成忽略模式
     const ignorePattern = `**/{${finalConfig.ignoreDirs.join(',')}}/**`;
 
-    // 检查缓存
+    // 檢查缓存
     const cacheKey = `${staged}-${process.cwd()}-${ignorePattern}`;
     if (cache.has(cacheKey)) {
       const cachedResults = cache.get(cacheKey);
@@ -91,7 +91,7 @@ async function checkCircular({
       return;
     }
 
-    // 检测循环依赖
+    // 检测循环依賴
     const results = await circularDepsDetect({
       absolute: staged,
       cwd: process.cwd(),
@@ -102,7 +102,7 @@ async function checkCircular({
       let files = await getStagedFiles();
       const allowedExtensions = new Set(finalConfig.allowedExtensions);
 
-      // 过滤文件列表
+      // 过滤文件清單
       files = files.filter((file) => allowedExtensions.has(extname(file)));
 
       const circularFiles: CircularDependencyResult[] = [];
@@ -125,7 +125,7 @@ async function checkCircular({
       verbose && formatCircles(results);
     }
 
-    // 如果发现循环依赖，只输出警告信息
+    // 如果发现循环依賴，只输出警告信息
     if (results.length > 0) {
       console.log(
         '\n⚠️ Warning: Circular dependencies found, please check and fix',
@@ -140,7 +140,7 @@ async function checkCircular({
 }
 
 /**
- * 定义检查循环依赖的命令
+ * 定义檢查循环依賴的命令
  * @param cac - CAC实例
  */
 function defineCheckCircularCommand(cac: CAC): void {

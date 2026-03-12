@@ -30,7 +30,7 @@ import { viteTailwindReferencePlugin } from './tailwind-reference';
 import { viteVxeTableImportsPlugin } from './vxe-table';
 
 /**
- * 获取条件成立的 vite 插件
+ * 取得条件成立的 vite 插件
  * @param conditionPlugins
  */
 async function loadConditionPlugins(conditionPlugins: ConditionPlugin[]) {
@@ -45,7 +45,7 @@ async function loadConditionPlugins(conditionPlugins: ConditionPlugin[]) {
 }
 
 /**
- * 根据条件获取通用的vite插件
+ * 根據条件取得通用的vite插件
  */
 async function loadCommonPlugins(
   options: CommonPluginOptions,
@@ -87,7 +87,7 @@ async function loadCommonPlugins(
 }
 
 /**
- * 根据条件获取应用类型的vite插件
+ * 根據条件取得应用类型的vite插件
  */
 async function loadApplicationPlugins(
   options: ApplicationPluginOptions,
@@ -221,7 +221,7 @@ async function loadApplicationPlugins(
 }
 
 /**
- * 根据条件获取库类型的vite插件
+ * 根據条件取得库类型的vite插件
  */
 async function loadLibraryPlugins(
   options: LibraryPluginOptions,

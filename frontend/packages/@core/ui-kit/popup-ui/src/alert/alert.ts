@@ -11,7 +11,7 @@ export type BeforeCloseScope = {
 };
 
 export type AlertProps = {
-  /** 关闭前的回调，如果返回false，则终止关闭 */
+  /** 关闭前的回呼，如果返回false，则终止关闭 */
   beforeClose?: (
     scope: BeforeCloseScope,
   ) => boolean | Promise<boolean | undefined> | undefined;
@@ -24,7 +24,7 @@ export type AlertProps = {
   buttonAlign?: 'center' | 'end' | 'start';
   /** 取消按钮的标题 */
   cancelText?: string;
-  /** 是否居中显示 */
+  /** 是否居中顯示 */
   centered?: boolean;
   /** 确认按钮的标题 */
   confirmText?: string;
@@ -34,7 +34,7 @@ export type AlertProps = {
   content: Component | string;
   /** 弹窗内容的额外样式 */
   contentClass?: string;
-  /** 执行beforeClose回调期间，在内容区域显示一个loading遮罩*/
+  /** 执行beforeClose回呼期间，在内容区域顯示一个loading遮罩*/
   contentMasking?: boolean;
   /** 弹窗底部内容（与按钮在同一个容器中） */
   footer?: Component | string;
@@ -44,7 +44,7 @@ export type AlertProps = {
    * 弹窗遮罩模糊效果
    */
   overlayBlur?: number;
-  /** 是否显示取消按钮 */
+  /** 是否顯示取消按钮 */
   showCancel?: boolean;
   /** 弹窗标题 */
   title?: string;
@@ -52,16 +52,16 @@ export type AlertProps = {
 
 /** Prompt属性 */
 export type PromptProps<T = any> = {
-  /** 关闭前的回调，如果返回false，则终止关闭 */
+  /** 关闭前的回呼，如果返回false，则终止关闭 */
   beforeClose?: (scope: {
     isConfirm: boolean;
     value: T | undefined;
   }) => boolean | Promise<boolean | undefined> | undefined;
-  /** 用于接受用户输入的组件 */
+  /** 用于接受使用者输入的元件 */
   component?: Component;
-  /** 输入组件的属性 */
+  /** 输入元件的属性 */
   componentProps?: Recordable<any>;
-  /** 输入组件的插槽 */
+  /** 输入元件的插槽 */
   componentSlots?:
     | (() => any)
     | Recordable<unknown>
@@ -69,7 +69,7 @@ export type PromptProps<T = any> = {
     | VNodeArrayChildren;
   /** 默认值 */
   defaultValue?: T;
-  /** 输入组件的值属性名 */
+  /** 输入元件的值属性名 */
   modelPropName?: string;
 } & Omit<AlertProps, 'beforeClose'>;
 
@@ -87,7 +87,7 @@ export const [injectAlertContext, provideAlertContext] =
   createContext<AlertContext>('VbenAlertContext');
 
 /**
- * 获取Alert上下文
+ * 取得Alert上下文
  * @returns AlertContext
  */
 export function useAlertContext() {

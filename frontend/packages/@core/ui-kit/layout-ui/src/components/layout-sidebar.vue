@@ -60,17 +60,17 @@ interface Props {
    */
   paddingTop?: number;
   /**
-   * 是否显示
+   * 是否顯示
    * @default true
    */
   show?: boolean;
   /**
-   * 显示折叠按钮
+   * 顯示折叠按钮
    * @default true
    */
   showCollapseButton?: boolean;
   /**
-   * 显示固定按钮
+   * 顯示固定按钮
    * @default true
    */
   showFixedButton?: boolean;

@@ -7,7 +7,7 @@ import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 
 import { useIsMobile, useSortable } from '@vben-core/composables';
 
-// 可能会找到拖拽的子元素，这里需要确保拖拽的dom时tab元素
+// 可能会找到拖拽的子元素，這裡需要確保拖拽的dom时tab元素
 function findParentElement(element: HTMLElement) {
   const parentCls = 'group';
   return element.classList.contains(parentCls)

@@ -13,7 +13,7 @@ export const TransitionPresetsKeys = Object.keys(
 export interface CountToProps {
   /** 初始值 */
   startVal?: number;
-  /** 当前值 */
+  /** 目前值 */
   endVal: number;
   /** 是否禁用动画 */
   disabled?: boolean;

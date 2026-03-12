@@ -112,7 +112,7 @@ const [Form, formApi] = useTableForm({
     await formApi.resetForm();
     const formValues = await formApi.getValues();
     formApi.setLatestSubmissionValues(formValues);
-    // 如果值发生了变化，submitOnChange会触发刷新。所以只在submitOnChange为false或者值没有发生变化时，手动刷新
+    // 如果值发生了变化，submitOnChange会觸發刷新。所以只在submitOnChange为false或者值沒有发生变化时，手动刷新
     if (isEqual(prevValues, formValues) || !formOptions.value?.submitOnChange) {
       props.api.reload(formValues);
     }
@@ -153,7 +153,7 @@ const toolbarOptions = computed(() => {
       ? $t('common.hideSearchPanel')
       : $t('common.showSearchPanel'),
   };
-  // 将搜索按钮合并到用户配置的toolbarConfig.tools中
+  // 将搜索按钮合并到使用者配置的toolbarConfig.tools中
   const toolbarConfig: VxeGridPropTypes.ToolbarConfig = {
     tools: (gridOptions.value?.toolbarConfig?.tools ??
       []) as VxeToolbarPropTypes.ToolConfig[],
@@ -169,7 +169,7 @@ const toolbarOptions = computed(() => {
     return { toolbarConfig };
   }
 
-  // 强制使用固定的toolbar配置，不允许用户自定义
+  // 强制使用固定的toolbar配置，不允许使用者自定义
   // 减少配置的复杂度，以及后续维护的成本
   toolbarConfig.slots = {
     ...(slotActions || showTableTitle.value
@@ -195,7 +195,7 @@ const options = computed(() => {
   if (mergedOptions.proxyConfig) {
     const { ajax } = mergedOptions.proxyConfig;
     mergedOptions.proxyConfig.enabled = !!ajax;
-    // 不自动加载数据, 由组件控制
+    // 不自动載入数据, 由元件控制
     mergedOptions.proxyConfig.autoLoad = false;
   }
 
@@ -280,11 +280,11 @@ const delegatedFormSlots = computed(() => {
 });
 
 const showDefaultEmpty = computed(() => {
-  // 检查是否有原生的 VXE Table 空状态配置
+  // 檢查是否有原生的 VXE Table 空状态配置
   const hasEmptyText = options.value.emptyText !== undefined;
   const hasEmptyRender = options.value.emptyRender !== undefined;
 
-  // 如果有原生配置，就不显示默认的空状态
+  // 如果有原生配置，就不顯示默认的空状态
   return !hasEmptyText && !hasEmptyRender;
 });
 
@@ -296,7 +296,7 @@ async function init() {
     toRaw(gridOptions.value),
     toRaw(globalGridConfig),
   );
-  // 内部主动加载数据，防止form的默认值影响
+  // 内部主动載入数据，防止form的默认值影响
   const autoLoad = defaultGridOptions.proxyConfig?.autoLoad;
   const enableProxyConfig = options.value.proxyConfig?.enabled;
   if (enableProxyConfig && autoLoad) {
@@ -307,9 +307,9 @@ async function init() {
     // props.api.reload(formApi.form?.values ?? {});
   }
 
-  // form 由 vben-form代替，所以不适配formConfig，这里给出警告
+  // form 由 vben-form代替，所以不适配formConfig，這裡给出警告
   const formConfig = gridOptions.value?.formConfig;
-  // 处理某个页面加载多个Table时，第2个之后的Table初始化报出警告
+  // 处理某个頁面載入多个Table时，第2个之后的Table初始化报出警告
   // 因为第一次初始化之后会把defaultGridOptions和gridOptions合并后缓存进State
   if (formConfig && formConfig.enabled) {
     console.warn(

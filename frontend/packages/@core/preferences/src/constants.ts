@@ -79,7 +79,7 @@ const BUILT_IN_THEME_PRESETS: BuiltinThemePreset[] = [
 ];
 
 /**
- * 时区选项
+ * 时区選項
  */
 const DEFAULT_TIME_ZONE_OPTIONS: TimezoneOption[] = [
   {

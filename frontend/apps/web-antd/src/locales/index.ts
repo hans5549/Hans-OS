@@ -14,7 +14,7 @@ import {
 import { preferences } from '@vben/preferences';
 
 import antdEnLocale from 'ant-design-vue/es/locale/en_US';
-import antdDefaultLocale from 'ant-design-vue/es/locale/zh_CN';
+import antdDefaultLocale from 'ant-design-vue/es/locale/zh_TW';
 import dayjs from 'dayjs';
 
 const antdLocale = ref<Locale>(antdDefaultLocale);
@@ -26,8 +26,8 @@ const localesMap = loadLocalesMapFromDir(
   modules,
 );
 /**
- * 加载应用特有的语言包
- * 这里也可以改造为从服务端获取翻译数据
+ * 載入應用特有的語言包
+ * 這裡也可以改造成從服務端取得翻譯資料
  * @param lang
  */
 async function loadMessages(lang: SupportedLanguagesType) {
@@ -39,7 +39,7 @@ async function loadMessages(lang: SupportedLanguagesType) {
 }
 
 /**
- * 加载第三方组件库的语言包
+ * 載入第三方元件庫的語言包
  * @param lang
  */
 async function loadThirdPartyMessage(lang: SupportedLanguagesType) {
@@ -47,7 +47,7 @@ async function loadThirdPartyMessage(lang: SupportedLanguagesType) {
 }
 
 /**
- * 加载dayjs的语言包
+ * 載入 dayjs 的語言包
  * @param lang
  */
 async function loadDayjsLocale(lang: SupportedLanguagesType) {
@@ -57,11 +57,11 @@ async function loadDayjsLocale(lang: SupportedLanguagesType) {
       locale = await import('dayjs/locale/en');
       break;
     }
-    case 'zh-CN': {
-      locale = await import('dayjs/locale/zh-cn');
+    case 'zh-TW': {
+      locale = await import('dayjs/locale/zh-tw');
       break;
     }
-    // 默认使用英语
+    // 預設使用英文
     default: {
       locale = await import('dayjs/locale/en');
     }
@@ -74,7 +74,7 @@ async function loadDayjsLocale(lang: SupportedLanguagesType) {
 }
 
 /**
- * 加载antd的语言包
+ * 載入 antd 的語言包
  * @param lang
  */
 async function loadAntdLocale(lang: SupportedLanguagesType) {
@@ -83,7 +83,7 @@ async function loadAntdLocale(lang: SupportedLanguagesType) {
       antdLocale.value = antdEnLocale;
       break;
     }
-    case 'zh-CN': {
+    case 'zh-TW': {
       antdLocale.value = antdDefaultLocale;
       break;
     }

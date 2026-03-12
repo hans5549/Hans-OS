@@ -4,52 +4,52 @@ import type { MenuRecordBadgeRaw, ThemeModeType } from '@vben-core/typings';
 
 interface MenuProps {
   /**
-   * @zh_CN 是否开启手风琴模式
+   * @zh_TW 是否开启手风琴模式
    * @default true
    */
   accordion?: boolean;
   /**
-   * @zh_CN 菜单是否折叠
+   * @zh_TW 菜单是否折叠
    * @default false
    */
   collapse?: boolean;
 
   /**
-   * @zh_CN 菜单折叠时是否显示菜单名称
+   * @zh_TW 菜单折叠时是否顯示菜单名称
    * @default false
    */
   collapseShowTitle?: boolean;
 
   /**
-   * @zh_CN 默认激活的菜单
+   * @zh_TW 默认激活的菜单
    */
   defaultActive?: string;
 
   /**
-   * @zh_CN 默认展开的菜单
+   * @zh_TW 默认展开的菜单
    */
   defaultOpeneds?: string[];
 
   /**
-   * @zh_CN 菜单模式
+   * @zh_TW 菜单模式
    * @default vertical
    */
   mode?: 'horizontal' | 'vertical';
 
   /**
-   * @zh_CN 是否圆润风格
+   * @zh_TW 是否圆润风格
    * @default true
    */
   rounded?: boolean;
 
   /**
-   * @zh_CN 是否自动滚动到激活的菜单项
+   * @zh_TW 是否自动滚动到激活的菜单项
    * @default false
    */
   scrollToActive?: boolean;
 
   /**
-   * @zh_CN 菜单主题
+   * @zh_TW 菜单主题
    * @default dark
    */
   theme?: ThemeModeType;
@@ -57,38 +57,38 @@ interface MenuProps {
 
 interface SubMenuProps extends MenuRecordBadgeRaw {
   /**
-   * @zh_CN 激活图标
+   * @zh_TW 激活图标
    */
   activeIcon?: string;
   /**
-   * @zh_CN 是否禁用
+   * @zh_TW 是否禁用
    */
   disabled?: boolean;
   /**
-   * @zh_CN 图标
+   * @zh_TW 图标
    */
   icon?: Component | string;
   /**
-   * @zh_CN submenu 名称
+   * @zh_TW submenu 名称
    */
   path: string;
 }
 
 interface MenuItemProps extends MenuRecordBadgeRaw {
   /**
-   * @zh_CN 图标
+   * @zh_TW 图标
    */
   activeIcon?: string;
   /**
-   * @zh_CN 是否禁用
+   * @zh_TW 是否禁用
    */
   disabled?: boolean;
   /**
-   * @zh_CN 图标
+   * @zh_TW 图标
    */
   icon?: Component | string;
   /**
-   * @zh_CN menuitem 名称
+   * @zh_TW menuitem 名称
    */
   path: string;
 }
