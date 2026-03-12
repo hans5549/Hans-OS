@@ -1,14 +1,14 @@
-# CLAUDE.md — Hans-OS (CGMSportFinance)
+# CLAUDE.md — Hans-OS
 
 ## Quick Facts
 
 | Item | Value |
 |------|-------|
 | **Stack** | .NET 9.0, Vue 3, PostgreSQL, Ant Design Vue, Tailwind CSS |
-| **Solution** | `backend/CGMSportFinance.sln` |
-| **Backend Build** | `dotnet build backend/CGMSportFinance.sln` |
-| **Backend Run** | `dotnet run --project backend/src/CGMSportFinance.Api` |
-| **Backend Test** | `dotnet test backend/CGMSportFinance.sln` |
+| **Solution** | `backend/HansOS.slnx` |
+| **Backend Build** | `dotnet build backend/HansOS.slnx` |
+| **Backend Run** | `dotnet run --project backend/src/HansOS.Api` |
+| **Backend Test** | `dotnet test backend/HansOS.slnx` |
 | **Frontend Dev** | `cd frontend && pnpm dev:antd` |
 | **Frontend Type Check** | `cd frontend && pnpm check:type` |
 
@@ -18,25 +18,48 @@
 
 ```bash
 # Build backend
-dotnet build backend/CGMSportFinance.sln
+dotnet build backend/HansOS.slnx
 
 # Run API server (Swagger: http://localhost:5180/swagger)
-dotnet run --project backend/src/CGMSportFinance.Api
+dotnet run --project backend/src/HansOS.Api
 
-# Run integration tests
-dotnet test backend/CGMSportFinance.sln
+# Run all tests
+dotnet test backend/HansOS.slnx
 
-# Frontend dev server
+# Frontend dev server (port 5666)
 cd frontend && pnpm install && pnpm dev:antd
 
 # Frontend type check
 cd frontend && pnpm check:type
-
-# Dev mode hot-reload
-dotnet watch --project backend/src/CGMSportFinance.Api/CGMSportFinance.Api.csproj
 ```
 
-No unit test projects at this time. Integration tests are in `backend/tests/CGMSportFinance.Api.IntegrationTests`.
+---
+
+## Testing Rules (Mandatory)
+
+**Every new API endpoint and public method MUST have corresponding tests.**
+
+| Change Type | Test Requirement |
+|-------------|-----------------|
+| New Controller endpoint | Must have corresponding Integration Test |
+| New Service public method | Must have Unit Test or Integration Test |
+| Modified endpoint behavior | Must update or add corresponding tests |
+| Bug fix | Must have a test that reproduces the bug (red-green) |
+
+### Test Project
+- Integration Tests: `backend/tests/HansOS.Api.IntegrationTests/`
+- Uses `WebApplicationFactory<Program>` for full API pipeline testing
+
+### Test Naming Convention
+- Format: `{Method}_{Scenario}_{ExpectedResult}`
+- Example: `Login_WithValidCredentials_ReturnsAccessToken`
+- Example: `GetMenuAll_Unauthorized_Returns401`
+
+### Minimum Coverage Per Endpoint
+1. Happy path (success scenario)
+2. 401 Unauthorized (unauthenticated)
+3. 400 Bad Request (invalid parameters, if applicable)
+4. Business logic edge cases
 
 ---
 
@@ -58,13 +81,33 @@ No unit test projects at this time. Integration tests are in `backend/tests/CGMS
 
 Monorepo with backend API + frontend SPA. Full details in `.claude/ARCHITECTURE.md`.
 
-**Key Patterns**: Features-based folders | JWT + HttpOnly Refresh Token | EF Core Code-First | API Envelope (`ApiEnvelope<T>`) | Encrypted Secrets
+**Key Patterns**: Features-based folders | JWT + HttpOnly Refresh Token | EF Core Code-First | API Envelope (`ApiEnvelope<T>`)
 
-**Database**: PostgreSQL, EF Core Code-First. Migrations allowed via `dotnet ef`.
+**Database**: PostgreSQL, EF Core Code-First. Migrations auto-applied on startup.
 
 **Frontend**: Vue 3 Composition API + Ant Design Vue + Pinia + TypeScript strict mode
 
 > Architecture details (project structure, auth flow, API patterns) -> see `.claude/ARCHITECTURE.md`
+
+---
+
+## EF Migration Rules
+
+- Migrations are automatically applied on deployment via `Program.cs` (`MigrateAsync()`)
+- No seed data classes — initial data is handled via migration `Up()` methods
+- `__EFMigrationsHistory` table prevents duplicate execution
+- Add migration: `dotnet ef migrations add <Name> --project backend/src/HansOS.Api`
+- Apply locally: `dotnet ef database update --project backend/src/HansOS.Api`
+- **Never** delete a migration that has been applied to any environment
+
+---
+
+## Deployment
+
+- Push to `main` → GitHub Actions auto-deploy
+- Backend → Azure App Service (auto-applies pending migrations on startup)
+- Frontend → Azure Static Web Apps
+- Single environment (personal project, no staging/production split)
 
 ---
 
@@ -148,7 +191,6 @@ Full guide: `~/.claude/rules/csharp-coding-style.md` (auto-loaded)
 
 - `git add .` -- specific files only (hook blocked)
 - Guessing -- use `[NEEDS CLARIFICATION]`
-- Modifying encrypted secrets files directly
 - Bypassing three-tier architecture
 
 ---

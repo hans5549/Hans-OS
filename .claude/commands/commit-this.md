@@ -45,9 +45,9 @@ This step YOU do directly (no agent needed):
 4. If any fail, fix the issues and re-check
 
 ## Step 5: Build & Commit
-1. Build backend: `dotnet build backend/CGMSportFinance.sln`
+1. Build backend: `dotnet build backend/HansOS.slnx`
 2. If any `.vue`, `.ts`, or `.tsx` files were modified, also run: `cd frontend && pnpm check:type`
-3. Run tests: `dotnet test backend/CGMSportFinance.sln`
+3. Run tests: `dotnet test backend/HansOS.slnx`
 4. If build or tests fail, fix and retry
 5. If all pass, create a git commit:
    - Stage only modified files (specific paths, never `git add .`)

@@ -45,8 +45,8 @@ This step YOU do directly (no agent needed):
 4. If any fail, fix the issues and re-check
 
 ## Step 5: Build Verification
-1. Build backend: `dotnet build backend/CGMSportFinance.sln`
+1. Build backend: `dotnet build backend/HansOS.slnx`
 2. If any `.vue`, `.ts`, or `.tsx` files were modified, also run: `cd frontend && pnpm check:type`
-3. Run tests: `dotnet test backend/CGMSportFinance.sln`
+3. Run tests: `dotnet test backend/HansOS.slnx`
 4. Report whether build and tests succeeded or failed. Do NOT create a git commit.
 5. Use `commit this` or `/commit-this` when ready to commit.

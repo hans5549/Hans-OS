@@ -89,11 +89,8 @@ switch (toolName) {
 
 {
   const fp = input.file_path || input.path || '';
-  if (fp && /appsettings\.secrets\.enc\.json$/i.test(fp)) {
-    log('[WARNING] Editing appsettings.secrets.enc.json — this file is AES-encrypted. Modifying encrypted values directly will break decryption. Use CGMSportFinance.SecretsCli to manage secrets.');
-  }
   if (fp && /appsettings.*\.json$/i.test(fp)) {
-    log('[WARNING] Editing appsettings.json — connection strings reference encrypted secrets. Verify with CGMSportFinance.Secrets infrastructure.');
+    log('[INFO] Editing appsettings — sensitive values (connection strings, JWT keys) should be set via environment variables in production.');
   }
 }
 

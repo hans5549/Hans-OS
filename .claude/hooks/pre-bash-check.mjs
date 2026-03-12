@@ -184,7 +184,7 @@ log('[Workflow] All steps completed! Running final build verification...');
 log('');
 
 // Backend build
-const solutionPath = 'backend/CGMSportFinance.sln';
+const solutionPath = 'backend/HansOS.slnx';
 log(`[Build] Building backend: ${solutionPath}`);
 
 try {

@@ -118,12 +118,12 @@ Before any analysis:
 
 ---
 
-## Domain Translation — "Never Break Userspace" in CGMSportFinance Context
+## Domain Translation — "Never Break Userspace" in Hans-OS Context
 
-In this sports finance system, "userspace" means:
+In this personal assistant system, "userspace" means:
 - **Don't break API contracts** — `ApiEnvelope<T>` response format is the contract with the frontend
 - **Don't break JWT auth flow** — Login → Refresh → Logout is the critical path
-- **Don't break RBAC permission codes** — Frontend button visibility depends on `GET /api/auth/codes`
+- **Don't break RBAC permission codes** — Frontend button visibility depends on `GET /auth/codes`
 - **Don't break EF Migration chain** — Each migration must be additive and backward-compatible
 - **Don't break frontend routes** — Menu tree drives navigation; orphaned routes break UX
 

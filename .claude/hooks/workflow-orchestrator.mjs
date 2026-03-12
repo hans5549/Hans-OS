@@ -103,7 +103,7 @@ if (/commit\s+this/i.test(promptLower)) {
   log('Step 1: Agent tool -> subagent_type: "code-simplifier:code-simplifier"');
   log('Step 2: Agent tool -> subagent_type: "code-review-specialist"');
   log('Step 3: Agent tool -> subagent_type: "security-vuln-scanner"');
-  log('Step 4: dotnet build backend/CGMSportFinance.sln -> git commit (Conventional Commits, Traditional Chinese)');
+  log('Step 4: dotnet build backend/HansOS.slnx -> git commit (Conventional Commits, Traditional Chinese)');
   log('');
   log('For detailed instructions, use /commit-this command instead.');
   log('</user-prompt-submit-hook>');
@@ -121,7 +121,7 @@ if (/^code-review$/i.test(promptLower.trim())) {
   log('Step 1: Agent tool -> subagent_type: "code-simplifier:code-simplifier"');
   log('Step 2: Agent tool -> subagent_type: "code-review-specialist"');
   log('Step 3: Agent tool -> subagent_type: "security-vuln-scanner"');
-  log('Step 4: dotnet build backend/CGMSportFinance.sln -> report result (do NOT commit)');
+  log('Step 4: dotnet build backend/HansOS.slnx -> report result (do NOT commit)');
   log('');
   log('For detailed instructions, use /review-workflow command instead.');
   log('Use "commit this" or /commit-this when ready to commit.');

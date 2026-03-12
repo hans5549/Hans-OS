@@ -2,7 +2,7 @@
 // post-edit-build.mjs - PostToolUse Hook: Auto Build on Code File Edit
 // ============================================================================
 // Dual build system for Hans-OS monorepo:
-//   - Backend (.cs) → dotnet build backend/CGMSportFinance.sln
+//   - Backend (.cs) → dotnet build backend/HansOS.slnx
 //   - Frontend (.vue, .ts, .tsx) → cd frontend && pnpm check:type
 // Uses atomic directory lock to prevent parallel builds.
 // Tracks build retry count (max 5) in workflow state.
@@ -81,7 +81,7 @@ try {
 
 try {
   if (buildType === 'backend') {
-    const solutionPath = resolve(PROJECT_ROOT, 'backend', 'CGMSportFinance.sln');
+    const solutionPath = resolve(PROJECT_ROOT, 'backend', 'HansOS.slnx');
     log(`[Build] Auto-building backend after ${ext} edit...`);
 
     execSync(`dotnet build "${solutionPath}" --no-restore -v q`, {

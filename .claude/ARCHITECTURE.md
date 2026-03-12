@@ -1,4 +1,4 @@
-# Architecture — Hans-OS (CGMSportFinance)
+# Architecture — Hans-OS
 
 ## Monorepo Structure
 
@@ -6,7 +6,6 @@
 Hans-OS/
   backend/           ← .NET 9.0 Web API
   frontend/          ← Vue Vben Admin (pnpm monorepo)
-  infra/             ← Docker / env templates
   .claude/           ← Claude Code automation
 ```
 
@@ -18,27 +17,26 @@ Hans-OS/
 
 | Project | Type | Purpose |
 |---------|------|---------|
-| `backend/src/CGMSportFinance.Api` | Web API (net9.0) | Main application |
-| `backend/src/CGMSportFinance.Secrets` | Class Library | Shared crypto utilities |
-| `backend/tools/CGMSportFinance.SecretsCli` | Console App | CLI for managing encrypted secrets |
-| `backend/tests/CGMSportFinance.Api.IntegrationTests` | xUnit | Integration tests |
+| `backend/src/HansOS.Api` | Web API (net9.0) | Main application |
+| `backend/tests/HansOS.Api.IntegrationTests` | xUnit | Integration tests |
 
-**Solution**: `backend/CGMSportFinance.sln`
+**Solution**: `backend/HansOS.slnx`
 
 ### Key NuGet Packages
 
 - `Microsoft.AspNetCore.Authentication.JwtBearer` 9.0
 - `Microsoft.AspNetCore.Identity.EntityFrameworkCore` 9.0
-- `Npgsql.EntityFrameworkCore.PostgreSQL` 9.0 (production)
-- `Microsoft.EntityFrameworkCore.Sqlite` 9.0 (dev/test)
-- `Swashbuckle.AspNetCore` 10.x (Swagger)
+- `Npgsql.EntityFrameworkCore.PostgreSQL` 9.0
+- `Swashbuckle.AspNetCore` 10.x (Swagger + Microsoft.OpenApi 2.0)
+- `Serilog.AspNetCore` (structured logging)
 
 ### Folder Structure (Features-Based)
 
 ```
-CGMSportFinance.Api/
+HansOS.Api/
   Common/
     ApiEnvelope.cs            ← Success response wrapper
+    GlobalExceptionHandler.cs ← IExceptionHandler implementation
   Features/
     Auth/                     ← Login, Refresh, Logout, Permission Codes
       AuthController.cs
@@ -53,9 +51,8 @@ CGMSportFinance.Api/
       UserController.cs
       Contracts/
   Infrastructure/
-    Configuration/            ← Encrypted config provider
     Identity/                 ← Entity classes (ApplicationUser, Menu, Permission, etc.)
-    Persistence/              ← DbContext, Migrations
+    Persistence/              ← DbContext, DesignTimeDbContextFactory, Migrations
     Security/                 ← JWT token service implementation
 ```
 
@@ -67,7 +64,7 @@ All successful responses use `ApiEnvelope<T>`:
 { "code": 0, "data": { ... }, "error": null, "message": "ok" }
 ```
 
-Error responses use ASP.NET Core `ProblemDetails`.
+Error responses also use `ApiEnvelope<T>` via `GlobalExceptionHandler`.
 
 The frontend `RequestClient` unwraps `data` when `code === 0`.
 
@@ -83,7 +80,6 @@ Inherits `IdentityDbContext<ApplicationUser, IdentityRole, string>` (ASP.NET Cor
 
 | DbSet | Entity | Key |
 |-------|--------|-----|
-| `AuditLogs` | `AuditLog` | `long Id` |
 | `Menus` | `Menu` | `Guid Id` |
 | `Permissions` | `Permission` | `int Id` (unique `Code`) |
 | `RefreshTokens` | `RefreshToken` | `Guid Id` |
@@ -96,17 +92,18 @@ Inherits `IdentityDbContext<ApplicationUser, IdentityRole, string>` (ASP.NET Cor
 - **Menu**: self-referencing tree (`ParentId → Parent/Children`), enum `MenuType` = Catalog/Menu/Button
 - **RefreshToken**: stores SHA-256 hash (never plaintext), IP/UserAgent tracking, token chaining
 - **Permission**: unique `Code` column (e.g., `"dashboard:analytics:view"`)
-- **AuditLog**: write-only append log
 
 ### Migration Workflow
 
 ```bash
 # Add migration
-dotnet ef migrations add <Name> --project backend/src/CGMSportFinance.Api
+dotnet ef migrations add <Name> --project backend/src/HansOS.Api
 
 # Apply to database
-dotnet ef database update --project backend/src/CGMSportFinance.Api
+dotnet ef database update --project backend/src/HansOS.Api
 ```
+
+Migrations are auto-applied on startup via `Program.cs` (`MigrateAsync()`).
 
 ---
 
@@ -114,23 +111,25 @@ dotnet ef database update --project backend/src/CGMSportFinance.Api
 
 ### Flow
 
-1. `POST /api/auth/login` → validates credentials → returns JWT (body) + refresh token (`HttpOnly` cookie)
-2. `POST /api/auth/refresh` → reads cookie → rotates tokens (revoke old, issue new pair)
-3. `POST /api/auth/logout` → revokes refresh token → clears cookie
-4. `GET /api/auth/codes` → returns `Permission.Code[]` for current user's roles (button-level RBAC)
+1. `POST /auth/login` → validates credentials → returns JWT (body) + refresh token (`HttpOnly` cookie)
+2. `POST /auth/refresh` → reads cookie → rotates tokens (revoke old, issue new pair)
+3. `POST /auth/logout` → revokes refresh token → clears cookie
+4. `GET /auth/codes` → returns `Permission.Code[]` for current user's roles (button-level RBAC)
 
 ### Configuration
 
 | Section | Key Fields |
 |---------|-----------|
-| `Jwt` | `Issuer`, `Audience`, `SigningKey`, `AccessTokenMinutes` (15), `RefreshTokenDays` (14) |
+| `Jwt` | `Issuer`, `Audience`, `SigningKey`, `AccessTokenExpiryMinutes` (15), `RefreshTokenExpiryDays` (14) |
 | `Frontend` | `AllowedOrigins` (CORS with `AllowCredentials()`) |
-| `Database` | `Provider` ("Postgres" / "Sqlite") |
+
 All option classes use `.ValidateOnStart()`.
 
-### Encrypted Secrets
+### Secrets Management
 
-`appsettings.secrets.enc.json` is AES-encrypted and committed safely. Custom `IConfigurationProvider` decrypts at startup. Managed via `CGMSportFinance.SecretsCli` tool.
+Sensitive values (connection strings, JWT signing key) are configured via:
+- **Local dev**: `appsettings.Development.json` (gitignored)
+- **Production**: Azure App Service environment variables
 
 ---
 
@@ -175,15 +174,26 @@ frontend/
 
 ## Roles
 
-Three built-in roles are created by the `SeedEssentialData` EF Core migration:
+One built-in role is created by the `SeedEssentialData` EF Core migration:
 
 | Role | Scope |
 |------|-------|
-| `super` | Full access |
-| `admin` | Most operations |
-| `user` | View-only |
+| `admin` | Full access |
 
-No users, menus, or permissions are seeded. These are managed via the API/UI after deployment.
+One user (`hans`) is seeded with the admin role.
+
+---
+
+## Deployment
+
+| Component | Target | Trigger |
+|-----------|--------|---------|
+| Backend | Azure App Service | Push to `main` (paths: `backend/**`) |
+| Frontend | Azure Static Web Apps | Push to `main` (paths: `frontend/**`) |
+
+- Single environment (personal project)
+- Migrations auto-applied on App Service startup
+- Health check: `GET /health`
 
 ---
 
@@ -193,6 +203,6 @@ No users, menus, or permissions are seeded. These are managed via the API/UI aft
 2. **No bypassing three-tier architecture** — Controller → Service → Repository/DbContext
 3. **API responses** — always wrapped in `ApiEnvelope<T>` for success
 4. **EF Core Code-First** — migrations allowed and expected
-5. **Encrypted secrets** — never store plaintext connection strings or signing keys
+5. **Environment variables for secrets** — never hardcode connection strings or signing keys
 6. **CORS with credentials** — required for `HttpOnly` refresh token cookie
 7. **Frontend strict TypeScript** — all `.ts`/`.vue` files must pass `pnpm check:type`

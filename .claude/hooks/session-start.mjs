@@ -29,7 +29,7 @@ if (existsSync(LOCK_DIR)) {
 
 log('');
 log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-log(' Hans-OS (CGMSportFinance) — WORKFLOW AUTOMATION ACTIVE');
+log(' Hans-OS — WORKFLOW AUTOMATION ACTIVE');
 log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 log('');
 log(' Steps: Simplifier → Spec Check → Code Review → Security → Linus → Build');

@@ -51,7 +51,9 @@
       "mcp__memory__create_entities",
       "mcp__memory__create_relations",
       "mcp__memory__add_observations",
-      "Bash(curl -s http://localhost:5180/api/menu/all)"
+      "Bash(curl -s http://localhost:5180/api/menu/all)",
+      "WebFetch(domain:doc.vben.pro)",
+      "WebFetch(domain:markdown.new)"
     ]
   },
   "enableAllProjectMcpServers": true,
