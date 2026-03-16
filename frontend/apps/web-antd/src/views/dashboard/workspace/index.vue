@@ -54,7 +54,7 @@ const projectItems: WorkbenchProjectItem[] = [
     group: '上班摸鱼',
     icon: 'ion:logo-html5',
     title: 'Html5',
-    url: 'https://developer.mozilla.org/zh-CN/docs/Web/HTML',
+    url: 'https://developer.mozilla.org/zh-TW/docs/Web/HTML',
   },
   {
     color: '#bf0c2c',
@@ -81,7 +81,7 @@ const projectItems: WorkbenchProjectItem[] = [
     group: '架构组',
     icon: 'ion:logo-javascript',
     title: 'Js',
-    url: 'https://developer.mozilla.org/zh-CN/docs/Web/JavaScript',
+    url: 'https://developer.mozilla.org/zh-TW/docs/Web/JavaScript',
   },
 ];
 
