@@ -1,6 +1,8 @@
 // ============================================================================
 // session-start.mjs - SessionStart Hook: Welcome Banner + Workflow Status
 // ============================================================================
+// Resets planning phase steps each session to ensure independent plan reviews.
+// ============================================================================
 
 import { readFileSync, writeFileSync, existsSync, rmdirSync } from 'fs';
 import { resolve, dirname } from 'path';
@@ -25,17 +27,34 @@ if (existsSync(LOCK_DIR)) {
   }
 }
 
+// ── Reset planning phase steps for new session ─────────────────────────────
+
+if (existsSync(STATE_FILE)) {
+  try {
+    const state = JSON.parse(readFileSync(STATE_FILE, 'utf-8'));
+    if (state.completedSteps) {
+      state.completedSteps.ceoReview = false;
+      state.completedSteps.engReview = false;
+      state.completedSteps.planLinusReview = false;
+      state.currentPlanFile = '';
+      state.lastModified = new Date().toISOString();
+      writeFileSync(STATE_FILE, JSON.stringify(state, null, 2), 'utf-8');
+    }
+  } catch { /* non-critical */ }
+}
+
 // ── Welcome banner ─────────────────────────────────────────────────────────
 
 log('');
 log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-log(' Hans-OS — WORKFLOW AUTOMATION ACTIVE');
+log(' WORKFLOW AUTOMATION ACTIVE');
 log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 log('');
-log(' Steps: Simplifier → Spec Check → Code Review → Security → Linus → Build');
-log(' Commands: workflow status | workflow reset | /context-prime | /resume | /reboot-check');
+log(' Coding: Simplifier → Code Review + Security → Build → Commit');
+log(' Planning: CEO Review → Eng Review → Linus Review → ExitPlanMode');
+log(' Commands: workflow status | workflow reset | /resume | /reboot-check');
 
-// ── Area 2b: Auto-create findings.md and progress.md ─────────────────────
+// ── Auto-create findings.md and progress.md ─────────────────────────────
 
 const workflowDir = resolve(PROJECT_ROOT, '.claude', 'workflow');
 const findingsPath = resolve(workflowDir, 'findings.md');
@@ -64,12 +83,11 @@ if (existsSync(findingsPath)) {
   } catch { /* ignore */ }
 }
 
-// ── Area 6: Session recovery — show last session summary ─────────────────
+// ── Session recovery — show last session summary ─────────────────────────
 
 if (existsSync(progressPath)) {
   try {
     const lines = readFileSync(progressPath, 'utf-8').split('\n');
-    // Find last "## Session:" block
     let lastSessionStart = -1;
     for (let i = lines.length - 1; i >= 0; i--) {
       if (lines[i].startsWith('## Session:')) {
@@ -104,10 +122,8 @@ if (existsSync(STATE_FILE)) {
 
       const stepNames = [
         ['simplifier', 'Simplifier'],
-        ['specCheck', 'Spec Check'],
         ['codeReviewer', 'Code Review'],
         ['securityReviewer', 'Security'],
-        ['linusGreen', 'Linus'],
         ['buildPassed', 'Build'],
       ];
 

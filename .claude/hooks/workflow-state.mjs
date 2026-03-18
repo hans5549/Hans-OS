@@ -1,7 +1,8 @@
 // ============================================================================
 // workflow-state.mjs - Workflow State Management Module
 // ============================================================================
-// Provides state tracking for modified files and completed workflow steps
+// Provides state tracking for modified files and completed workflow steps.
+// Supports both Planning Phase (CEO/Eng/Linus review) and Coding Phase.
 // ============================================================================
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
@@ -16,8 +17,7 @@ const WORKFLOW_DIR = resolve(PROJECT_ROOT, '.claude', 'workflow');
 const STATE_FILE = resolve(WORKFLOW_DIR, 'state.json');
 
 const CODE_EXTENSIONS = new Set([
-  '.cs', '.razor', '.json', '.css', '.js', '.html', '.csproj', '.xml',
-  '.vue', '.ts', '.tsx', '.mts', '.jsx'
+  '.cs', '.razor', '.json', '.css', '.js', '.html', '.csproj', '.xml', '.jsx', '.ts', '.tsx', '.vue', '.mts'
 ]);
 const DOC_EXTENSIONS = new Set(['.md', '.txt', '.rst', '.yml', '.yaml']);
 
@@ -27,23 +27,24 @@ function getDefaultState() {
   return {
     modifiedFiles: [],
     completedSteps: {
+      // Planning phase
       planner: false,
+      ceoReview: false,
+      engReview: false,
+      planLinusReview: false,
+      // Coding phase
       simplifier: false,
-      specCheck: false,
       buildPassed: false,
       codeReviewer: false,
       securityReviewer: false,
-      linusGreen: false,
     },
     buildRetryCount: 0,
     lastModified: '',
     sessionId: '',
-    // === Cross-cutting state (used by global + project hooks) ===
-    toolCallCount: 0,          // Area 1: Attention anchor frequency control
-    currentPlanFile: '',        // Area 1: Active plan file path
-    researchOpCount: 0,         // Area 2: Research operation counter
-    editHistory: [],            // Area 3: Edit history for Strike tracking
-    lastReadFiles: {},          // Area 8: File read timestamp tracking
+    currentPlanFile: '',
+    editHistory: [],
+    // Track cumulative line changes since last review
+    lineChangeSinceReview: 0,
   };
 }
 
@@ -84,11 +85,10 @@ export function getWorkflowState() {
       }
     }
 
-    // Ensure cross-cutting fields exist (used by global hooks)
-    if (state.toolCallCount === undefined) state.toolCallCount = 0;
-    if (state.researchOpCount === undefined) state.researchOpCount = 0;
+    // Ensure other fields exist
     if (!Array.isArray(state.editHistory)) state.editHistory = [];
-    if (!state.lastReadFiles || typeof state.lastReadFiles !== 'object') state.lastReadFiles = {};
+    if (state.currentPlanFile === undefined) state.currentPlanFile = '';
+    if (state.lineChangeSinceReview === undefined) state.lineChangeSinceReview = 0;
 
     return state;
   } catch {
@@ -122,7 +122,7 @@ export function isDocFile(filePath) {
 
 // ── File tracking ──────────────────────────────────────────────────────────
 
-export function addModifiedFile(filePath) {
+export function addModifiedFile(filePath, lineCount = 0) {
   const state = getWorkflowState();
   const normalized = filePath.replace(/\\/g, '/');
 
@@ -131,20 +131,31 @@ export function addModifiedFile(filePath) {
     return state;
   }
 
-  if (state.modifiedFiles.includes(normalized)) {
-    return state;
+  const isNew = !state.modifiedFiles.includes(normalized);
+  if (isNew) {
+    state.modifiedFiles.push(normalized);
   }
 
-  state.modifiedFiles.push(normalized);
-
-  // If code file, reset review steps (keep planner)
+  // If code file, handle review step resets
   if (isCodeFile(filePath)) {
-    state.completedSteps.simplifier = false;
-    state.completedSteps.specCheck = false;
-    state.completedSteps.buildPassed = false;
-    state.completedSteps.codeReviewer = false;
-    state.completedSteps.securityReviewer = false;
-    state.completedSteps.linusGreen = false;
+    state.lineChangeSinceReview = (state.lineChangeSinceReview || 0) + lineCount;
+
+    if (state.completedSteps.simplifier) {
+      // Simplifier already done → only reset post-simplifier steps
+      // Small changes (< 10 lines cumulative) → warn but don't reset
+      if (state.lineChangeSinceReview >= 10) {
+        state.completedSteps.codeReviewer = false;
+        state.completedSteps.securityReviewer = false;
+        state.completedSteps.buildPassed = false;
+        state.lineChangeSinceReview = 0;
+      }
+    } else {
+      // Simplifier not done → reset all coding review steps
+      state.completedSteps.simplifier = false;
+      state.completedSteps.buildPassed = false;
+      state.completedSteps.codeReviewer = false;
+      state.completedSteps.securityReviewer = false;
+    }
   }
 
   setWorkflowState(state);
@@ -153,7 +164,10 @@ export function addModifiedFile(filePath) {
 
 // ── Step management ────────────────────────────────────────────────────────
 
-const VALID_STEPS = ['planner', 'simplifier', 'specCheck', 'buildPassed', 'codeReviewer', 'securityReviewer', 'linusGreen'];
+const VALID_STEPS = [
+  'planner', 'ceoReview', 'engReview', 'planLinusReview',
+  'simplifier', 'buildPassed', 'codeReviewer', 'securityReviewer',
+];
 
 export function completeStep(stepName) {
   if (!VALID_STEPS.includes(stepName)) {
@@ -161,6 +175,10 @@ export function completeStep(stepName) {
   }
   const state = getWorkflowState();
   state.completedSteps[stepName] = true;
+  // Reset cumulative line counter when review completes
+  if (['codeReviewer', 'securityReviewer'].includes(stepName)) {
+    state.lineChangeSinceReview = 0;
+  }
   setWorkflowState(state);
   return state;
 }
@@ -183,14 +201,23 @@ export function resetWorkflowState() {
 
 // ── Query helpers ──────────────────────────────────────────────────────────
 
-export function getMissingSteps(includePlanner = false) {
+export function getCodingMissingSteps(codeFileCount = 0) {
   const state = getWorkflowState();
-  const required = ['simplifier', 'codeReviewer', 'securityReviewer'];
 
-  if (includePlanner) {
-    required.unshift('planner');
+  // Tiered requirements based on file count
+  let required;
+  if (codeFileCount <= 2) {
+    required = ['simplifier', 'codeReviewer'];
+  } else {
+    required = ['simplifier', 'codeReviewer', 'securityReviewer'];
   }
 
+  return required.filter((step) => !state.completedSteps[step]);
+}
+
+export function getPlanningMissingSteps() {
+  const state = getWorkflowState();
+  const required = ['ceoReview', 'engReview', 'planLinusReview'];
   return required.filter((step) => !state.completedSteps[step]);
 }
 
@@ -223,20 +250,36 @@ export function showWorkflowStatus() {
 
   // Step status
   log('Completed Steps:');
-  const stepOrder = [
-    { key: 'planner', name: 'Planner (optional)' },
-    { key: 'simplifier', name: 'Code Simplifier' },
-    { key: 'specCheck', name: 'Spec Check' },
-    { key: 'buildPassed', name: 'Build Passed' },
-    { key: 'codeReviewer', name: 'Code Review' },
-    { key: 'securityReviewer', name: 'Security Review' },
-    { key: 'linusGreen', name: 'Linus Green' },
-  ];
 
-  for (const { key, name } of stepOrder) {
+  log('  -- Planning Phase --');
+  const planSteps = [
+    { key: 'planner', name: 'Planner (optional)' },
+    { key: 'ceoReview', name: 'CEO Review' },
+    { key: 'engReview', name: 'Eng Review' },
+    { key: 'planLinusReview', name: 'Plan Linus Review' },
+  ];
+  for (const { key, name } of planSteps) {
     const done = state.completedSteps[key];
     const icon = done ? '[x]' : '[ ]';
     log(`  ${icon} ${name}`);
+  }
+
+  log('  -- Coding Phase --');
+  const codeSteps = [
+    { key: 'simplifier', name: 'Code Simplifier' },
+    { key: 'buildPassed', name: 'Build Passed' },
+    { key: 'codeReviewer', name: 'Code Review' },
+    { key: 'securityReviewer', name: 'Security Review' },
+  ];
+  for (const { key, name } of codeSteps) {
+    const done = state.completedSteps[key];
+    const icon = done ? '[x]' : '[ ]';
+    log(`  ${icon} ${name}`);
+  }
+
+  if (state.currentPlanFile) {
+    log('');
+    log(`  Active Plan: ${state.currentPlanFile}`);
   }
 
   log('');

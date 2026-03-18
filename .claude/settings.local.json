@@ -2,16 +2,23 @@
   "permissions": {
     "allow": [
       "Bash(dotnet:*)",
+      "Bash(dotnet build:*)",
+      "Bash(dotnet test:*)",
+      "Bash(dotnet ef:*)",
       "Bash(git:*)",
-      "Bash(pnpm:*)",
       "Bash(npm:*)",
       "Bash(npx:*)",
+      "Bash(pnpm:*)",
       "Bash(node:*)",
+      "Bash(node --check:*)",
       "Bash(python:*)",
+      "Bash(py:*)",
+      "Bash(python.exe:*)",
       "Bash(python3:*)",
       "Bash(ls:*)",
+      "Bash(dir:*)",
+      "Bash(where:*)",
       "Bash(find:*)",
-      "Bash(gh:*)",
       "Bash(cd:*)",
       "Bash(echo:*)",
       "Bash(grep:*)",
@@ -19,23 +26,33 @@
       "Bash(test:*)",
       "Bash(bash:*)",
       "Bash(cat:*)",
+      "Bash(more:*)",
       "Bash(sed:*)",
       "Bash(xargs:*)",
-      "Bash(more:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(tasklist:*)",
+      "Bash(powershell -Command:*)",
+      "Bash(gh:*)",
+      "Bash(csharp-ls:*)",
+      "Bash(claude:*)",
+      "Bash(claude mcp:*)",
       "Bash(chmod +x:*)",
-      "Bash(dotnet build:*)",
-      "Bash(dotnet test:*)",
-      "Bash(dotnet ef:*)",
+      "Bash(export:*)",
       "WebSearch",
       "WebFetch(domain:github.com)",
+      "WebFetch(domain:markdown.new)",
       "WebFetch(domain:learn.microsoft.com)",
       "WebFetch(domain:docs.microsoft.com)",
+      "WebFetch(domain:www.telerik.com)",
+      "WebFetch(domain:www.builder.io)",
       "WebFetch(domain:vuejs.org)",
       "WebFetch(domain:antdv.com)",
       "WebFetch(domain:www.antdv.com)",
       "WebFetch(domain:pinia.vuejs.org)",
       "WebFetch(domain:tailwindcss.com)",
       "WebFetch(domain:vitejs.dev)",
+      "WebFetch(domain:doc.vben.pro)",
       "mcp__filesystem__list_directory",
       "mcp__filesystem__list_directory_with_sizes",
       "mcp__filesystem__directory_tree",
@@ -51,9 +68,13 @@
       "mcp__memory__create_entities",
       "mcp__memory__create_relations",
       "mcp__memory__add_observations",
-      "Bash(curl -s http://localhost:5180/api/menu/all)",
-      "WebFetch(domain:doc.vben.pro)",
-      "WebFetch(domain:markdown.new)"
+      "mcp__ide__getDiagnostics",
+      "mcp__plugin_context7_context7__resolve-library-id",
+      "mcp__plugin_context7_context7__query-docs"
+    ],
+    "deny": [
+      "Bash(git add .)",
+      "Bash(git add -A)"
     ]
   },
   "enableAllProjectMcpServers": true,
@@ -127,6 +148,16 @@
             "timeout": 120
           }
         ]
+      },
+      {
+        "matcher": "ExitPlanMode",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/pre-exit-plan-check.mjs",
+            "timeout": 10
+          }
+        ]
       }
     ],
     "PostToolUse": [
@@ -147,11 +178,6 @@
             "type": "command",
             "command": "node .claude/hooks/post-edit-build.mjs",
             "timeout": 60
-          },
-          {
-            "type": "command",
-            "command": "node .claude/hooks/post-edit-cs-lint.mjs",
-            "timeout": 10
           }
         ]
       }
