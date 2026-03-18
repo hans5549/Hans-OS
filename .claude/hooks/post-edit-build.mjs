@@ -24,16 +24,6 @@ const PROJECT_ROOT = resolve(__dirname, '..', '..');
 const parsed = await parseHookInput();
 if (!parsed) process.exit(0);
 
-// ── Area 2d: Reset research counter on Write/Edit (entering implementation mode) ─
-
-{
-  const state = getWorkflowState();
-  if (state.researchOpCount > 0) {
-    state.researchOpCount = 0;
-    setWorkflowState(state);
-  }
-}
-
 // ── Extract file path from tool input ──────────────────────────────────────
 
 const toolName = parsed.tool_name;
@@ -111,7 +101,7 @@ try {
     if (state.buildRetryCount > 0) {
       state.buildRetryCount = 0;
     }
-    // Area 3: Record successful edit
+    // Record successful edit
     if (!Array.isArray(state.editHistory)) state.editHistory = [];
     state.editHistory.push({ file: filePath, time: Date.now(), buildOk: true });
     if (state.editHistory.length > 10) state.editHistory = state.editHistory.slice(-10);
@@ -122,12 +112,12 @@ try {
   if (output.length > 600) output = output.substring(0, 600) + '...';
   log(`[Build] FAILED (${buildType}):\n${output}`);
 
-  // Increment retry count + Area 3: Strike tracking
+  // Increment retry count + Strike tracking
   try {
     const state = getWorkflowState();
     state.buildRetryCount = (state.buildRetryCount || 0) + 1;
 
-    // Area 3: Record failed edit
+    // Record failed edit
     if (!Array.isArray(state.editHistory)) state.editHistory = [];
     state.editHistory.push({ file: filePath, time: Date.now(), buildOk: false });
     if (state.editHistory.length > 10) state.editHistory = state.editHistory.slice(-10);

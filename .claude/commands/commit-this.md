@@ -1,6 +1,6 @@
 # Commit This - Full Workflow
 
-CRITICAL RULE: Each agent step below MUST be executed using the Agent tool.
+CRITICAL RULE: Each agent step (Steps 1-5) MUST be executed using the Agent tool.
 You are FORBIDDEN from substituting any agent step with your own text summary or analysis.
 The post-agent-verify hook will check -- steps only count as complete when Agent tool is actually called.
 
@@ -17,12 +17,6 @@ Use the Agent tool with these EXACT parameters:
 - DO NOT do this yourself. You MUST call the Agent tool.
 - Wait for the agent to complete before proceeding.
 
-## Step 1.5: Spec Check
-This step YOU do directly (no agent needed):
-1. Re-read the original user request or plan
-2. Compare: Are all requirements implemented? Nothing extra (YAGNI)?
-3. Report findings, then say "spec check done"
-
 ## Step 2: Code Review
 Use the Agent tool with these EXACT parameters:
 - subagent_type: "code-review-specialist"
@@ -38,17 +32,24 @@ Use the Agent tool with these EXACT parameters:
 - Wait for the agent to complete before proceeding.
 
 ## Step 4: Linus Review
-This step YOU do directly (no agent needed):
-1. Read `.claude/LINUS_MODE.md`
-2. Apply each criterion to the modified code
-3. If all pass, say "Linus Green"
-4. If any fail, fix the issues and re-check
+Use the Agent tool with these EXACT parameters:
+- subagent_type: "linus-reviewer"
+- prompt: "Review these modified files applying Linus Torvalds criteria: [list files]. Check: Good Taste (edge case elimination), Never Break Userspace (backward compatibility), Pragmatism, Simplicity (nesting <= 3, methods <= 20 lines). Hans-OS domain: API endpoints, JWT auth, menu system, user management."
+- DO NOT do a Linus review yourself. You MUST call the Agent tool.
+- Wait for the agent to complete before proceeding.
 
-## Step 5: Build & Commit
-1. Build backend: `dotnet build backend/HansOS.slnx`
-2. If any `.vue`, `.ts`, or `.tsx` files were modified, also run: `cd frontend && pnpm check:type`
-3. Run tests: `dotnet test backend/HansOS.slnx`
-4. If build or tests fail, fix and retry
+## Step 5: gstack Review
+Use the Agent tool with these EXACT parameters:
+- subagent_type: "gstack-reviewer"
+- prompt: "Pre-landing structural review for these modified files: [list files]. Two-pass analysis: CRITICAL (SQL safety, race conditions, trust boundary, async void, shared DbContext) then INFORMATIONAL (magic numbers, dead code, test gaps). Hans-OS domain: API endpoints, JWT auth, menu system, user management. Analyze diff against origin/main."
+- DO NOT do this review yourself. You MUST call the Agent tool.
+- Wait for the agent to complete before proceeding.
+
+## Step 6: Build & Commit
+1. Run: `dotnet build backend/HansOS.slnx`
+2. If frontend files (.vue, .ts, .tsx) were modified, also run: `cd frontend && pnpm check:type`
+3. Run: `dotnet test backend/HansOS.slnx`
+4. If build/test fails, fix and retry
 5. If all pass, create a git commit:
    - Stage only modified files (specific paths, never `git add .`)
    - Use Conventional Commits format in Traditional Chinese

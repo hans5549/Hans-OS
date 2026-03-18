@@ -1,12 +1,13 @@
 // ============================================================================
 // pre-edit-check.mjs - PreToolUse Hook: File Edit Tracker
 // ============================================================================
-// Tracks all code-related file modifications and maintains main branch protection
+// Tracks code file modifications, maintains main branch protection,
+// records currentPlanFile when .claude/plans/*.md is written.
 // Supports: Edit, MultiEdit, Write, mcp__filesystem__edit_file, mcp__filesystem__write_file
 // ============================================================================
 
 import { execSync } from 'child_process';
-import { addModifiedFile, isCodeFile, isDocFile } from './workflow-state.mjs';
+import { getWorkflowState, setWorkflowState, addModifiedFile, isCodeFile, isDocFile } from './workflow-state.mjs';
 import { parseHookInput, log } from './hook-utils.mjs';
 
 // ── Main ───────────────────────────────────────────────────────────────────
@@ -90,12 +91,26 @@ switch (toolName) {
 {
   const fp = input.file_path || input.path || '';
   if (fp && /appsettings.*\.json$/i.test(fp)) {
-    log('[INFO] Editing appsettings — sensitive values (connection strings, JWT keys) should be set via environment variables in production.');
+    log('[WARNING] Editing appsettings.json — connection strings, JWT keys should be set via environment variables.');
   }
 }
 
 // ============================================================================
-// 3. Track File Modification
+// 3. Record currentPlanFile when writing to .claude/plans/*.md
+// ============================================================================
+
+if (filePath) {
+  const normalized = filePath.replace(/\\/g, '/');
+  if (/\.claude\/plans\/.*\.md$/i.test(normalized)) {
+    const state = getWorkflowState();
+    state.currentPlanFile = normalized;
+    setWorkflowState(state);
+    log(`[Workflow] Plan file recorded: ${normalized}`);
+  }
+}
+
+// ============================================================================
+// 4. Track File Modification
 // ============================================================================
 
 if (filePath) {
@@ -103,15 +118,28 @@ if (filePath) {
   const isDoc = isDocFile(filePath);
 
   if (isCode || isDoc) {
-    const state = addModifiedFile(filePath);
+    // Estimate line count from edit (rough: count newlines in new_string)
+    let lineCount = 0;
+    if (input.new_string) {
+      lineCount = (input.new_string.match(/\n/g) || []).length;
+    } else if (input.content) {
+      lineCount = (input.content.match(/\n/g) || []).length;
+    }
+
+    const state = addModifiedFile(filePath, lineCount);
 
     if (isCode) {
       const codeCount = state.modifiedFiles.filter((f) => isCodeFile(f)).length;
-      log('');
-      log(`[Workflow] Tracking code file: ${filePath}`);
-      log(`[Workflow] Total tracked code files: ${codeCount}`);
-      log('[Workflow] Review steps have been reset - please re-run reviews before commit');
-      log('');
+      const cumLines = state.lineChangeSinceReview || 0;
+
+      if (state.completedSteps.simplifier && cumLines > 0 && cumLines < 10) {
+        log(`[Workflow] Tracking code edit: ${filePath} (+${lineCount} lines, cumulative ${cumLines}/10 — reviews preserved)`);
+      } else {
+        log(`[Workflow] Tracking code file: ${filePath} | Total code files: ${codeCount}`);
+        if (!state.completedSteps.simplifier || cumLines >= 10) {
+          log('[Workflow] Review steps have been reset');
+        }
+      }
     }
   }
 }

@@ -39,11 +39,12 @@ if (existsSync(STATE_FILE)) {
 
     if (files.length > 0) {
       const stepNames = [
+        ['ceoReview', 'CEO Review'],
+        ['engReview', 'Eng Review'],
+        ['planLinusReview', 'Plan Linus'],
         ['simplifier', 'Simplifier'],
-        ['specCheck', 'Spec Check'],
         ['codeReviewer', 'Code Review'],
         ['securityReviewer', 'Security'],
-        ['linusGreen', 'Linus'],
         ['buildPassed', 'Build'],
       ];
 
@@ -87,8 +88,6 @@ if (existsSync(STATE_FILE)) {
       `- Branch: ${branch}`,
       `- Modified: ${(state.modifiedFiles || []).join(', ') || 'none'}`,
       `- Steps: ${completedStepNames.join(', ') || 'none'}`,
-      `- Tool calls: ${state.toolCallCount || 0}`,
-      `- Research ops: ${state.researchOpCount || 0}`,
       '',
     ].join('\n');
 

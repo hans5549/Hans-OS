@@ -1,8 +1,10 @@
 // ============================================================================
 // hook-utils.mjs - Shared utilities for Claude Code hooks
 // ============================================================================
-// DRY: readStdin + JSON parse + stderr logging used by all hooks
+// DRY: readStdin + JSON parse + stderr logging + file helpers
 // ============================================================================
+
+import { readFileSync, existsSync } from 'fs';
 
 /**
  * Read all data from stdin as a string.
@@ -37,3 +39,19 @@ export async function parseHookInput() {
  * @param {string} msg
  */
 export const log = (msg) => process.stderr.write(msg + '\n');
+
+/**
+ * Read first N lines of a file. Returns empty string if file doesn't exist.
+ * @param {string} filePath
+ * @param {number} n
+ * @returns {string}
+ */
+export function readFirstNLines(filePath, n) {
+  if (!existsSync(filePath)) return '';
+  try {
+    const content = readFileSync(filePath, 'utf-8');
+    return content.split('\n').slice(0, n).join('\n');
+  } catch {
+    return '';
+  }
+}
