@@ -89,7 +89,7 @@ function handleDragStart(e: MouseEvent | TouchEvent) {
   state.moveDistance =
     getEventPageX(e) -
     Number.parseInt(
-      actionRef.value.getStyle().left.replace('px', '') || '0',
+      actionRef.value.getStyle()?.left.replace('px', '') || '0',
       10,
     );
   state.startTime = Date.now();
@@ -104,62 +104,71 @@ function getOffset(actionEl: HTMLDivElement) {
 }
 
 function handleDragMoving(e: MouseEvent | TouchEvent) {
-  const { isMoving, moveDistance } = state;
-  if (isMoving) {
-    const actionEl = unref(actionRef);
-    const barEl = unref(barRef);
-    if (!actionEl || !barEl) return;
-    const { actionWidth, offset, wrapperWidth } = getOffset(actionEl.getEl());
-    const moveX = getEventPageX(e) - moveDistance;
+  if (!state.isMoving) return;
 
-    emit('move', {
-      event: e,
-      moveDistance,
-      moveX,
-    });
-    if (moveX > 0 && moveX <= offset) {
-      actionEl.setLeft(`${moveX}px`);
-      barEl.setWidth(`${moveX + actionWidth / 2}px`);
-    } else if (moveX > offset) {
-      actionEl.setLeft(`${wrapperWidth - actionWidth}px`);
-      barEl.setWidth(`${wrapperWidth - actionWidth / 2}px`);
-      if (!props.isSlot) {
-        checkPass();
-      }
-    }
+  const actionEl = unref(actionRef);
+  const barEl = unref(barRef);
+  if (!actionEl || !barEl) return;
+  const actionElNode = actionEl.getEl();
+  if (!actionElNode) return;
+
+  const { actionWidth, offset, wrapperWidth } = getOffset(actionElNode);
+  const moveX = getEventPageX(e) - state.moveDistance;
+
+  emit('move', { event: e, moveDistance: state.moveDistance, moveX });
+
+  if (moveX > 0 && moveX <= offset) {
+    actionEl.setLeft(`${moveX}px`);
+    barEl.setWidth(`${moveX + actionWidth / 2}px`);
+  } else if (moveX > offset) {
+    actionEl.setLeft(`${wrapperWidth - actionWidth}px`);
+    barEl.setWidth(`${wrapperWidth - actionWidth / 2}px`);
+    if (!props.isSlot) checkPass();
+  }
+}
+
+function syncSlotBarWidth(
+  barEl: InstanceType<typeof SliderCaptchaBar>,
+) {
+  const contentEl = unref(contentRef);
+  if (!contentEl) return;
+  const contentNode = contentEl.getEl();
+  const barNode = barEl.getEl();
+  if (contentNode && barNode) {
+    contentNode.style.width = `${Number.parseInt(barNode.style.width)}px`;
   }
 }
 
 function handleDragOver(e: MouseEvent | TouchEvent) {
-  const { isMoving, isPassing, moveDistance } = state;
-  if (isMoving && !isPassing) {
-    emit('end', e);
-    const actionEl = actionRef.value;
-    const barEl = unref(barRef);
-    if (!actionEl || !barEl) return;
-    const moveX = getEventPageX(e) - moveDistance;
-    const { actionWidth, offset, wrapperWidth } = getOffset(actionEl.getEl());
-    if (moveX < offset) {
-      if (props.isSlot) {
-        setTimeout(() => {
-          if (modelValue.value) {
-            const contentEl = unref(contentRef);
-            if (contentEl) {
-              contentEl.getEl().style.width = `${Number.parseInt(barEl.getEl().style.width)}px`;
-            }
-          } else {
-            resume();
-          }
-        }, 0);
-      } else {
-        resume();
-      }
+  if (!state.isMoving || state.isPassing) return;
+
+  emit('end', e);
+  const actionEl = actionRef.value;
+  const barEl = unref(barRef);
+  if (!actionEl || !barEl) return;
+  const actionElNode = actionEl.getEl();
+  if (!actionElNode) return;
+
+  const moveX = getEventPageX(e) - state.moveDistance;
+  const { actionWidth, offset, wrapperWidth } = getOffset(actionElNode);
+  state.isMoving = false;
+
+  if (moveX < offset) {
+    if (props.isSlot) {
+      setTimeout(() => {
+        if (modelValue.value) {
+          syncSlotBarWidth(barEl);
+        } else {
+          resume();
+        }
+      }, 0);
     } else {
-      actionEl.setLeft(`${wrapperWidth - actionWidth}px`);
-      barEl.setWidth(`${wrapperWidth - actionWidth / 2}px`);
-      checkPass();
+      resume();
     }
-    state.isMoving = false;
+  } else {
+    actionEl.setLeft(`${wrapperWidth - actionWidth}px`);
+    barEl.setWidth(`${wrapperWidth - actionWidth / 2}px`);
+    checkPass();
   }
 }
 
@@ -185,7 +194,10 @@ function resume() {
   const contentEl = unref(contentRef);
   if (!actionEl || !barEl || !contentEl) return;
 
-  contentEl.getEl().style.width = '100%';
+  const contentNode = contentEl.getEl();
+  if (contentNode) {
+    contentNode.style.width = '100%';
+  }
   state.toLeft = true;
   useTimeoutFn(() => {
     state.toLeft = false;
