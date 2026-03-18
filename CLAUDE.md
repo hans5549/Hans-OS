@@ -113,28 +113,74 @@ Monorepo with backend API + frontend SPA. Full details in `.claude/ARCHITECTURE.
 
 ## Workflow (Automated)
 
-The development workflow is **enforced by hooks**. All steps must be completed before commit:
+Three-phase pipeline enforced by hooks. Not all changes need all phases — see skip rules below.
 
 ```
-Planner (optional) -> Code -> Simplifier -> Spec Check -> Code Review -> Security -> Linus -> Build -> Commit
+Brainstorming (optional) → Plan Mode (optional) → Coding Phase → Commit
 ```
 
-### Required Steps
+### Phase 1: Brainstorming (Skill, optional)
 
-| Step | Tool/Agent | Completion Signal |
-|------|------------|-------------------|
-| 1. Code Simplifier | `code-simplifier:code-simplifier` agent | Say "simplifier done" |
-| 1.5 Spec Check | Compare implementation vs requirements | Say "spec check done" |
-| 2. Code Review | `code-review-specialist` agent | Say "code review done" |
-| 3. Security Review | `security-vuln-scanner` agent | Say "security review done" |
-| 4. Linus Review | Apply `.claude/LINUS_MODE.md` | Say "Linus Green" |
-| 5. Build | Auto-verified on commit | Automatic |
+Trigger: `/brainstorming` or when starting a new feature idea.
+Output: Design spec in `.claude/specs/`.
+
+### Phase 2: Plan Mode (Hard Gate, optional)
+
+Claude Code's built-in plan mode. System prevents code edits. Plan review agents validate before exit.
+
+| Step | Agent | Model |
+|------|-------|-------|
+| CEO Review | `plan-ceo-reviewer` | opus |
+| Eng Review | `plan-eng-reviewer` | sonnet |
+| Plan Linus Review | `plan-linus-reviewer` | sonnet |
+
+Dispatch all 3 **in parallel** (one message, multiple Agent tool calls).
+`pre-exit-plan-check` hook blocks ExitPlanMode until all 3 complete.
+
+**Review Conflict Resolution**: When CEO review and Linus review conflict (e.g., CEO suggests expansion, Linus flags over-engineering), do NOT auto-resolve. Present both positions to the user for decision.
+
+### Phase 3: Coding Phase (hooks enforced)
+
+```
+Simplifier (sonnet) → [Code Review (opus) + Security (opus)] parallel → Build → Commit
+```
+
+| Step | Agent | Completion Signal |
+|------|-------|-------------------|
+| Code Simplifier | `code-simplifier:code-simplifier` | auto-completed by hook |
+| Code Review | `code-review-specialist` | auto-completed by hook |
+| Security Review | `security-vuln-scanner` | auto-completed by hook |
+| Build | Auto-verified on commit | Automatic |
+
+**Dispatch pattern**: After simplifier completes, dispatch Code Review + Security **in parallel** (one message, multiple Agent tool calls). Do not dispatch sequentially.
+
+### Planning Phase Skip Rules
+
+| Change Type | Brainstorming | Plan Mode | Plan Review Agents |
+|-------------|:---:|:---:|:---:|
+| New feature / architecture | Yes | Yes | All 3 |
+| Medium feature (< 8 files) | Skip | Yes | CEO + Eng (skip Linus) or all 3 |
+| Small change (< 3 files, bug fix, UI tweak) | Skip | Skip | Skip |
+
+### Coding Phase Skip Rules
+
+| Change Size | Required Steps | Can Skip |
+|-------------|---------------|----------|
+| 1-2 files | Simplifier + Code Review + Build | Security |
+| 3-8 files | All | None |
+| 8+ files | All + mandatory plan mode | None |
+| Pure docs (.md, .yml) | None | All (isDocFile check) |
+
+### Smart Reset Rules
+
+- **Simplifier exemption**: After simplifier completes, subsequent code edits only reset post-simplifier steps (Code Review, Security), NOT simplifier itself.
+- **Small change tolerance**: Cumulative edits < 10 lines after review → warning only, reviews preserved. >= 10 lines → reset.
 
 ### Agent Dispatch Rules (MANDATORY)
 
-When workflow requires running agents (simplifier, code-review, security):
 - You MUST use the Agent tool to dispatch. Do NOT substitute with your own text analysis.
-- The `post-agent-verify` hook verifies Agent tool was actually called -- text summaries will NOT mark steps complete.
+- The `post-agent-verify` hook verifies Agent tool was actually called — text summaries will NOT mark steps complete.
+- All review agents produce: **concise summary** (max 300 tokens) to main conversation + **full report** to `.claude/reviews/`.
 - Use `/commit-this` or `/review-workflow` slash commands for guided workflow execution.
 
 ### Workflow Commands
@@ -148,16 +194,17 @@ When workflow requires running agents (simplifier, code-review, security):
 | `commit this` | Run full workflow and create git commit |
 | `/commit-this` | Full workflow with guided Agent dispatch + git commit |
 | `/review-workflow` | Full review workflow without commit |
+| `/brainstorming` | Start interactive brainstorming session |
 
 ### Workflow Rules
 
-- **Build FAIL** -> fix -> Build is automatically re-verified
-- **Code file edits** automatically reset review steps
-- Spec Check: re-read requirements, verify completeness, check YAGNI
+- **Build FAIL** → fix → Build is automatically re-verified
+- **Code file edits** automatically reset review steps (with smart exemptions above)
+- Planning steps (CEO/Eng/Linus) auto-reset each new session
 
 ### Tracked File Types
 
-Code: `.cs`, `.razor`, `.json`, `.css`, `.js`, `.html`, `.csproj`, `.xml`, `.vue`, `.ts`, `.tsx`, `.mts`
+Code: `.cs`, `.razor`, `.json`, `.css`, `.js`, `.html`, `.csproj`, `.xml`, `.vue`, `.ts`, `.tsx`
 Doc: `.md`, `.txt`, `.rst`, `.yml`, `.yaml` (skip build verification)
 
 ---
@@ -170,8 +217,11 @@ Doc: `.md`, `.txt`, `.rst`, `.yml`, `.yaml` (skip build verification)
 - DLL lock -> retry with `--no-incremental`, then tell user which process to close
 
 ### Related Skills
-- `/commit-this` -- Execute full workflow and commit
-- `/review-workflow` -- Execute review workflow without commit
+- `/commit-this` — Execute full workflow and commit
+- `/review-workflow` — Execute review workflow without commit
+- `/execute-plan` — Execute a plan immediately
+- `/refactor-plan` — Phased refactoring
+- `/safe-cleanup` — Safe code cleanup
 
 ---
 
