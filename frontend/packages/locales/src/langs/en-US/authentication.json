@@ -1,10 +1,10 @@
 {
   "welcomeBack": "Welcome Back",
-  "pageTitle": "Plug-and-play Admin system",
-  "pageDesc": "Efficient, versatile frontend template",
+  "pageTitle": "Hans-OS Personal Workspace",
+  "pageDesc": "Your personal digital assistant",
   "loginSuccess": "Login Successful",
   "loginSuccessDesc": "Welcome Back",
-  "loginSubtitle": "Enter your account details to manage your projects",
+  "loginSubtitle": "Enter your credentials to continue",
   "selectAccount": "Quick Select Account",
   "username": "Username",
   "password": "Password",

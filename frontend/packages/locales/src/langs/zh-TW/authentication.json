@@ -1,10 +1,10 @@
 {
   "welcomeBack": "歡迎回來",
-  "pageTitle": "開箱即用的大型中後台管理系統",
-  "pageDesc": "工程化、高效能、跨組件庫的前端模板",
+  "pageTitle": "Hans-OS 個人工作台",
+  "pageDesc": "你的個人數位助理",
   "loginSuccess": "登入成功",
   "loginSuccessDesc": "歡迎回來",
-  "loginSubtitle": "請輸入您的帳戶資訊以開始管理您的專案",
+  "loginSubtitle": "請輸入帳號密碼以繼續",
   "selectAccount": "快速選擇帳號",
   "username": "帳號",
   "password": "密碼",

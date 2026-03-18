@@ -1,10 +1,10 @@
 {
   "welcomeBack": "다시 오신 것을 환영합니다",
-  "pageTitle": "즉시 사용 가능한 대규모 관리 시스템",
-  "pageDesc": "엔지니어링 기반, 고성능, 크로스 컴포넌트 프론트엔드 템플릿",
+  "pageTitle": "Hans-OS 개인 워크스페이스",
+  "pageDesc": "당신의 개인 디지털 어시스턴트",
   "loginSuccess": "로그인 성공",
   "loginSuccessDesc": "다시 오신 것을 환영합니다",
-  "loginSubtitle": "프로젝트 관리를 시작하려면 계정 정보를 입력하세요",
+  "loginSubtitle": "계속하려면 자격 증명을 입력하세요",
   "selectAccount": "빠른 계정 선택",
   "username": "계정",
   "password": "비밀번호",
