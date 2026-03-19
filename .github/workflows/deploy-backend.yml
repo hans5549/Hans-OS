@@ -53,10 +53,9 @@ jobs:
           name: backend-app
           path: ./publish
 
-      # TODO: Uncomment and configure after Azure App Service is created
-      # - name: Deploy to Azure App Service
-      #   uses: azure/webapps-deploy@v3
-      #   with:
-      #     app-name: '<AZURE_APP_SERVICE_NAME>'
-      #     publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-      #     package: ./publish
+      - name: Deploy to Azure App Service
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: 'hans-os-api'
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: ./publish
