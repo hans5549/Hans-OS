@@ -10,4 +10,5 @@ public record UserInfoResponse(
     [property: JsonPropertyName("roles")] string[] Roles,
     [property: JsonPropertyName("desc")] string Desc,
     [property: JsonPropertyName("homePath")] string HomePath,
-    [property: JsonPropertyName("token")] string Token);
+    [property: JsonPropertyName("token")] string Token,
+    [property: JsonPropertyName("email")] string Email);
