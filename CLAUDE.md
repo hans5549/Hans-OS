@@ -154,22 +154,14 @@ Simplifier (sonnet) → [Code Review (opus) + Security (opus)] parallel → Buil
 
 **Dispatch pattern**: After simplifier completes, dispatch Code Review + Security **in parallel** (one message, multiple Agent tool calls). Do not dispatch sequentially.
 
-### Planning Phase Skip Rules
+### Skip Rules (Binary)
 
-| Change Type | Brainstorming | Plan Mode | Plan Review Agents |
-|-------------|:---:|:---:|:---:|
-| New feature / architecture | Yes | Yes | All 3 |
-| Medium feature (< 8 files) | Skip | Yes | CEO + Eng (skip Linus) or all 3 |
-| Small change (< 3 files, bug fix, UI tweak) | Skip | Skip | Skip |
+| 變更類型 | 定義 | Plan Mode | Plan Review | Coding Phase |
+|----------|------|:---------:|:-----------:|:------------:|
+| 文字變更 | Doc extensions (`.md`, `.txt`, `.rst`, `.yml`, `.yaml`) | Skip | Skip | Skip |
+| 程式變更 | Code extensions (`.cs`, `.vue`, `.ts`, `.tsx`, `.json`, `.css`, `.js`, `.html`, `.csproj`, `.xml`) | Required | All 3 (CEO + Eng + Linus) | All (Simplifier + Code Review + Security + Build) |
 
-### Coding Phase Skip Rules
-
-| Change Size | Required Steps | Can Skip |
-|-------------|---------------|----------|
-| 1-2 files | Simplifier + Code Review + Build | Security |
-| 3-8 files | All | None |
-| 8+ files | All + mandatory plan mode | None |
-| Pure docs (.md, .yml) | None | All (isDocFile check) |
+No file-count tiers. Any code change = full pipeline.
 
 ### Smart Reset Rules
 

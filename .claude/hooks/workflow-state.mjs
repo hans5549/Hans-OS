@@ -201,17 +201,9 @@ export function resetWorkflowState() {
 
 // ── Query helpers ──────────────────────────────────────────────────────────
 
-export function getCodingMissingSteps(codeFileCount = 0) {
+export function getCodingMissingSteps() {
   const state = getWorkflowState();
-
-  // Tiered requirements based on file count
-  let required;
-  if (codeFileCount <= 2) {
-    required = ['simplifier', 'codeReviewer'];
-  } else {
-    required = ['simplifier', 'codeReviewer', 'securityReviewer'];
-  }
-
+  const required = ['simplifier', 'codeReviewer', 'securityReviewer'];
   return required.filter((step) => !state.completedSteps[step]);
 }
 

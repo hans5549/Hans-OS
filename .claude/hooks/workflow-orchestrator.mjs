@@ -209,7 +209,7 @@ if (hasCommitIntent) {
 
   if (codeFileExists) {
     const codeFileCount = state.modifiedFiles.filter((f) => isCodeFile(f)).length;
-    const missing = getCodingMissingSteps(codeFileCount);
+    const missing = getCodingMissingSteps();
 
     if (missing.length > 0) {
       const stepDisplayNames = {

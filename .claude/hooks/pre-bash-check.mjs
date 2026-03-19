@@ -122,11 +122,11 @@ if (!codeFilesExist) {
 }
 
 // ============================================================================
-// 4. Tiered commit gating based on file count
+// 4. Binary commit gating: any code file = full pipeline
 // ============================================================================
 
 const codeFileCount = state.modifiedFiles.filter((f) => isCodeFile(f)).length;
-const missingSteps = getCodingMissingSteps(codeFileCount);
+const missingSteps = getCodingMissingSteps();
 
 if (missingSteps.length > 0) {
   const stepDisplayNames = {
