@@ -10,10 +10,17 @@ public class MenuService(ApplicationDbContext db) : IMenuService
 {
     public async Task<List<MenuRouteResponse>> GetMenusByRolesAsync(IList<string> roles, CancellationToken ct = default)
     {
+        // Resolve role names to role IDs (JWT carries names, RoleMenus stores IDs)
+        var roleIds = await db.Roles
+            .AsNoTracking()
+            .Where(r => roles.Contains(r.Name!))
+            .Select(r => r.Id)
+            .ToListAsync(ct);
+
         // Get all menu IDs assigned to user's roles
         var menuIds = await db.RoleMenus
             .AsNoTracking()
-            .Where(rm => roles.Contains(rm.RoleId))
+            .Where(rm => roleIds.Contains(rm.RoleId))
             .Select(rm => rm.MenuId)
             .Distinct()
             .ToListAsync(ct);

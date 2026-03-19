@@ -2,6 +2,7 @@ using FluentAssertions;
 using HansOS.Api.Data;
 using HansOS.Api.Data.Entities;
 using HansOS.Api.Services;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace HansOS.Api.UnitTests;
@@ -28,6 +29,8 @@ public class MenuServiceTests : IDisposable
         var parentId = Guid.NewGuid();
         var childId = Guid.NewGuid();
 
+        _db.Roles.Add(new IdentityRole { Id = roleId, Name = "admin", NormalizedName = "ADMIN" });
+
         _db.Menus.AddRange(
             new Menu
             {
@@ -48,8 +51,8 @@ public class MenuServiceTests : IDisposable
 
         await _db.SaveChangesAsync();
 
-        // Act
-        var result = await _sut.GetMenusByRolesAsync(["admin-role-id"]);
+        // Act — pass role name (as JWT ClaimTypes.Role provides names, not IDs)
+        var result = await _sut.GetMenusByRolesAsync(["admin"]);
 
         // Assert
         result.Should().HaveCount(1);
@@ -66,6 +69,8 @@ public class MenuServiceTests : IDisposable
         var child1Id = Guid.NewGuid();
         var child2Id = Guid.NewGuid();
 
+        _db.Roles.Add(new IdentityRole { Id = roleId, Name = "editor", NormalizedName = "EDITOR" });
+
         _db.Menus.AddRange(
             new Menu { Id = rootId, Name = "Root", Path = "/root", Component = "BasicLayout", Title = "Root", Type = MenuType.Catalog, Order = 1 },
             new Menu { Id = child1Id, ParentId = rootId, Name = "Child1", Path = "/c1", Component = "/c1", Title = "C1", Type = MenuType.Menu, Order = 1 },
@@ -78,7 +83,8 @@ public class MenuServiceTests : IDisposable
 
         await _db.SaveChangesAsync();
 
-        var result = await _sut.GetMenusByRolesAsync([roleId]);
+        // Pass role name, not role ID
+        var result = await _sut.GetMenusByRolesAsync(["editor"]);
 
         result.Should().HaveCount(1);
         result[0].Children.Should().HaveCount(2);
