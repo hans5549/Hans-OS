@@ -12,7 +12,13 @@ export async function getUserInfoApi() {
 /**
  * 更新個人資料
  */
-export async function updateProfileApi(data: { realName: string }) {
+export async function updateProfileApi(data: {
+  realName: string;
+  email?: string;
+  phone?: string;
+  avatar?: string;
+  desc?: string;
+}) {
   return requestClient.put('/user/profile', data);
 }
 

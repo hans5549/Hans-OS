@@ -11,4 +11,5 @@ public record UserInfoResponse(
     [property: JsonPropertyName("desc")] string Desc,
     [property: JsonPropertyName("homePath")] string HomePath,
     [property: JsonPropertyName("token")] string Token,
-    [property: JsonPropertyName("email")] string Email);
+    [property: JsonPropertyName("email")] string Email,
+    [property: JsonPropertyName("phone")] string Phone);

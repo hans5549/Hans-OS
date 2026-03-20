@@ -5,11 +5,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HansOS.Api.Data;
 
-public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
+public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+    : IdentityDbContext<ApplicationUser>(options)
 {
-    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
-        : base(options) { }
-
     public DbSet<Menu> Menus => Set<Menu>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<RoleMenu> RoleMenus => Set<RoleMenu>();
@@ -23,6 +21,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         {
             e.Property(u => u.RealName).HasMaxLength(100);
             e.Property(u => u.Avatar).HasMaxLength(500);
+            e.Property(u => u.Desc).HasMaxLength(500);
             e.Property(u => u.HomePath).HasMaxLength(200);
         });
 

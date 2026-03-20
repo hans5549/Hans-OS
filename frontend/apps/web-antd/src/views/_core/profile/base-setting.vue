@@ -31,10 +31,29 @@ const formSchema: VbenFormSchema[] = [
   {
     fieldName: 'email',
     component: 'Input',
-    componentProps: {
-      disabled: true,
-    },
     label: 'Email',
+  },
+  {
+    fieldName: 'phone',
+    component: 'Input',
+    label: '電話',
+  },
+  {
+    fieldName: 'avatar',
+    component: 'Input',
+    componentProps: {
+      placeholder: '請輸入頭像圖片 URL',
+    },
+    label: '頭像 URL',
+  },
+  {
+    fieldName: 'desc',
+    component: 'Textarea',
+    componentProps: {
+      rows: 3,
+      placeholder: '請輸入自我介紹',
+    },
+    label: '自我介紹',
   },
   {
     fieldName: 'roles',
@@ -56,7 +75,13 @@ onMounted(async () => {
 });
 
 async function handleSubmit(values: Recordable<any>) {
-  await updateProfileApi({ realName: values.realName });
+  await updateProfileApi({
+    realName: values.realName,
+    email: values.email,
+    phone: values.phone,
+    avatar: values.avatar,
+    desc: values.desc,
+  });
   await useAuthStore().fetchUserInfo();
   message.success('個人資料已更新');
 }

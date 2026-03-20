@@ -40,6 +40,9 @@ public class UserControllerTests(HansOsWebApplicationFactory factory)
         data.GetProperty("realName").GetString().Should().Be("Hans");
         data.GetProperty("roles").GetArrayLength().Should().BeGreaterThan(0);
         data.GetProperty("email").GetString().Should().NotBeNull();
+        data.GetProperty("phone").GetString().Should().NotBeNull();
+        data.GetProperty("desc").GetString().Should().NotBeNull();
+        data.GetProperty("avatar").GetString().Should().NotBeNull();
     }
 
     #endregion
@@ -59,10 +62,17 @@ public class UserControllerTests(HansOsWebApplicationFactory factory)
     {
         var token = await LoginAndGetTokenAsync();
 
-        // Update profile
+        // Update profile with all fields
         var updateRequest = new HttpRequestMessage(HttpMethod.Put, "/user/profile")
         {
-            Content = JsonContent.Create(new { realName = "Hans Updated" })
+            Content = JsonContent.Create(new
+            {
+                realName = "Hans Updated",
+                email = "hans.updated@example.com",
+                phone = "0912345678",
+                avatar = "https://example.com/avatar.png",
+                desc = "自我介紹測試"
+            })
         };
         updateRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         var updateResponse = await _client.SendAsync(updateRequest);
@@ -73,15 +83,50 @@ public class UserControllerTests(HansOsWebApplicationFactory factory)
         infoRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         var infoResponse = await _client.SendAsync(infoRequest);
         var body = await infoResponse.Content.ReadFromJsonAsync<JsonElement>();
-        body.GetProperty("data").GetProperty("realName").GetString().Should().Be("Hans Updated");
+        var data = body.GetProperty("data");
+        data.GetProperty("realName").GetString().Should().Be("Hans Updated");
+        data.GetProperty("email").GetString().Should().Be("hans.updated@example.com");
+        data.GetProperty("phone").GetString().Should().Be("0912345678");
+        data.GetProperty("avatar").GetString().Should().Be("https://example.com/avatar.png");
+        data.GetProperty("desc").GetString().Should().Be("自我介紹測試");
 
-        // Restore original name
+        // Restore original values
         var restoreRequest = new HttpRequestMessage(HttpMethod.Put, "/user/profile")
         {
             Content = JsonContent.Create(new { realName = "Hans" })
         };
         restoreRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         await _client.SendAsync(restoreRequest);
+    }
+
+    [Fact]
+    public async Task UpdateProfile_WithInvalidEmail_Returns400()
+    {
+        var token = await LoginAndGetTokenAsync();
+
+        var request = new HttpRequestMessage(HttpMethod.Put, "/user/profile")
+        {
+            Content = JsonContent.Create(new { realName = "Hans", email = "not-an-email" })
+        };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var response = await _client.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task UpdateProfile_WithTooLongDesc_Returns400()
+    {
+        var token = await LoginAndGetTokenAsync();
+
+        var request = new HttpRequestMessage(HttpMethod.Put, "/user/profile")
+        {
+            Content = JsonContent.Create(new { realName = "Hans", desc = new string('A', 501) })
+        };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var response = await _client.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]

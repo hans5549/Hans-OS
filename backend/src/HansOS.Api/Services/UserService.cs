@@ -20,10 +20,11 @@ public class UserService(
             RealName: user.RealName,
             Avatar: user.Avatar ?? string.Empty,
             Roles: [.. roles],
-            Desc: "管理員",
+            Desc: user.Desc ?? string.Empty,
             HomePath: user.HomePath ?? "/analytics",
             Token: string.Empty,
-            Email: user.Email ?? string.Empty
+            Email: user.Email ?? string.Empty,
+            Phone: user.PhoneNumber ?? string.Empty
         );
     }
 
@@ -33,6 +34,22 @@ public class UserService(
             ?? throw new KeyNotFoundException($"使用者 {userId} 不存在");
 
         user.RealName = request.RealName;
+        user.Avatar = request.Avatar ?? user.Avatar;
+        user.Desc = request.Desc ?? user.Desc;
+
+        if (request.Email is not null && request.Email != user.Email)
+        {
+            var emailResult = await userManager.SetEmailAsync(user, request.Email);
+            if (!emailResult.Succeeded)
+                throw new ArgumentException(string.Join("；", emailResult.Errors.Select(TranslateIdentityError)));
+        }
+
+        if (request.Phone is not null && request.Phone != user.PhoneNumber)
+        {
+            var phoneResult = await userManager.SetPhoneNumberAsync(user, request.Phone);
+            if (!phoneResult.Succeeded)
+                throw new ArgumentException(string.Join("；", phoneResult.Errors.Select(TranslateIdentityError)));
+        }
 
         var result = await userManager.UpdateAsync(user);
         if (!result.Succeeded)
@@ -46,10 +63,7 @@ public class UserService(
 
         var result = await userManager.ChangePasswordAsync(user, request.OldPassword, request.NewPassword);
         if (!result.Succeeded)
-        {
-            var errors = result.Errors.Select(TranslateIdentityError);
-            throw new ArgumentException(string.Join("；", errors));
-        }
+            throw new ArgumentException(string.Join("；", result.Errors.Select(TranslateIdentityError)));
     }
 
     private static string TranslateIdentityError(IdentityError error) => error.Code switch
