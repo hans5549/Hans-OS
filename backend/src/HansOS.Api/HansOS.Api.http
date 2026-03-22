@@ -1,0 +1,29 @@
+@host = http://localhost:5180
+@token = <paste-access-token-here>
+
+### 登入
+POST {{host}}/auth/login
+Content-Type: application/json
+
+{"username": "hans", "password": "H@ns19951204"}
+
+### 取得使用者資訊
+GET {{host}}/user/info
+Authorization: Bearer {{token}}
+
+### 取得權限碼
+GET {{host}}/auth/codes
+Authorization: Bearer {{token}}
+
+### 取得選單
+GET {{host}}/menu/all
+Authorization: Bearer {{token}}
+
+### 刷新 Token
+POST {{host}}/auth/refresh
+
+### 登出
+POST {{host}}/auth/logout
+
+### Health Check
+GET {{host}}/health

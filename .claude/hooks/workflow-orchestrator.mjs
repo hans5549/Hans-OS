@@ -2,17 +2,17 @@
 // workflow-orchestrator.mjs - UserPromptSubmit Hook: Workflow Controller
 // ============================================================================
 // Detects user input and manages workflow state:
-// - Detects requirement keywords -> suggests running planner
 // - Detects step completion signals -> updates state
 // - Detects commit intent -> shows pending checklist
 // - Supports workflow status/reset/skip commands
+// - Supports both Planning Phase and Coding Phase
 // ============================================================================
 
 import {
   getWorkflowState,
   resetWorkflowState,
   completeStep,
-  getMissingSteps,
+  getCodingMissingSteps,
   isCodeFile,
   showWorkflowStatus,
 } from './workflow-state.mjs';
@@ -26,7 +26,6 @@ let prompt;
 if (parsed) {
   prompt = parsed.prompt || '';
 } else {
-  // parseHookInput already logged the error
   process.exit(0);
 }
 
@@ -70,11 +69,16 @@ if (skipMatch) {
     securityreviewer: 'securityReviewer',
     'security-review': 'securityReviewer',
     security: 'securityReviewer',
-    speccheck: 'specCheck',
-    'spec-check': 'specCheck',
-    spec: 'specCheck',
-    linus: 'linusGreen',
-    linusgreen: 'linusGreen',
+    ceoreview: 'ceoReview',
+    'ceo-review': 'ceoReview',
+    ceo: 'ceoReview',
+    engreview: 'engReview',
+    'eng-review': 'engReview',
+    eng: 'engReview',
+    planlinusreview: 'planLinusReview',
+    'plan-linus-review': 'planLinusReview',
+    'plan-linus': 'planLinusReview',
+    planlinus: 'planLinusReview',
   };
 
   const actual = stepMap[stepToSkip];
@@ -87,7 +91,7 @@ if (skipMatch) {
   } else {
     log('');
     log(`[Workflow] Unknown step: ${stepToSkip}`);
-    log('[Workflow] Valid steps: planner, simplifier, speccheck, build, codereview, securityreview, linus');
+    log('[Workflow] Valid steps: planner, simplifier, build, codereview, security, ceo, eng, plan-linus');
     log('');
   }
   process.exit(0);
@@ -97,13 +101,15 @@ if (skipMatch) {
 if (/commit\s+this/i.test(promptLower)) {
   log('');
   log('<user-prompt-submit-hook>');
-  log('COMMIT WORKFLOW TRIGGERED. Execute the following steps SEQUENTIALLY.');
-  log('MANDATORY: Steps 1, 2, 3 MUST use the Agent tool. Do NOT substitute with your own text summary.');
+  log('COMMIT WORKFLOW TRIGGERED. Execute the following steps.');
+  log('MANDATORY: Steps MUST use the Agent tool. Do NOT substitute with your own text summary.');
   log('');
-  log('Step 1: Agent tool -> subagent_type: "code-simplifier:code-simplifier"');
-  log('Step 2: Agent tool -> subagent_type: "code-review-specialist"');
-  log('Step 3: Agent tool -> subagent_type: "security-vuln-scanner"');
-  log('Step 4: dotnet build backend/HansOS.slnx -> git commit (Conventional Commits, Traditional Chinese)');
+  log('Dispatch IN PARALLEL (one message, multiple Agent tool calls):');
+  log('  1. Agent tool -> subagent_type: "code-simplifier:code-simplifier"');
+  log('Then after simplifier completes, dispatch IN PARALLEL:');
+  log('  2. Agent tool -> subagent_type: "code-review-specialist"');
+  log('  3. Agent tool -> subagent_type: "security-vuln-scanner"');
+  log('Then: dotnet build backend/HansOS.slnx -> git commit (Conventional Commits, Traditional Chinese)');
   log('');
   log('For detailed instructions, use /commit-this command instead.');
   log('</user-prompt-submit-hook>');
@@ -115,15 +121,16 @@ if (/commit\s+this/i.test(promptLower)) {
 if (/^code-review$/i.test(promptLower.trim())) {
   log('');
   log('<user-prompt-submit-hook>');
-  log('CODE-REVIEW WORKFLOW TRIGGERED. Execute the following steps SEQUENTIALLY.');
-  log('MANDATORY: Steps 1, 2, 3 MUST use the Agent tool. Do NOT substitute with your own text summary.');
+  log('CODE-REVIEW WORKFLOW TRIGGERED. Execute the following steps.');
+  log('MANDATORY: Steps MUST use the Agent tool. Do NOT substitute with your own text summary.');
   log('');
-  log('Step 1: Agent tool -> subagent_type: "code-simplifier:code-simplifier"');
-  log('Step 2: Agent tool -> subagent_type: "code-review-specialist"');
-  log('Step 3: Agent tool -> subagent_type: "security-vuln-scanner"');
-  log('Step 4: dotnet build backend/HansOS.slnx -> report result (do NOT commit)');
+  log('Dispatch IN PARALLEL (one message, multiple Agent tool calls):');
+  log('  1. Agent tool -> subagent_type: "code-simplifier:code-simplifier"');
+  log('Then after simplifier completes, dispatch IN PARALLEL:');
+  log('  2. Agent tool -> subagent_type: "code-review-specialist"');
+  log('  3. Agent tool -> subagent_type: "security-vuln-scanner"');
+  log('Then: dotnet build backend/HansOS.slnx -> report result (do NOT commit)');
   log('');
-  log('For detailed instructions, use /review-workflow command instead.');
   log('Use "commit this" or /commit-this when ready to commit.');
   log('</user-prompt-submit-hook>');
   log('');
@@ -142,25 +149,8 @@ if (/(planner\s+done|planning\s+done)/i.test(promptLower)) {
   process.exit(0);
 }
 
-// Agent-based steps (simplifier, code review, security review) are now
-// auto-completed by post-agent-verify.mjs PostToolUse hook.
+// Agent-based steps are auto-completed by post-agent-verify.mjs PostToolUse hook.
 // Text signals removed to prevent bypassing.
-
-if (/(spec\s*check\s+done|spec\s+done)/i.test(promptLower)) {
-  completeStep('specCheck');
-  log('');
-  log('[Workflow] Spec Check step completed!');
-  log('');
-  process.exit(0);
-}
-
-if (/(linus\s+green|linus\s+pass)/i.test(promptLower)) {
-  completeStep('linusGreen');
-  log('');
-  log('[Workflow] Linus Review passed (Green)!');
-  log('');
-  process.exit(0);
-}
 
 if (/(build\s+pass|build\s+success|build\s+done)/i.test(promptLower)) {
   completeStep('buildPassed');
@@ -218,7 +208,8 @@ if (hasCommitIntent) {
   const codeFileExists = state.modifiedFiles.some((f) => isCodeFile(f));
 
   if (codeFileExists) {
-    const missing = getMissingSteps();
+    const codeFileCount = state.modifiedFiles.filter((f) => isCodeFile(f)).length;
+    const missing = getCodingMissingSteps();
 
     if (missing.length > 0) {
       const stepDisplayNames = {
@@ -232,7 +223,7 @@ if (hasCommitIntent) {
       log(' WARNING: WORKFLOW STEPS REQUIRED BEFORE COMMIT');
       log('=================================================');
       log('');
-      log(` Tracked files: ${state.modifiedFiles.length}`);
+      log(` Tracked files: ${state.modifiedFiles.length} (${codeFileCount} code)`);
       log('');
       log(' Missing steps:');
 

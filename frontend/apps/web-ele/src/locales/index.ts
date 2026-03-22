@@ -15,7 +15,8 @@ import { preferences } from '@vben/preferences';
 
 import dayjs from 'dayjs';
 import enLocale from 'element-plus/es/locale/lang/en';
-import defaultLocale from 'element-plus/es/locale/lang/zh-cn';
+import koLocale from 'element-plus/es/locale/lang/ko';
+import defaultLocale from 'element-plus/es/locale/lang/zh-tw';
 
 const elementLocale = ref<Language>(defaultLocale);
 
@@ -51,43 +52,28 @@ async function loadThirdPartyMessage(lang: SupportedLanguagesType) {
  * @param lang
  */
 async function loadDayjsLocale(lang: SupportedLanguagesType) {
-  let locale;
-  switch (lang) {
-    case 'en-US': {
-      locale = await import('dayjs/locale/en');
-      break;
-    }
-    case 'zh-CN': {
-      locale = await import('dayjs/locale/zh-cn');
-      break;
-    }
-    // 默认使用英语
-    default: {
-      locale = await import('dayjs/locale/en');
-    }
-  }
-  if (locale) {
-    dayjs.locale(locale);
-  } else {
-    console.error(`Failed to load dayjs locale for ${lang}`);
-  }
+  const dayjsLocaleMap: Record<SupportedLanguagesType, () => Promise<any>> = {
+    'en-US': () => import('dayjs/locale/en'),
+    'ko-KR': () => import('dayjs/locale/ko'),
+    'zh-TW': () => import('dayjs/locale/zh-tw'),
+  };
+  const { default: locale } = await (
+    dayjsLocaleMap[lang] ?? dayjsLocaleMap['en-US']
+  )();
+  dayjs.locale(locale);
 }
 
 /**
  * 加载element-plus的语言包
  * @param lang
  */
-async function loadElementLocale(lang: SupportedLanguagesType) {
-  switch (lang) {
-    case 'en-US': {
-      elementLocale.value = enLocale;
-      break;
-    }
-    case 'zh-CN': {
-      elementLocale.value = defaultLocale;
-      break;
-    }
-  }
+function loadElementLocale(lang: SupportedLanguagesType) {
+  const elementLocaleMap: Record<SupportedLanguagesType, Language> = {
+    'en-US': enLocale,
+    'ko-KR': koLocale,
+    'zh-TW': defaultLocale,
+  };
+  elementLocale.value = elementLocaleMap[lang] ?? defaultLocale;
 }
 
 async function setupI18n(app: App, options: LocaleSetupOptions = {}) {

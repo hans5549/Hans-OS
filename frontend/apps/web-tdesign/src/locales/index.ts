@@ -34,35 +34,23 @@ async function loadMessages(lang: SupportedLanguagesType) {
  * 加载第三方组件库的语言包
  * @param lang
  */
-async function loadThirdPartyMessage(lang: SupportedLanguagesType) {
-  await loadDayjsLocale(lang);
-}
+const loadThirdPartyMessage = (lang: SupportedLanguagesType) =>
+  loadDayjsLocale(lang);
 
 /**
  * 加载dayjs的语言包
  * @param lang
  */
 async function loadDayjsLocale(lang: SupportedLanguagesType) {
-  let locale;
-  switch (lang) {
-    case 'en-US': {
-      locale = await import('dayjs/locale/en');
-      break;
-    }
-    case 'zh-CN': {
-      locale = await import('dayjs/locale/zh-cn');
-      break;
-    }
-    // 默认使用英语
-    default: {
-      locale = await import('dayjs/locale/en');
-    }
-  }
-  if (locale) {
-    dayjs.locale(locale);
-  } else {
-    console.error(`Failed to load dayjs locale for ${lang}`);
-  }
+  const dayjsLocaleMap: Record<SupportedLanguagesType, () => Promise<any>> = {
+    'en-US': () => import('dayjs/locale/en'),
+    'ko-KR': () => import('dayjs/locale/ko'),
+    'zh-TW': () => import('dayjs/locale/zh-tw'),
+  };
+  const { default: locale } = await (
+    dayjsLocaleMap[lang] ?? dayjsLocaleMap['en-US']
+  )();
+  dayjs.locale(locale);
 }
 
 async function setupI18n(app: App, options: LocaleSetupOptions = {}) {

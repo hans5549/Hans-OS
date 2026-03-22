@@ -1,65 +1,95 @@
 <script setup lang="ts">
-import type { BasicOption } from '@vben/types';
+import type { Recordable } from '@vben/types';
 
 import type { VbenFormSchema } from '#/adapter/form';
 
-import { computed, onMounted, ref } from 'vue';
+import { onMounted, ref } from 'vue';
 
 import { ProfileBaseSetting } from '@vben/common-ui';
 
-import { getUserInfoApi } from '#/api';
+import { message } from 'ant-design-vue';
+
+import { getUserInfoApi, updateProfileApi } from '#/api';
+import { useAuthStore } from '#/store';
 
 const profileBaseSettingRef = ref();
 
-const MOCK_ROLES_OPTIONS: BasicOption[] = [
+const formSchema: VbenFormSchema[] = [
   {
-    label: '管理员',
-    value: 'super',
+    fieldName: 'realName',
+    component: 'Input',
+    label: '姓名',
   },
   {
-    label: '用户',
-    value: 'user',
+    fieldName: 'username',
+    component: 'Input',
+    componentProps: {
+      disabled: true,
+    },
+    label: '使用者名稱',
   },
   {
-    label: '测试',
-    value: 'test',
+    fieldName: 'email',
+    component: 'Input',
+    label: 'Email',
+  },
+  {
+    fieldName: 'phone',
+    component: 'Input',
+    label: '電話',
+  },
+  {
+    fieldName: 'avatar',
+    component: 'Input',
+    componentProps: {
+      placeholder: '請輸入頭像圖片 URL',
+    },
+    label: '頭像 URL',
+  },
+  {
+    fieldName: 'desc',
+    component: 'Textarea',
+    componentProps: {
+      rows: 3,
+      placeholder: '請輸入自我介紹',
+    },
+    label: '自我介紹',
+  },
+  {
+    fieldName: 'roles',
+    component: 'Input',
+    componentProps: {
+      disabled: true,
+    },
+    label: '角色',
   },
 ];
 
-const formSchema = computed((): VbenFormSchema[] => {
-  return [
-    {
-      fieldName: 'realName',
-      component: 'Input',
-      label: '姓名',
-    },
-    {
-      fieldName: 'username',
-      component: 'Input',
-      label: '用户名',
-    },
-    {
-      fieldName: 'roles',
-      component: 'Select',
-      componentProps: {
-        mode: 'tags',
-        options: MOCK_ROLES_OPTIONS,
-      },
-      label: '角色',
-    },
-    {
-      fieldName: 'introduction',
-      component: 'Textarea',
-      label: '个人简介',
-    },
-  ];
-});
-
 onMounted(async () => {
   const data = await getUserInfoApi();
-  profileBaseSettingRef.value.getFormApi().setValues(data);
+  const formData = {
+    ...data,
+    roles: (data?.roles ?? []).join(', '),
+  };
+  profileBaseSettingRef.value.getFormApi().setValues(formData);
 });
+
+async function handleSubmit(values: Recordable<any>) {
+  await updateProfileApi({
+    realName: values.realName,
+    email: values.email,
+    phone: values.phone,
+    avatar: values.avatar,
+    desc: values.desc,
+  });
+  await useAuthStore().fetchUserInfo();
+  message.success('個人資料已更新');
+}
 </script>
 <template>
-  <ProfileBaseSetting ref="profileBaseSettingRef" :form-schema="formSchema" />
+  <ProfileBaseSetting
+    ref="profileBaseSettingRef"
+    :form-schema="formSchema"
+    @submit="handleSubmit"
+  />
 </template>

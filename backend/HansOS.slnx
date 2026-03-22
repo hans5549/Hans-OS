@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/HansOS.Api/HansOS.Api.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/HansOS.Api.UnitTests/HansOS.Api.UnitTests.csproj" />
+    <Project Path="tests/HansOS.Api.IntegrationTests/HansOS.Api.IntegrationTests.csproj" />
+  </Folder>
+</Solution>

@@ -1,16 +1,18 @@
 <script lang="ts" setup>
 import type { GlobalConfigProvider } from 'tdesign-vue-next';
 
-import { watch } from 'vue';
+import { computed, watch } from 'vue';
 
 import { usePreferences } from '@vben/preferences';
 
 import { merge } from 'es-toolkit/compat';
 import { ConfigProvider } from 'tdesign-vue-next';
-import zhConfig from 'tdesign-vue-next/es/locale/zh_CN';
+import enConfig from 'tdesign-vue-next/es/locale/en_US';
+import koConfig from 'tdesign-vue-next/es/locale/ko_KR';
+import zhTWConfig from 'tdesign-vue-next/es/locale/zh_TW';
 
 defineOptions({ name: 'App' });
-const { isDark } = usePreferences();
+const { isDark, locale } = usePreferences();
 
 watch(
   () => isDark.value,
@@ -20,13 +22,21 @@ watch(
   { immediate: true },
 );
 
+const localeMap: Record<string, GlobalConfigProvider> = {
+  'en-US': enConfig,
+  'ko-KR': koConfig,
+  'zh-TW': zhTWConfig,
+};
+
 const customConfig: GlobalConfigProvider = {
-  // 可以在此处定义更多自定义配置，具体可配置内容参看 API 文档
   calendar: {},
   table: {},
   pagination: {},
 };
-const globalConfig = merge(zhConfig, customConfig);
+
+const globalConfig = computed(() =>
+  merge(localeMap[locale.value] ?? zhTWConfig, customConfig),
+);
 </script>
 
 <template>

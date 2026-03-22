@@ -1,8 +1,8 @@
 // ============================================================================
 // pre-bash-check.mjs - PreToolUse Hook: Bash Command Interceptor & Commit Gate
 // ============================================================================
-// Intercepts dangerous commands, validates git conventions, checks workflow.
-// NOTE: EF Core migrations are ALLOWED in this project (Code-First).
+// Protected file detection, git conventions, tiered commit gating.
+// Dangerous command blocking (EF migrations, git add .) moved to deny permissions.
 // ============================================================================
 
 import { execSync } from 'child_process';
@@ -11,6 +11,7 @@ import {
   isCodeFile,
   resetStep,
   resetWorkflowState,
+  getCodingMissingSteps,
 } from './workflow-state.mjs';
 import { parseHookInput, log } from './hook-utils.mjs';
 
@@ -26,27 +27,7 @@ const command = (parsed.tool_input && parsed.tool_input.command) || '';
 if (!command) process.exit(0);
 
 // ============================================================================
-// 0. Dangerous command blocking (before commit check)
-// ============================================================================
-
-const BLOCKED_COMMANDS = [
-  {
-    pattern: /git\s+add\s+(-A\b|--all\b|\.(\s|"|'|$))/i,
-    message: `BLOCKED: 'git add .' and 'git add -A' are forbidden.
-Stage specific files only: git add file1.cs file2.cs
-Use 'git status' to review first.`,
-  },
-];
-
-for (const { pattern, message } of BLOCKED_COMMANDS) {
-  if (pattern.test(command)) {
-    process.stderr.write(message);
-    process.exit(2);
-  }
-}
-
-// ============================================================================
-// 0.3 Protected file modification via Bash
+// 0. Protected file modification via Bash
 // ============================================================================
 
 const PROTECTED_FILE_PATTERNS = [
@@ -56,7 +37,6 @@ const PROTECTED_FILE_PATTERNS = [
 ];
 
 if (PROTECTED_FILE_PATTERNS.some(p => p.test(command))) {
-  // Allow read-only operations (cat, type, more, head, tail, node --check, git diff, etc.)
   const isReadOnly = /^(cat|type|more|head|tail|node\s+--check|git\s+(diff|log|show))\b/i.test(command.trim());
   if (!isReadOnly) {
     process.stderr.write(
@@ -88,8 +68,9 @@ if (!isCommit) process.exit(0);
 // 1.5 Conventional Commits format validation
 // ============================================================================
 
-const msgMatch = command.match(/-m\s+(?:"([^"]*(?:"[^"]*"[^"]*)*)"|'([^']*)'|"?\$\(cat\s+<<)/);
-if (msgMatch) {
+const isHeredoc = /\$\(cat\s+<</.test(command);
+const msgMatch = command.match(/-m\s+(?:"([^"]*(?:"[^"]*"[^"]*)*)"|'([^']*)')/);
+if (!isHeredoc && msgMatch) {
   const msg = msgMatch[1] || msgMatch[2] || '';
   if (msg) {
     const conventionalPattern = /^(feat|fix|refactor|docs|perf|build|chore|ci|style|test)(\(.+\))?: .+/;
@@ -98,7 +79,7 @@ if (msgMatch) {
       log('[Git] WARNING: Commit message does not follow Conventional Commits format.');
       log('[Git] Expected: <type>(scope): description');
       log('[Git] Types: feat, fix, refactor, docs, perf, build, chore, ci, style, test');
-      log('[Git] Example: feat(auth): 新增 JWT refresh token 自動續期機制');
+      log('[Git] Example: feat(settings): add incremental build checks');
       log('');
     }
   }
@@ -141,30 +122,31 @@ if (!codeFilesExist) {
 }
 
 // ============================================================================
-// 4. Check if required steps are complete
+// 4. Binary commit gating: any code file = full pipeline
 // ============================================================================
 
-const requiredSteps = [
-  { name: 'simplifier', display: 'Code Simplifier' },
-  { name: 'codeReviewer', display: 'Code Review' },
-  { name: 'securityReviewer', display: 'Security Review' },
-];
-
-const missingSteps = requiredSteps.filter((s) => !state.completedSteps[s.name]);
+const codeFileCount = state.modifiedFiles.filter((f) => isCodeFile(f)).length;
+const missingSteps = getCodingMissingSteps();
 
 if (missingSteps.length > 0) {
-  const stepList = missingSteps.map((s) => `  [ ] ${s.display}`).join('\n');
+  const stepDisplayNames = {
+    simplifier: 'Code Simplifier (run code-simplifier:code-simplifier agent)',
+    codeReviewer: 'Code Review (run code-review-specialist agent)',
+    securityReviewer: 'Security Review (run security-vuln-scanner agent)',
+  };
+
+  const stepList = missingSteps.map((s) => `  [ ] ${stepDisplayNames[s] || s}`).join('\n');
+
+  const tierNote = codeFileCount <= 2
+    ? '(small change: ≤2 files → only simplifier + code review required)'
+    : '(3+ files → simplifier + code review + security required)';
 
   const message = `COMMIT BLOCKED - Workflow steps incomplete!
 
-Missing steps:
+Missing steps ${tierNote}:
 ${stepList}
 
-Please complete the following workflow before committing:
-1. Run code-simplifier agent (auto-completed by hook)
-2. Run code-review-specialist agent (auto-completed by hook)
-3. Run security-vuln-scanner agent (auto-completed by hook)
-Final build verification runs automatically on commit.
+Complete these steps, then commit will be allowed.
 
 Commands:
 - 'workflow status' - View current status
@@ -192,11 +174,9 @@ try {
     encoding: 'utf-8',
     stdio: ['pipe', 'pipe', 'pipe'],
     timeout: 120000,
-    cwd: process.env.PROJECT_ROOT || undefined,
   });
   log('[Build] Backend build passed');
 } catch (err) {
-  // Build failed
   resetStep('buildPassed');
 
   let output = (err.stdout || '') + (err.stderr || '');
@@ -257,7 +237,6 @@ log('[Workflow] Final build passed!');
 log('[Workflow] All workflow steps completed - commit allowed');
 log('');
 
-// Reset workflow state (prepare for next round)
 resetWorkflowState();
 
 process.exit(0);

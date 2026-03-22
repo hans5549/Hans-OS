@@ -1,7 +1,8 @@
 // ============================================================================
-// pre-compact.mjs - PreCompact Hook: Context Preservation
+// pre-compact.mjs - PreCompact Hook: Context Preservation + Reboot Test
 // ============================================================================
-// Injects critical context (branch, workflow state, active plan) into stderr
+// Merged from project pre-compact + global pre-compact-context.
+// Injects: git context, workflow state, reboot test, plan/findings/progress
 // BEFORE context compaction, so Claude retains key information after compression.
 // ============================================================================
 
@@ -9,13 +10,25 @@ import { execSync } from 'child_process';
 import { existsSync, readFileSync, readdirSync, statSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { log } from './hook-utils.mjs';
+import { log, readFirstNLines } from './hook-utils.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const PROJECT_ROOT = resolve(__dirname, '..', '..');
 
-// ── Gather context ─────────────────────────────────────────────────────────
+// ── 1. Reboot Test (from global pre-compact-context) ─────────────────────
+
+log('');
+log('[Reboot Test — PreCompact]');
+log('Before compaction, confirm you can answer:');
+log('  1. Which file/feature am I working on?');
+log('  2. What is the end goal of the task?');
+log('  3. Which phase of the plan am I in?');
+log('  4. What have I learned that affects next steps?');
+log('  5. What is done and what remains?');
+log('');
+
+// ── 2. Git context ────────────────────────────────────────────────────────
 
 let branch = '(unknown)';
 let recentCommits = '(none)';
@@ -36,7 +49,12 @@ try {
   }).trim();
 } catch { /* git not available */ }
 
-// ── Workflow state ─────────────────────────────────────────────────────────
+log(`[Context] Branch: ${branch} | Recent commits:`);
+for (const line of recentCommits.split('\n')) {
+  log(`  ${line}`);
+}
+
+// ── 3. Workflow state ─────────────────────────────────────────────────────
 
 const STATE_FILE = resolve(PROJECT_ROOT, '.claude', 'workflow', 'state.json');
 let workflowInfo = 'No active workflow';
@@ -50,10 +68,8 @@ if (existsSync(STATE_FILE)) {
     if (files.length > 0) {
       const stepNames = [
         ['simplifier', 'Simplifier'],
-        ['specCheck', 'Spec'],
         ['codeReviewer', 'Review'],
         ['securityReviewer', 'Security'],
-        ['linusGreen', 'Linus'],
         ['buildPassed', 'Build'],
       ];
 
@@ -66,10 +82,12 @@ if (existsSync(STATE_FILE)) {
   } catch { /* state file corrupt */ }
 }
 
-// ── Active plan ────────────────────────────────────────────────────────────
+log(`[Context] Workflow: ${workflowInfo}`);
 
-let activePlan = 'None';
+// ── 4. Active plan ────────────────────────────────────────────────────────
+
 const plansDir = resolve(PROJECT_ROOT, '.claude', 'plans');
+let activePlan = null;
 
 if (existsSync(plansDir)) {
   try {
@@ -77,26 +95,49 @@ if (existsSync(plansDir)) {
       .filter((f) => f.endsWith('.md'))
       .map((f) => ({
         name: f,
+        path: resolve(plansDir, f),
         mtime: statSync(resolve(plansDir, f)).mtimeMs,
       }))
       .sort((a, b) => b.mtime - a.mtime);
 
     if (planFiles.length > 0) {
-      activePlan = `.claude/plans/${planFiles[0].name}`;
+      activePlan = planFiles[0];
     }
   } catch { /* ignore */ }
 }
 
-// ── Output ─────────────────────────────────────────────────────────────────
-
-log('');
-log('[Context Reminder — PreCompact]');
-log(`Branch: ${branch} | Recent commits:`);
-for (const line of recentCommits.split('\n')) {
-  log(`  ${line}`);
+if (activePlan) {
+  log(`[Context] Active Plan: .claude/plans/${activePlan.name}`);
+  const planSummary = readFirstNLines(activePlan.path, 50);
+  if (planSummary) {
+    log('[Plan Summary]');
+    log(planSummary);
+    log('');
+  }
 }
-log(`Workflow: ${workflowInfo}`);
-log(`Active Plan: ${activePlan}`);
-log('');
+
+// ── 5. Findings summary (from global pre-compact-context) ────────────────
+
+const findingsPath = resolve(PROJECT_ROOT, '.claude', 'workflow', 'findings.md');
+if (existsSync(findingsPath)) {
+  const findings = readFileSync(findingsPath, 'utf-8');
+  if (findings.trim().split('\n').length > 3) {
+    log('[Findings Summary]');
+    log(readFirstNLines(findingsPath, 20));
+    log('');
+  }
+}
+
+// ── 6. Progress summary (from global pre-compact-context) ────────────────
+
+const progressPath = resolve(PROJECT_ROOT, '.claude', 'workflow', 'progress.md');
+if (existsSync(progressPath)) {
+  const progress = readFileSync(progressPath, 'utf-8');
+  if (progress.trim().split('\n').length > 3) {
+    log('[Progress Summary]');
+    log(readFirstNLines(progressPath, 15));
+    log('');
+  }
+}
 
 process.exit(0);

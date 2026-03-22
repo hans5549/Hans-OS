@@ -35,8 +35,9 @@ import {
   // VxeTextarea,
 } from 'vxe-pc-ui';
 import enUS from 'vxe-pc-ui/lib/language/en-US';
-// 导入默认的语言
-import zhCN from 'vxe-pc-ui/lib/language/zh-CN';
+import koKR from 'vxe-pc-ui/lib/language/ko-KR';
+// 匯入預設的語言
+import zhTW from 'vxe-pc-ui/lib/language/zh-TW';
 import {
   VxeColgroup,
   VxeColumn,
@@ -54,11 +55,7 @@ let isInit = false;
 export let useTableForm: typeof useVbenForm;
 
 // 部分组件，如果没注册，vxe-table 会报错，这里实际没用组件，只是为了不报错，同时可以减少打包体积
-const createVirtualComponent = (name = '') => {
-  return defineComponent({
-    name,
-  });
-};
+const createVirtualComponent = (name = '') => defineComponent({ name });
 
 export function initVxeTable() {
   if (isInit) {
@@ -109,8 +106,9 @@ export function setupVbenVxeTable(setupOptions: SetupVxeTable) {
   const { isDark, locale } = usePreferences();
 
   const localMap = {
-    'zh-CN': zhCN,
     'en-US': enUS,
+    'ko-KR': koKR,
+    'zh-TW': zhTW,
   };
 
   watch(
