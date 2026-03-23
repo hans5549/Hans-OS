@@ -77,10 +77,10 @@ onMounted(async () => {
 async function handleSubmit(values: Recordable<any>) {
   await updateProfileApi({
     realName: values.realName,
-    email: values.email,
-    phone: values.phone,
-    avatar: values.avatar,
-    desc: values.desc,
+    email: values.email || undefined,
+    phone: values.phone || undefined,
+    avatar: values.avatar || undefined,
+    desc: values.desc || undefined,
   });
   await useAuthStore().fetchUserInfo();
   message.success('個人資料已更新');

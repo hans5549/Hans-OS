@@ -22,11 +22,11 @@ watch(
   { immediate: true },
 );
 
-const localeMap: Record<string, GlobalConfigProvider> = {
+const localeMap = {
   'en-US': enConfig,
   'ko-KR': koConfig,
   'zh-TW': zhTWConfig,
-};
+} as unknown as Record<string, GlobalConfigProvider>;
 
 const customConfig: GlobalConfigProvider = {
   calendar: {},
