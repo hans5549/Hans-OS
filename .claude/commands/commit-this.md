@@ -17,6 +17,12 @@ Use the Agent tool with these EXACT parameters:
 - DO NOT do this yourself. You MUST call the Agent tool.
 - Wait for the agent to complete before proceeding.
 
+## Step 1.5: Spec Check
+This step YOU do directly (no agent needed):
+1. Re-read the original user request or plan
+2. Compare: Are all requirements implemented? Nothing extra (YAGNI)?
+3. Report findings, then say "spec check done"
+
 ## Step 2: Code Review
 Use the Agent tool with these EXACT parameters:
 - subagent_type: "code-review-specialist"

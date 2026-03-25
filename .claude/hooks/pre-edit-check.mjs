@@ -28,18 +28,24 @@ if (!trackedTools.includes(toolName)) {
 // 1. Main Branch Protection
 // ============================================================================
 
+// Allow workflow file writes on main (plans, reviews, specs, test-plans, workflow)
+const _ti = parsed.tool_input || {};
+const _targetPath = (_ti.file_path || _ti.path || '').replace(/\\/g, '/');
+const isWorkflowFile = /\.claude\/(plans|reviews|test-plans|specs|workflow)\//i.test(_targetPath);
+
 try {
   const branch = execSync('git branch --show-current', { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
-  if (branch === 'main' || branch === 'master') {
-    const blockMessage = JSON.stringify({
-      block: true,
-      message: 'BLOCKED: Cannot edit files on main branch. Create a feature branch first:\n\n  git checkout -b feature/xxx\n  or\n  git worktree add ../worktrees/<name> -b feature/xxx',
-    });
-    process.stdout.write(blockMessage);
+  if ((branch === 'main' || branch === 'master') && !isWorkflowFile) {
+    process.stderr.write(
+      'BLOCKED: Cannot edit files on main branch. Create a feature branch first:\n\n' +
+      '  git checkout -b feature/xxx\n' +
+      '  or\n' +
+      '  git worktree add ../worktrees/<name> -b feature/xxx'
+    );
     process.exit(2);
   }
-} catch {
-  // Git not available, allow operation
+} catch (err) {
+  log(`[WARNING] Git branch check failed: ${err.message || 'unknown error'}. Main branch protection skipped.`);
 }
 
 // ============================================================================
