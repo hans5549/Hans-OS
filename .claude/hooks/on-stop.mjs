@@ -62,6 +62,22 @@ if (existsSync(STATE_FILE)) {
   } catch { /* ignore */ }
 }
 
+// ── Worktree cleanup reminder ─────────────────────────────────────────────
+try {
+  const wtOutput = execSync('git worktree list --porcelain', {
+    encoding: 'utf-8',
+    stdio: ['pipe', 'pipe', 'pipe'],
+    cwd: PROJECT_ROOT,
+  });
+  const worktrees = wtOutput.match(/^worktree /gm) || [];
+  if (worktrees.length > 1) {
+    log('');
+    log(`[Session End] ${worktrees.length - 1} worktree(s) still active.`);
+    log('  Use "git worktree list" to view, "git worktree remove <path>" to clean up.');
+    log('');
+  }
+} catch { /* ignore */ }
+
 // ── Area 2c: Auto-write session summary to progress.md ───────────────────
 
 const progressPath = resolve(PROJECT_ROOT, '.claude', 'workflow', 'progress.md');

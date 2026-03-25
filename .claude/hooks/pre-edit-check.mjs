@@ -25,7 +25,7 @@ if (!trackedTools.includes(toolName)) {
 }
 
 // ============================================================================
-// 1. Main Branch Protection
+// 1. Main Branch Protection + Worktree Enforcement
 // ============================================================================
 
 // Allow workflow file writes on main (plans, reviews, specs, test-plans, workflow)
@@ -36,11 +36,13 @@ const isWorkflowFile = /\.claude\/(plans|reviews|test-plans|specs|workflow)\//i.
 try {
   const branch = execSync('git branch --show-current', { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
   if ((branch === 'main' || branch === 'master') && !isWorkflowFile) {
+    const state = getWorkflowState();
+    const hasPlan = state.currentPlanFile && state.currentPlanFile.length > 0;
+
     process.stderr.write(
-      'BLOCKED: Cannot edit files on main branch. Create a feature branch first:\n\n' +
-      '  git checkout -b feature/xxx\n' +
-      '  or\n' +
-      '  git worktree add ../worktrees/<name> -b feature/xxx'
+      hasPlan
+        ? 'BLOCKED: Plan approved but you are on main branch. You MUST call EnterWorktree first.\n\n  EnterWorktree(name: "your-feature-name")'
+        : 'BLOCKED: Cannot edit files on main branch. Create a feature branch first.\n\n  git checkout -b feature/xxx\n  or use EnterWorktree after plan approval.'
     );
     process.exit(2);
   }

@@ -8,6 +8,7 @@
 import { execSync } from 'child_process';
 import {
   getWorkflowState,
+  setWorkflowState,
   isCodeFile,
   resetStep,
   resetWorkflowState,
@@ -122,10 +123,9 @@ if (!codeFilesExist) {
 }
 
 // ============================================================================
-// 4. Binary commit gating: any code file = full pipeline
+// 4. Commit gating — all code changes require full pipeline
 // ============================================================================
 
-const codeFileCount = state.modifiedFiles.filter((f) => isCodeFile(f)).length;
 const missingSteps = getCodingMissingSteps();
 
 if (missingSteps.length > 0) {
@@ -137,13 +137,9 @@ if (missingSteps.length > 0) {
 
   const stepList = missingSteps.map((s) => `  [ ] ${stepDisplayNames[s] || s}`).join('\n');
 
-  const tierNote = codeFileCount <= 2
-    ? '(small change: ≤2 files → only simplifier + code review required)'
-    : '(3+ files → simplifier + code review + security required)';
-
   const message = `COMMIT BLOCKED - Workflow steps incomplete!
 
-Missing steps ${tierNote}:
+Missing steps:
 ${stepList}
 
 Complete these steps, then commit will be allowed.
@@ -235,8 +231,61 @@ Please fix the type errors and try again.`;
 log('');
 log('[Workflow] Final build passed!');
 log('[Workflow] All workflow steps completed - commit allowed');
+
+// Detect worktree and handle merge-back flow
+let isInWorktree = false;
+try {
+  const gitDir = execSync('git rev-parse --git-dir', {
+    encoding: 'utf-8',
+    stdio: ['pipe', 'pipe', 'pipe'],
+  }).trim();
+  isInWorktree = gitDir.includes('.git/worktrees/') || gitDir.includes('.git\\worktrees\\');
+} catch { /* not in git repo */ }
+
+if (isInWorktree) {
+  const mbState = getWorkflowState();
+
+  if (!mbState.mergeBackPending) {
+    // First commit in worktree — enter merge-back flow
+    mbState.mergeBackPending = true;
+    mbState.completedSteps.simplifier = false;
+    mbState.completedSteps.codeReviewer = false;
+    mbState.completedSteps.securityReviewer = false;
+    mbState.completedSteps.buildPassed = false;
+    mbState.modifiedFiles = [];
+    mbState.editHistory = [];
+    mbState.lineChangeSinceReview = 0;
+    mbState.buildRetryCount = 0;
+    setWorkflowState(mbState);
+
+    let wtBranch = '';
+    try {
+      wtBranch = execSync('git branch --show-current', {
+        encoding: 'utf-8',
+        stdio: ['pipe', 'pipe', 'pipe'],
+      }).trim();
+    } catch { /* fallback */ }
+
+    log('');
+    log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    log(' COMMIT SUCCESSFUL — MERGE-BACK FLOW STARTED');
+    log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    log(` Branch: ${wtBranch}`);
+    log('');
+    log(' Next steps:');
+    log('   1. git merge --no-ff main');
+    log('   2. Resolve conflicts if any, then commit');
+    log('   3. code-review (re-run review pipeline)');
+    log('   4. worktree merge-back (finalize)');
+    log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  } else {
+    // Subsequent commit while mergeBackPending (e.g. after merge conflict resolution)
+    resetWorkflowState();
+  }
+} else {
+  // Not in worktree — original behavior
+  resetWorkflowState();
+}
+
 log('');
-
-resetWorkflowState();
-
 process.exit(0);

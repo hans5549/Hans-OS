@@ -7,6 +7,7 @@
 import { readFileSync, writeFileSync, existsSync, rmdirSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { execSync } from 'child_process';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -37,6 +38,18 @@ if (existsSync(STATE_FILE)) {
       state.completedSteps.engReview = false;
       state.completedSteps.planLinusReview = false;
       state.currentPlanFile = '';
+
+      // Fix: Reset coding steps if previous session completed (modifiedFiles empty)
+      // Skip reset during merge-back flow (mergeBackPending preserves state)
+      if ((!state.modifiedFiles || state.modifiedFiles.length === 0) && !state.mergeBackPending) {
+        state.completedSteps.simplifier = false;
+        state.completedSteps.codeReviewer = false;
+        state.completedSteps.securityReviewer = false;
+        state.completedSteps.buildPassed = false;
+        state.lineChangeSinceReview = 0;
+        state.buildRetryCount = 0;
+      }
+
       state.lastModified = new Date().toISOString();
       writeFileSync(STATE_FILE, JSON.stringify(state, null, 2), 'utf-8');
     }
@@ -53,6 +66,30 @@ log('');
 log(' Coding: Simplifier → Code Review + Security → Build → Commit');
 log(' Planning: CEO Review → Eng Review → Linus Review → ExitPlanMode');
 log(' Commands: workflow status | workflow reset | /resume | /reboot-check');
+
+// ── Worktree awareness ────────────────────────────────────────────────────
+try {
+  const wtOutput = execSync('git worktree list --porcelain', {
+    encoding: 'utf-8',
+    stdio: ['pipe', 'pipe', 'pipe'],
+    cwd: PROJECT_ROOT,
+  });
+  const worktreeCount = (wtOutput.match(/^worktree /gm) || []).length;
+  if (worktreeCount > 1) {
+    log(` [Worktree] ${worktreeCount - 1} additional worktree(s) active`);
+  }
+} catch { /* git not available */ }
+
+// ── Merge-back awareness ────────────────────────────────────────────────
+try {
+  if (existsSync(STATE_FILE)) {
+    const stateContent = readFileSync(STATE_FILE, 'utf-8');
+    const mbState = JSON.parse(stateContent);
+    if (mbState.mergeBackPending === true) {
+      log(' [!] MERGE-BACK PENDING — Run "worktree merge-back" after reviews');
+    }
+  }
+} catch { /* state file doesn't exist or parse error */ }
 
 // ── Auto-create findings.md and progress.md ─────────────────────────────
 
