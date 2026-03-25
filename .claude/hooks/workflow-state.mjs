@@ -45,6 +45,8 @@ function getDefaultState() {
     editHistory: [],
     // Track cumulative line changes since last review
     lineChangeSinceReview: 0,
+    // Worktree merge-back flow
+    mergeBackPending: false,
   };
 }
 
@@ -89,6 +91,7 @@ export function getWorkflowState() {
     if (!Array.isArray(state.editHistory)) state.editHistory = [];
     if (state.currentPlanFile === undefined) state.currentPlanFile = '';
     if (state.lineChangeSinceReview === undefined) state.lineChangeSinceReview = 0;
+    if (state.mergeBackPending === undefined) state.mergeBackPending = false;
 
     return state;
   } catch {
@@ -218,6 +221,19 @@ export function hasCodeFiles() {
   return state.modifiedFiles.some((f) => isCodeFile(f));
 }
 
+// ── Merge-back helpers ───────────────────────────────────────────────
+
+export function resetCodingStepsOnly() {
+  const state = getWorkflowState();
+  state.completedSteps.simplifier = false;
+  state.completedSteps.codeReviewer = false;
+  state.completedSteps.securityReviewer = false;
+  state.completedSteps.buildPassed = false;
+  state.lineChangeSinceReview = 0;
+  setWorkflowState(state);
+  return state;
+}
+
 // ── Display ────────────────────────────────────────────────────────────────
 
 export function showWorkflowStatus() {
@@ -267,6 +283,12 @@ export function showWorkflowStatus() {
     const done = state.completedSteps[key];
     const icon = done ? '[x]' : '[ ]';
     log(`  ${icon} ${name}`);
+  }
+
+  if (state.mergeBackPending) {
+    log('');
+    log('  -- Merge-Back --');
+    log('  [!] Merge-back pending — run "worktree merge-back" after reviews pass');
   }
 
   if (state.currentPlanFile) {

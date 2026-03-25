@@ -1,0 +1,20 @@
+{
+  "lspServers": {
+    "typescript": {
+      "command": "typescript-language-server",
+      "args": ["--stdio"],
+      "fileExtensions": {
+        ".ts": "typescript",
+        ".tsx": "typescriptreact",
+        ".vue": "vue"
+      }
+    },
+    "csharp": {
+      "command": "csharp-ls",
+      "args": [],
+      "fileExtensions": {
+        ".cs": "csharp"
+      }
+    }
+  }
+}

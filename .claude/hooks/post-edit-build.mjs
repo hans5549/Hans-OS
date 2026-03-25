@@ -13,7 +13,7 @@ import { existsSync, mkdirSync, rmdirSync } from 'fs';
 import { extname, resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { parseHookInput, log } from './hook-utils.mjs';
-import { getWorkflowState, setWorkflowState } from './workflow-state.mjs';
+import { getWorkflowState, setWorkflowState, completeStep } from './workflow-state.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -94,6 +94,9 @@ try {
 
     log('[Build] Frontend type check passed');
   }
+
+  // Mark buildPassed step complete for workflow status accuracy
+  try { completeStep('buildPassed'); } catch { /* non-critical */ }
 
   // Reset retry count on success + record edit history
   try {
