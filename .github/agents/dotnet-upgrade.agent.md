@@ -1,7 +1,7 @@
 ---
-description: 'Performs janitorial tasks on C#/.NET code including cleanup, modernization, and tech debt remediation.'
-name: '.NET Upgrade'
-tools: ['codebase', 'edit/editFiles', 'search', 'runCommands', 'runTasks', 'runTests', 'problems', 'changes', 'usages', 'findTestFiles', 'testFailure', 'terminalLastCommand', 'terminalSelection', 'web/fetch']
+name: dotnet-upgrade
+description: .NET 版本升級助手，偵測版本、產出升級計畫、逐步升級
+tools: ["read", "search", "edit", "execute"]
 ---
 
 # .NET Upgrade & Maintenance

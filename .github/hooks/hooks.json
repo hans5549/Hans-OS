@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "type": "command",
+        "bash": "./.github/hooks/scripts/session-start.sh",
+        "timeoutSec": 10
+      }
+    ],
+    "sessionEnd": [
+      {
+        "type": "command",
+        "bash": "./.github/hooks/scripts/session-end.sh",
+        "timeoutSec": 5
+      }
+    ],
+    "userPromptSubmitted": [
+      {
+        "type": "command",
+        "bash": "./.github/hooks/scripts/workflow-orchestrator.sh",
+        "timeoutSec": 10
+      }
+    ],
+    "preToolUse": [
+      {
+        "type": "command",
+        "bash": "./.github/hooks/scripts/pre-edit-check.sh",
+        "timeoutSec": 10
+      },
+      {
+        "type": "command",
+        "bash": "./.github/hooks/scripts/pre-bash-check.sh",
+        "timeoutSec": 30
+      }
+    ],
+    "postToolUse": [
+      {
+        "type": "command",
+        "bash": "./.github/hooks/scripts/post-edit-build.sh",
+        "timeoutSec": 120
+      },
+      {
+        "type": "command",
+        "bash": "./.github/hooks/scripts/post-tool-track.sh",
+        "timeoutSec": 10
+      }
+    ],
+    "errorOccurred": [
+      {
+        "type": "command",
+        "bash": "./.github/hooks/scripts/error-handler.sh",
+        "timeoutSec": 10
+      }
+    ]
+  }
+}

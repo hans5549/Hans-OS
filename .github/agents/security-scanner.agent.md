@@ -1,7 +1,7 @@
 ---
-description: 'Security vulnerability scanning agent — checks for OWASP Top 10, injection, XSS, authentication bypass, and other security issues.'
-name: 'Security Scanner'
-tools: ['changes', 'search/codebase', 'edit/editFiles', 'search', 'runCommands', 'problems', 'usages']
+name: security-scanner
+description: 安全漏洞掃描（OWASP Top 10），嚴重度 CRITICAL/IMPORTANT/ADVISORY（只讀）
+tools: ["read", "search"]
 ---
 
 # Security Vulnerability Scanning Agent

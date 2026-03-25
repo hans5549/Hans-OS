@@ -1,7 +1,7 @@
 ---
-description: 'Vue 3 best practices review agent — scans Vue and TypeScript files to check Vue 3 best practices.'
-name: 'Vue Review'
-tools: ['changes', 'search/codebase', 'edit/editFiles', 'search', 'runCommands', 'problems', 'usages']
+name: vue-review
+description: Vue 3 Composition API + Ant Design Vue + TypeScript 最佳實踐審查（只讀）
+tools: ["read", "search"]
 ---
 
 # Vue 3 Review Agent

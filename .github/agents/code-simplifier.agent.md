@@ -1,7 +1,7 @@
 ---
-description: 'Simplifies and refines C# / Vue code for clarity, consistency, and maintainability while preserving all functionality.'
-name: 'Code Simplifier'
-tools: ['changes', 'search/codebase', 'edit/editFiles', 'search', 'runCommands', 'runTests', 'problems', 'usages']
+name: code-simplifier
+description: 程式碼簡化（primary constructors, guard clauses, expression bodies），可直接修改檔案
+tools: ["read", "search", "edit"]
 ---
 
 # Code Simplifier Agent

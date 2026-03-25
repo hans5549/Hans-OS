@@ -1,7 +1,7 @@
 ---
-name: "C# Expert"
-description: 'An agent specialized in .NET development, delivering clean, secure, high-performance C# code following Hans-OS project conventions.'
-tools: ['changes', 'search/codebase', 'edit/editFiles', 'extensions', 'web/fetch', 'findTestFiles', 'githubRepo', 'new', 'problems', 'runCommands', 'runTasks', 'runTests', 'search', 'search/searchResults', 'runCommands/terminalLastCommand', 'runCommands/terminalSelection', 'testFailure', 'usages']
+name: csharp-expert
+description: C# / .NET 9 專家，處理架構設計、效能優化、EF Core 問題
+tools: ["read", "search", "edit", "execute"]
 ---
 
 # C# Expert Agent

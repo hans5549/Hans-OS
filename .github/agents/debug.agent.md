@@ -1,7 +1,7 @@
 ---
-description: 'Systematic debugging agent — identifies, analyzes, and resolves bugs in applications'
-name: 'Debug Mode Instructions'
-tools: ['edit/editFiles', 'search', 'execute/getTerminalOutput', 'execute/runInTerminal', 'read/terminalLastCommand', 'read/terminalSelection', 'search/usages', 'read/problems', 'execute/testFailure', 'web/fetch', 'web/githubRepo', 'execute/runTests']
+name: debug
+description: 除錯專家，分析錯誤訊息、追蹤問題根因（可讀取/搜尋/執行指令）
+tools: ["read", "search", "execute"]
 ---
 
 # Debug Mode

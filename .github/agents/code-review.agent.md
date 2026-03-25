@@ -1,7 +1,7 @@
 ---
-description: 'Code review agent — comprehensive checks for code quality, architecture compliance, naming conventions, error handling, and potential bugs.'
-name: 'Code Review'
-tools: ['changes', 'search/codebase', 'edit/editFiles', 'search', 'runCommands', 'runTests', 'problems', 'usages', 'findTestFiles']
+name: code-review
+description: 程式碼品質審查，嚴重度分類 CRITICAL/IMPORTANT/STYLE（只讀）
+tools: ["read", "search"]
 ---
 
 # Code Review Agent

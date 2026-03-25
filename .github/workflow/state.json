@@ -1,0 +1,18 @@
+{
+  "modifiedFiles": [],
+  "completedSteps": {
+    "planner": false,
+    "ceoReview": false,
+    "engReview": false,
+    "planLinusReview": false,
+    "simplifier": false,
+    "codeReviewer": false,
+    "securityReviewer": false,
+    "buildPassed": false
+  },
+  "lineChangeSinceReview": 0,
+  "buildRetryCount": 0,
+  "editHistory": [],
+  "lastModified": "",
+  "currentPlanFile": ""
+}
