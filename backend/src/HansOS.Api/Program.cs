@@ -76,6 +76,7 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IMenuService, MenuService>();
 builder.Services.AddScoped<ITsfSettingsService, TsfSettingsService>();
+builder.Services.AddScoped<IBankTransactionService, BankTransactionService>();
 
 // ── Controllers + Swagger ────────────────────────
 builder.Services.AddControllers();
