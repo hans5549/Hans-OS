@@ -57,9 +57,10 @@ const currentYear = ref(dayjs().year());
 const currentMonth = ref<number | undefined>(dayjs().month() + 1);
 
 const yearOptions = computed(() => {
-  const thisYear = dayjs().year();
+  const startYear = 2019;
+  const endYear = dayjs().year() + 1;
   const years: number[] = [];
-  for (let y = thisYear - 5; y <= thisYear + 1; y++) {
+  for (let y = startYear; y <= endYear; y++) {
     years.push(y);
   }
   return years;
