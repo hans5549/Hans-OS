@@ -14,7 +14,7 @@ public class BankTransactionImportService(
     ApplicationDbContext db,
     ILogger<BankTransactionImportService> logger) : IBankTransactionImportService
 {
-    private static readonly Lock ImportLock = new();
+    private static readonly SemaphoreSlim ImportSemaphore = new(1, 1);
 
     private static readonly Dictionary<string, string> FileToBank = new()
     {
@@ -26,7 +26,7 @@ public class BankTransactionImportService(
 
     public async Task<ImportResultResponse> ImportFromSeedDataAsync(CancellationToken ct = default)
     {
-        if (!ImportLock.TryEnter())
+        if (!await ImportSemaphore.WaitAsync(0, ct))
         {
             throw new InvalidOperationException("匯入作業正在進行中，請稍後再試");
         }
@@ -37,7 +37,7 @@ public class BankTransactionImportService(
         }
         finally
         {
-            ImportLock.Exit();
+            ImportSemaphore.Release();
         }
     }
 
