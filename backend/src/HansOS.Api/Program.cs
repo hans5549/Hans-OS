@@ -75,6 +75,7 @@ builder.Services.AddCors(opt =>
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IMenuService, MenuService>();
+builder.Services.AddScoped<ITsfSettingsService, TsfSettingsService>();
 
 // ── Controllers + Swagger ────────────────────────
 builder.Services.AddControllers();

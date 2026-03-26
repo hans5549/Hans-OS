@@ -11,6 +11,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Menu> Menus => Set<Menu>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<RoleMenu> RoleMenus => Set<RoleMenu>();
+    public DbSet<SportsDepartment> SportsDepartments => Set<SportsDepartment>();
+    public DbSet<BankInitialBalance> BankInitialBalances => Set<BankInitialBalance>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -78,6 +80,24 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
              .OnDelete(DeleteBehavior.Cascade);
 
             e.HasIndex(rm => rm.RoleId);
+        });
+
+        // SportsDepartment
+        builder.Entity<SportsDepartment>(e =>
+        {
+            e.HasKey(d => d.Id);
+            e.Property(d => d.Name).HasMaxLength(100).IsRequired();
+            e.Property(d => d.Note).HasMaxLength(500);
+            e.HasIndex(d => d.Name).IsUnique();
+        });
+
+        // BankInitialBalance
+        builder.Entity<BankInitialBalance>(e =>
+        {
+            e.HasKey(b => b.Id);
+            e.Property(b => b.BankName).HasMaxLength(100).IsRequired();
+            e.Property(b => b.InitialAmount).HasPrecision(18, 2);
+            e.HasIndex(b => b.BankName).IsUnique();
         });
     }
 }
