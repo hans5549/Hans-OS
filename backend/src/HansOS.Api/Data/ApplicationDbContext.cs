@@ -17,6 +17,9 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<AnnualBudget> AnnualBudgets => Set<AnnualBudget>();
     public DbSet<DepartmentBudget> DepartmentBudgets => Set<DepartmentBudget>();
     public DbSet<BudgetItem> BudgetItems => Set<BudgetItem>();
+    public DbSet<Activity> Activities => Set<Activity>();
+    public DbSet<ActivityGroup> ActivityGroups => Set<ActivityGroup>();
+    public DbSet<ActivityExpense> ActivityExpenses => Set<ActivityExpense>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -166,6 +169,63 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
              .OnDelete(DeleteBehavior.SetNull);
 
             e.HasIndex(t => new { t.BankName, t.TransactionDate });
+        });
+
+        // Activity
+        builder.Entity<Activity>(e =>
+        {
+            e.HasKey(a => a.Id);
+            e.Property(a => a.Name).HasMaxLength(200).IsRequired();
+            e.Property(a => a.Description).HasMaxLength(1000);
+            e.Property(a => a.Month).IsRequired();
+            e.Property(a => a.Year).IsRequired();
+
+            e.HasOne(a => a.Department)
+             .WithMany()
+             .HasForeignKey(a => a.DepartmentId)
+             .OnDelete(DeleteBehavior.Restrict);
+
+            e.HasIndex(a => new { a.DepartmentId, a.Year, a.Month });
+        });
+
+        // ActivityGroup
+        builder.Entity<ActivityGroup>(e =>
+        {
+            e.HasKey(g => g.Id);
+            e.Property(g => g.Name).HasMaxLength(200).IsRequired();
+
+            e.HasOne(g => g.Activity)
+             .WithMany(a => a.Groups)
+             .HasForeignKey(g => g.ActivityId)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ActivityExpense
+        builder.Entity<ActivityExpense>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Description).HasMaxLength(200).IsRequired();
+            e.Property(x => x.Amount).HasPrecision(18, 2);
+            e.Property(x => x.Note).HasMaxLength(1000);
+
+            e.HasOne(x => x.Activity)
+             .WithMany(a => a.Expenses)
+             .HasForeignKey(x => x.ActivityId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne(x => x.Group)
+             .WithMany(g => g.Expenses)
+             .HasForeignKey(x => x.ActivityGroupId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne(x => x.BudgetItem)
+             .WithMany()
+             .HasForeignKey(x => x.BudgetItemId)
+             .OnDelete(DeleteBehavior.SetNull);
+
+            e.HasIndex(x => x.ActivityId);
+            e.HasIndex(x => x.ActivityGroupId);
+            e.HasIndex(x => x.BudgetItemId);
         });
     }
 }

@@ -79,6 +79,7 @@ builder.Services.AddScoped<ITsfSettingsService, TsfSettingsService>();
 builder.Services.AddScoped<IBankTransactionService, BankTransactionService>();
 builder.Services.AddScoped<IBankTransactionImportService, BankTransactionImportService>();
 builder.Services.AddScoped<IAnnualBudgetService, AnnualBudgetService>();
+builder.Services.AddScoped<IActivityService, ActivityService>();
 
 // ── Controllers + Swagger ────────────────────────
 builder.Services.AddControllers();
