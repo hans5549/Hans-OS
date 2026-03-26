@@ -14,6 +14,9 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<SportsDepartment> SportsDepartments => Set<SportsDepartment>();
     public DbSet<BankInitialBalance> BankInitialBalances => Set<BankInitialBalance>();
     public DbSet<BankTransaction> BankTransactions => Set<BankTransaction>();
+    public DbSet<AnnualBudget> AnnualBudgets => Set<AnnualBudget>();
+    public DbSet<DepartmentBudget> DepartmentBudgets => Set<DepartmentBudget>();
+    public DbSet<BudgetItem> BudgetItems => Set<BudgetItem>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -99,6 +102,49 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             e.Property(b => b.BankName).HasMaxLength(100).IsRequired();
             e.Property(b => b.InitialAmount).HasPrecision(18, 2);
             e.HasIndex(b => b.BankName).IsUnique();
+        });
+
+        // AnnualBudget
+        builder.Entity<AnnualBudget>(e =>
+        {
+            e.HasKey(b => b.Id);
+            e.Property(b => b.Year).IsRequired();
+            e.HasIndex(b => b.Year).IsUnique();
+            e.Property(b => b.Status)
+             .HasConversion<string>()
+             .HasMaxLength(20);
+            e.Property(b => b.Note).HasMaxLength(1000);
+        });
+
+        // DepartmentBudget
+        builder.Entity<DepartmentBudget>(e =>
+        {
+            e.HasKey(db => db.Id);
+            e.HasOne(db => db.AnnualBudget)
+             .WithMany(ab => ab.DepartmentBudgets)
+             .HasForeignKey(db => db.AnnualBudgetId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(db => db.Department)
+             .WithMany()
+             .HasForeignKey(db => db.DepartmentId)
+             .OnDelete(DeleteBehavior.Restrict);
+            e.HasIndex(db => new { db.AnnualBudgetId, db.DepartmentId }).IsUnique();
+        });
+
+        // BudgetItem
+        builder.Entity<BudgetItem>(e =>
+        {
+            e.HasKey(bi => bi.Id);
+            e.HasOne(bi => bi.DepartmentBudget)
+             .WithMany(db => db.Items)
+             .HasForeignKey(bi => bi.DepartmentBudgetId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.Property(bi => bi.ActivityName).HasMaxLength(200).IsRequired();
+            e.Property(bi => bi.ContentItem).HasMaxLength(200).IsRequired();
+            e.Property(bi => bi.Amount).HasPrecision(18, 2);
+            e.Property(bi => bi.ActualAmount).HasPrecision(18, 2);
+            e.Property(bi => bi.Note).HasMaxLength(1000);
+            e.Property(bi => bi.ActualNote).HasMaxLength(1000);
         });
 
         // BankTransaction

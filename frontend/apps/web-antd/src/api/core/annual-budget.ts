@@ -1,0 +1,84 @@
+import { requestClient } from '#/api/request';
+
+// ── Types ─────────────────────────────────────────
+
+export interface AnnualBudgetOverviewResponse {
+  id: string;
+  year: number;
+  status: string;
+  note: string | null;
+  totalBudget: number;
+  totalActual: number;
+  departments: DepartmentBudgetSummaryResponse[];
+}
+
+export interface DepartmentBudgetSummaryResponse {
+  departmentBudgetId: string;
+  departmentId: string;
+  departmentName: string;
+  budgetAmount: number;
+  actualAmount: number;
+  itemCount: number;
+}
+
+export interface BudgetItemResponse {
+  id: string;
+  sequence: number;
+  activityName: string;
+  contentItem: string;
+  amount: number;
+  note: string | null;
+  actualAmount: number | null;
+  actualNote: string | null;
+}
+
+export interface BudgetItemInput {
+  id?: string;
+  sequence: number;
+  activityName: string;
+  contentItem: string;
+  amount: number;
+  note?: string;
+  actualAmount?: number;
+  actualNote?: string;
+}
+
+export interface SaveBudgetItemsRequest {
+  items: BudgetItemInput[];
+}
+
+export interface UpdateBudgetStatusRequest {
+  status: string;
+}
+
+// ── API ───────────────────────────────────────────
+
+/** 取得年度預算總覽（自動初始化） */
+export const getAnnualBudgetOverviewApi = (year: number) =>
+  requestClient.get<AnnualBudgetOverviewResponse>(`/annual-budgets/${year}`);
+
+/** 更新預算狀態 */
+export const updateBudgetStatusApi = (
+  year: number,
+  data: UpdateBudgetStatusRequest,
+) => requestClient.put(`/annual-budgets/${year}/status`, data);
+
+/** 取得部門預算項目 */
+export const getDepartmentBudgetItemsApi = (
+  year: number,
+  departmentId: string,
+) =>
+  requestClient.get<BudgetItemResponse[]>(
+    `/annual-budgets/${year}/departments/${departmentId}/items`,
+  );
+
+/** 批次儲存部門預算項目 */
+export const saveDepartmentBudgetItemsApi = (
+  year: number,
+  departmentId: string,
+  data: SaveBudgetItemsRequest,
+) =>
+  requestClient.put<BudgetItemResponse[]>(
+    `/annual-budgets/${year}/departments/${departmentId}/items`,
+    data,
+  );
