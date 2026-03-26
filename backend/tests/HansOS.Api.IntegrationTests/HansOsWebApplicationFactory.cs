@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
@@ -48,7 +49,8 @@ public class HansOsWebApplicationFactory : WebApplicationFactory<Program>
             // Re-register with InMemory provider
             var dbName = $"HansOS-Test-{Guid.NewGuid()}";
             services.AddDbContext<ApplicationDbContext>(opt =>
-                opt.UseInMemoryDatabase(dbName));
+                opt.UseInMemoryDatabase(dbName)
+                   .ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning)));
 
             // Override JWT options for AuthService (token signing)
             services.Configure<JwtOptions>(opt =>

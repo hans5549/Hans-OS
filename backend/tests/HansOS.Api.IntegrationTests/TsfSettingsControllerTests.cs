@@ -3,6 +3,9 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using FluentAssertions;
+using HansOS.Api.Data;
+using HansOS.Api.Data.Entities;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace HansOS.Api.IntegrationTests;
 
@@ -164,6 +167,23 @@ public class TsfSettingsControllerTests(HansOsWebApplicationFactory factory)
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
+    [Fact]
+    public async Task UpdateDepartment_Unauthorized_Returns401()
+    {
+        var response = await _client.PutAsJsonAsync($"/tsf-settings/departments/{Guid.NewGuid()}", new
+        {
+            name = "test",
+        });
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task DeleteDepartment_Unauthorized_Returns401()
+    {
+        var response = await _client.DeleteAsync($"/tsf-settings/departments/{Guid.NewGuid()}");
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
     // ── Bank Balances ───────────────────────────────
 
     [Fact]
@@ -209,6 +229,46 @@ public class TsfSettingsControllerTests(HansOsWebApplicationFactory factory)
             initialAmount = 1000m,
         });
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task UpdateBankBalance_ValidData_Returns200()
+    {
+        var token = await LoginAndGetTokenAsync();
+
+        // 直接透過 DI 容器建立 BankInitialBalance（避免依賴 Import 端點）
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            db.BankInitialBalances.Add(new BankInitialBalance
+            {
+                Id = Guid.NewGuid(),
+                BankName = "測試銀行",
+                InitialAmount = 10000m,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+            });
+            await db.SaveChangesAsync();
+        }
+
+        // 取得現有的 bank balances
+        var listResp = await _client.SendAsync(AuthGet("/tsf-settings/bank-balances", token));
+        var listBody = await listResp.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
+        var balances = listBody.GetProperty("data");
+        balances.GetArrayLength().Should().BeGreaterThan(0);
+
+        var balanceId = balances[0].GetProperty("id").GetString();
+
+        // 更新金額
+        var updateReq = AuthPut($"/tsf-settings/bank-balances/{balanceId}", token, new
+        {
+            initialAmount = 99999.99m,
+        });
+        var response = await _client.SendAsync(updateReq);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
+        body.GetProperty("code").GetInt32().Should().Be(0);
     }
 
     // ── Helpers ──────────────────────────────────────

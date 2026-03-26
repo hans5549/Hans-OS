@@ -399,6 +399,65 @@ public class BankTransactionControllerTests(HansOsWebApplicationFactory factory)
         data.GetProperty("totalExpense").GetDecimal().Should().Be(8030m);
     }
 
+    // ── GET Summary (Happy Path) ───────────────────────────────
+
+    [Fact]
+    public async Task GetSummary_WithData_ReturnsCorrectSummary()
+    {
+        var token = await LoginAndGetTokenAsync();
+        var bank = "合作金庫";
+
+        // 建立收入與支出（使用不同銀行避免其他測試資料干擾）
+        await _client.SendAsync(AuthPost($"/bank-transactions/{bank}", token, new
+        {
+            transactionType = 0,
+            transactionDate = "2026-09-01",
+            description = "會費收入",
+            amount = 15000,
+        }));
+        await _client.SendAsync(AuthPost($"/bank-transactions/{bank}", token, new
+        {
+            transactionType = 1,
+            transactionDate = "2026-09-15",
+            description = "場地費",
+            amount = 3000,
+            fee = 20,
+        }));
+
+        var response = await _client.SendAsync(
+            AuthGet($"/bank-transactions/{bank}/summary?year=2026&month=9", token));
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
+        var data = body.GetProperty("data");
+        data.GetProperty("totalIncome").GetDecimal().Should().Be(15000m);
+        data.GetProperty("totalExpense").GetDecimal().Should().Be(3020m);
+    }
+
+    // ── PUT Update (Unauthorized) ───────────────────────────
+
+    [Fact]
+    public async Task UpdateTransaction_Unauthorized_Returns401()
+    {
+        var response = await _client.PutAsJsonAsync($"/bank-transactions/{Guid.NewGuid()}", new
+        {
+            transactionType = 0,
+            transactionDate = "2026-03-01",
+            description = "test",
+            amount = 100,
+        });
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    // ── DELETE (Unauthorized) ────────────────────────────────
+
+    [Fact]
+    public async Task DeleteTransaction_Unauthorized_Returns401()
+    {
+        var response = await _client.DeleteAsync($"/bank-transactions/{Guid.NewGuid()}");
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
     // ── Import ────────────────────────────────────────────────
 
     [Fact]

@@ -1,5 +1,6 @@
 using FluentAssertions;
 using HansOS.Api.Data.Entities;
+using HansOS.Api.Models.Users;
 using HansOS.Api.Services;
 using Microsoft.AspNetCore.Identity;
 using NSubstitute;
@@ -50,6 +51,132 @@ public class UserServiceTests
         _userManager.FindByIdAsync("nonexistent").Returns((ApplicationUser?)null);
 
         var act = () => _sut.GetUserInfoAsync("nonexistent");
+
+        await act.Should().ThrowAsync<KeyNotFoundException>();
+    }
+
+    // ── UpdateProfileAsync ─────────────────────────
+
+    [Fact]
+    public async Task UpdateProfile_ValidData_UpdatesSuccessfully()
+    {
+        var user = new ApplicationUser
+        {
+            Id = "user-1",
+            UserName = "hans",
+            RealName = "Hans",
+            Email = "old@example.com",
+        };
+        _userManager.FindByIdAsync("user-1").Returns(user);
+        _userManager.SetEmailAsync(user, "new@example.com")
+            .Returns(IdentityResult.Success);
+        _userManager.UpdateAsync(user).Returns(IdentityResult.Success);
+
+        var request = new UpdateProfileRequest(
+            RealName: "Hans Updated",
+            Email: "new@example.com",
+            Phone: null,
+            Avatar: null,
+            Desc: "new desc");
+
+        await _sut.UpdateProfileAsync("user-1", request);
+
+        user.RealName.Should().Be("Hans Updated");
+        user.Desc.Should().Be("new desc");
+    }
+
+    [Fact]
+    public async Task UpdateProfile_NonExistentUser_ThrowsNotFound()
+    {
+        _userManager.FindByIdAsync("nonexistent").Returns((ApplicationUser?)null);
+
+        var request = new UpdateProfileRequest(
+            RealName: "Any",
+            Email: null,
+            Phone: null,
+            Avatar: null,
+            Desc: null);
+
+        var act = () => _sut.UpdateProfileAsync("nonexistent", request);
+
+        await act.Should().ThrowAsync<KeyNotFoundException>();
+    }
+
+    [Fact]
+    public async Task UpdateProfile_DuplicateEmail_ThrowsError()
+    {
+        var user = new ApplicationUser
+        {
+            Id = "user-1",
+            UserName = "hans",
+            RealName = "Hans",
+            Email = "old@example.com",
+        };
+        _userManager.FindByIdAsync("user-1").Returns(user);
+        _userManager.SetEmailAsync(user, "taken@example.com")
+            .Returns(IdentityResult.Failed(new IdentityError
+            {
+                Code = "DuplicateEmail",
+                Description = "Email already taken",
+            }));
+
+        var request = new UpdateProfileRequest(
+            RealName: "Hans",
+            Email: "taken@example.com",
+            Phone: null,
+            Avatar: null,
+            Desc: null);
+
+        var act = () => _sut.UpdateProfileAsync("user-1", request);
+
+        await act.Should().ThrowAsync<ArgumentException>();
+    }
+
+    // ── ChangePasswordAsync ────────────────────────
+
+    [Fact]
+    public async Task ChangePassword_ValidData_ChangesSuccessfully()
+    {
+        var user = new ApplicationUser { Id = "user-1", UserName = "hans", RealName = "Hans" };
+        _userManager.FindByIdAsync("user-1").Returns(user);
+        _userManager.ChangePasswordAsync(user, "OldPass1!", "NewPass1!")
+            .Returns(IdentityResult.Success);
+
+        var request = new ChangePasswordRequest("OldPass1!", "NewPass1!");
+
+        var act = () => _sut.ChangePasswordAsync("user-1", request);
+
+        await act.Should().NotThrowAsync();
+    }
+
+    [Fact]
+    public async Task ChangePassword_WrongOldPassword_ThrowsError()
+    {
+        var user = new ApplicationUser { Id = "user-1", UserName = "hans", RealName = "Hans" };
+        _userManager.FindByIdAsync("user-1").Returns(user);
+        _userManager.ChangePasswordAsync(user, "wrong", "NewPass1!")
+            .Returns(IdentityResult.Failed(new IdentityError
+            {
+                Code = "PasswordMismatch",
+                Description = "Incorrect password.",
+            }));
+
+        var request = new ChangePasswordRequest("wrong", "NewPass1!");
+
+        var act = () => _sut.ChangePasswordAsync("user-1", request);
+
+        await act.Should().ThrowAsync<ArgumentException>()
+            .WithMessage("*舊密碼不正確*");
+    }
+
+    [Fact]
+    public async Task ChangePassword_NonExistentUser_ThrowsNotFound()
+    {
+        _userManager.FindByIdAsync("nonexistent").Returns((ApplicationUser?)null);
+
+        var request = new ChangePasswordRequest("old", "NewPass1!");
+
+        var act = () => _sut.ChangePasswordAsync("nonexistent", request);
 
         await act.Should().ThrowAsync<KeyNotFoundException>();
     }
