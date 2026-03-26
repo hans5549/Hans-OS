@@ -113,26 +113,42 @@ Monorepo with backend API + frontend SPA. Full details in `.claude/ARCHITECTURE.
 
 ## Workflow (Automated)
 
-Three-phase pipeline enforced by hooks. Not all changes need all phases — see skip rules below.
+Pipeline enforced by hooks. Not all changes need all phases — see skip rules below.
 
 ```
-Brainstorming (optional) → Plan Mode (optional) → Coding Phase → Commit
+接到需求 → 建立 Worktree → 腦力激盪 (optional) → 計畫模式 (required)
+  → 實作程式碼 → 審查管線 → 合併回主線 → 刪除 Worktree
 ```
+
+### Git Worktree (Required for Code Changes)
+
+程式變更**必須**在 git worktree 上開發，不可直接在 main 上作業。
+
+```bash
+# 建立 feature branch 的 worktree
+git worktree add ../Hans-OS-<branch-name> -b <branch-name>
+cd ../Hans-OS-<branch-name>
+```
+
+- 分支命名：`feature/add-xxx`、`fix/xxx-error`、`refactor/xxx`
+- Worktree 放在上層目錄，避免巢狀
+- 建立後自動執行 `dotnet restore` + `pnpm install`（hook 強制）
 
 ### Phase 1: Brainstorming (Skill, optional)
 
 Trigger: `/brainstorming` or when starting a new feature idea.
 Output: Design spec in `.claude/specs/`.
+Model: `claude-opus-4.6`
 
-### Phase 2: Plan Mode (Hard Gate, optional)
+### Phase 2: Plan Mode (Hard Gate, **required** for code changes)
 
 Claude Code's built-in plan mode. System prevents code edits. Plan review agents validate before exit.
 
 | Step | Agent | Model |
 |------|-------|-------|
-| CEO Review | `plan-ceo-reviewer` | opus |
-| Eng Review | `plan-eng-reviewer` | sonnet |
-| Plan Linus Review | `plan-linus-reviewer` | sonnet |
+| CEO Review | `plan-ceo-reviewer` | `claude-opus-4.6` |
+| Eng Review | `plan-eng-reviewer` | `claude-opus-4.6` |
+| Plan Linus Review | `plan-linus-reviewer` | `claude-opus-4.6` |
 
 Dispatch all 3 **in parallel** (one message, multiple Agent tool calls).
 `pre-exit-plan-check` hook blocks ExitPlanMode until all 3 complete.
@@ -142,30 +158,40 @@ Dispatch all 3 **in parallel** (one message, multiple Agent tool calls).
 ### Phase 3: Coding Phase (hooks enforced)
 
 ```
-Simplifier (sonnet) → [Code Review (opus) + Security (opus)] parallel → Build → Commit
+Simplifier (gpt-5.4) → [Code Review + Security] parallel (claude-opus-4.6) → Linus (claude-opus-4.6) → Build → Commit
 ```
 
-| Step | Agent | Completion Signal |
-|------|-------|-------------------|
-| Code Simplifier | `code-simplifier:code-simplifier` | auto-completed by hook |
-| Code Review | `code-review-specialist` | auto-completed by hook |
-| Security Review | `security-vuln-scanner` | auto-completed by hook |
-| Build | Auto-verified on commit | Automatic |
+| Step | Agent | Model | Completion Signal |
+|------|-------|-------|-------------------|
+| Code Simplifier | `code-simplifier:code-simplifier` | `gpt-5.4` | auto-completed by hook |
+| Code Review | `code-review-specialist` | `claude-opus-4.6` | auto-completed by hook |
+| Security Review | `security-vuln-scanner` | `claude-opus-4.6` | auto-completed by hook |
+| Linus Review | `linus-reviewer` | `claude-opus-4.6` | after CR + Security |
+| Build | Auto-verified on commit | — | Automatic |
 
-**Dispatch pattern**: After simplifier completes, dispatch Code Review + Security **in parallel** (one message, multiple Agent tool calls). Do not dispatch sequentially.
+**Dispatch pattern**: After simplifier completes, dispatch Code Review + Security **in parallel** (one message, multiple Agent tool calls). After both complete, dispatch Linus Review. Do not dispatch sequentially.
+
+### Phase 4: Merge Back to Main
+
+開發完成並通過所有審查後，使用 `merge this` 觸發合併流程：
+
+1. 先把 main 合併到 feature branch，確保沒有衝突
+2. `dotnet build` + `dotnet test` + `pnpm check:type`
+3. 確認通過 → 切回 main 執行 `git merge --no-ff`
+4. `git worktree remove` + `git branch -d`
 
 ### Skip Rules (Binary)
 
 | 變更類型 | 定義 | Plan Mode | Plan Review | Coding Phase |
 |----------|------|:---------:|:-----------:|:------------:|
 | 文字變更 | Doc extensions (`.md`, `.txt`, `.rst`, `.yml`, `.yaml`) | Skip | Skip | Skip |
-| 程式變更 | Code extensions (`.cs`, `.vue`, `.ts`, `.tsx`, `.json`, `.css`, `.js`, `.html`, `.csproj`, `.xml`) | Required | All 3 (CEO + Eng + Linus) | All (Simplifier + Code Review + Security + Build) |
+| 程式變更 | Code extensions (`.cs`, `.vue`, `.ts`, `.tsx`, `.json`, `.css`, `.js`, `.html`, `.csproj`, `.xml`) | Required | All 3 (CEO + Eng + Linus) | All (Simplifier + Code Review + Security + Linus + Build) |
 
 No file-count tiers. Any code change = full pipeline.
 
 ### Smart Reset Rules
 
-- **Simplifier exemption**: After simplifier completes, subsequent code edits only reset post-simplifier steps (Code Review, Security), NOT simplifier itself.
+- **Simplifier exemption**: After simplifier completes, subsequent code edits only reset post-simplifier steps (Code Review, Security, Linus), NOT simplifier itself.
 - **Small change tolerance**: Cumulative edits < 10 lines after review → warning only, reviews preserved. >= 10 lines → reset.
 
 ### Agent Dispatch Rules (MANDATORY)
@@ -179,13 +205,15 @@ No file-count tiers. Any code change = full pipeline.
 
 | Command | Description |
 |---------|-------------|
-| `workflow status` | View current workflow state and pending steps |
+| `workflow status` | View current workflow state and pending steps (含 worktree 資訊) |
 | `workflow reset` | Reset all workflow state (start fresh) |
 | `workflow skip <step>` | Skip a specific step (not recommended) |
 | `code-review` | Run full review workflow without commit |
 | `commit this` | Run full workflow and create git commit |
+| `merge this` | Merge feature branch back to main and cleanup worktree |
 | `/commit-this` | Full workflow with guided Agent dispatch + git commit |
 | `/review-workflow` | Full review workflow without commit |
+| `/merge-this` | Guided merge flow |
 | `/brainstorming` | Start interactive brainstorming session |
 
 ### Workflow Rules
@@ -193,11 +221,28 @@ No file-count tiers. Any code change = full pipeline.
 - **Build FAIL** → fix → Build is automatically re-verified
 - **Code file edits** automatically reset review steps (with smart exemptions above)
 - Planning steps (CEO/Eng/Linus) auto-reset each new session
+- **Branch-scoped state**: Workflow state keyed by branch name — parallel worktrees have independent state
 
 ### Tracked File Types
 
 Code: `.cs`, `.razor`, `.json`, `.css`, `.js`, `.html`, `.csproj`, `.xml`, `.vue`, `.ts`, `.tsx`
 Doc: `.md`, `.txt`, `.rst`, `.yml`, `.yaml` (skip build verification)
+
+### Auto-Enforcement Rules
+
+| Rule | Description |
+|------|-------------|
+| Main branch protection | Cannot edit code files on `main`/`master` |
+| Worktree required | Code changes must be on a git worktree (session start detection) |
+| Merge gate | `git merge` to main requires all workflow steps complete + main merged to feature |
+| Protected files | `.github/hooks/` and workflow state files cannot be modified |
+| git add . blocked | Must stage specific files only |
+| Commit gating | Code changes require all review steps complete before commit |
+| Auto-build | `.cs` edits → `dotnet build`; `.vue`/`.ts` edits → `pnpm check:type` |
+| Build strike | 3 fails → warning, 5 fails → stop and report |
+| Auto-setup | `git worktree add` → auto `dotnet restore` + `pnpm install` |
+| Dependency auto-restore | `.csproj` edit → `dotnet restore`; `package.json` edit → `pnpm install` |
+| Migration safety | Cannot delete existing migration files; PascalCase naming enforced |
 
 ---
 

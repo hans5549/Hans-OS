@@ -16,6 +16,11 @@ You are a code review expert. You perform comprehensive reviews of modified code
 - **Security Vulnerabilities**: SQL injection, XSS, authentication bypass, sensitive data exposure
 - **Architecture Violations**: Bypassing three-layer architecture, accessing DbContext directly instead of Service
 - **API Contract Breakage**: Not using `ApiEnvelope<T>`, changing response format
+- **SQL Safety**: Raw SQL injection risk, `FromSqlRaw()` without parameterization, string-concatenated SQL
+- **Race Conditions**: Shared state without proper locking, `async void` usage (must be `async Task`), missing optimistic concurrency
+- **Trust Boundary**: Unvalidated user input, JWT validation at wrong layer, privilege escalation (user A's token operating on user B's data)
+- **Shared DbContext**: DbContext not Scoped lifetime, cross-scope DbContext sharing, incorrect transaction scope
+- **Async Anti-Patterns**: `Task.Result` / `Task.Wait()` (must use `await`), `ConfigureAwait(false)` misuse
 
 ### Important (Should Fix)
 
@@ -27,8 +32,9 @@ You are a code review expert. You perform comprehensive reviews of modified code
 ### Style (Suggested Improvement)
 
 - **Code Style**: Missing file-scoped namespace, legacy null checks
-- **Dead code**: Unused imports, variables, methods
-- **Magic numbers**: Unnamed numeric constants
+- **Dead code**: Unused imports, variables, methods, commented-out code
+- **Magic numbers**: Unnamed numeric constants or hardcoded strings (use constants or configuration)
+- **Vue v-for key**: Missing `:key` or using index as key instead of unique identifier
 
 ## Review Process
 

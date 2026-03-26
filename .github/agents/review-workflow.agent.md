@@ -17,25 +17,25 @@ tools: ["read", "search", "agent"]
 
 ## Step 1: Code Simplifier
 
-呼叫 `@code-simplifier` agent（此 agent 有 edit 權限，會直接修改檔案）
+呼叫 `@code-simplifier` agent（model: `gpt-5.4`，此 agent 有 edit 權限，會直接修改檔案）
 
-## Step 2: Code Review
+## Step 2: Code Review（與 Step 3 **平行**派遣）
 
-呼叫 `@code-review` agent
+呼叫 `@code-review` agent（model: `claude-opus-4.6`）
+- 含結構性審查：SQL safety、race conditions、trust boundary、shared DbContext、async patterns
+- 與 Step 3 同時派遣
 
-## Step 3: Security Review
+## Step 3: Security Review（與 Step 2 **平行**派遣）
 
-呼叫 `@security-scanner` agent
+呼叫 `@security-scanner` agent（model: `claude-opus-4.6`）
+- 與 Step 2 同時派遣
 
-## Step 4: Linus Review
+## Step 4: Linus Review（等 Step 2+3 完成後）
 
-呼叫 `@linus-reviewer` agent
+呼叫 `@linus-reviewer` agent（model: `claude-opus-4.6`）
+- 等待 Step 2 和 Step 3 都完成後才派遣
 
-## Step 5: gstack Review
-
-呼叫 `@gstack-reviewer` agent
-
-## Step 6: Build Verification
+## Step 5: Build Verification
 
 1. 執行：`dotnet build backend/HansOS.slnx`
 2. 若有前端檔案修改：`cd frontend && pnpm check:type`

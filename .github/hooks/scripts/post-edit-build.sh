@@ -37,7 +37,14 @@ BUILD_TYPE=""
 case "$EXT" in
   cs|razor) BUILD_TYPE="backend" ;;
   vue|ts|tsx) BUILD_TYPE="frontend" ;;
+  csproj) BUILD_TYPE="backend-restore" ;;
 esac
+
+# Check for package.json specifically
+FILE_NAME=$(basename "$FILE_PATH")
+if [[ "$FILE_NAME" == "package.json" ]]; then
+  BUILD_TYPE="frontend-install"
+fi
 
 [[ -z "$BUILD_TYPE" ]] && exit 0
 
@@ -66,11 +73,25 @@ if [[ "$BUILD_TYPE" == "backend" ]]; then
     log "[Build] Backend build passed"
     BUILD_OK=true
   fi
-else
+elif [[ "$BUILD_TYPE" == "frontend" ]]; then
   log "[Build] Auto-checking frontend types after .$EXT edit..."
 
   if (cd "$PROJECT_ROOT/frontend" && pnpm check:type 2>&1 | tail -5 >&2); then
     log "[Build] Frontend type check passed"
+    BUILD_OK=true
+  fi
+elif [[ "$BUILD_TYPE" == "backend-restore" ]]; then
+  log "[Dependency] .csproj changed — running dotnet restore..."
+
+  if dotnet restore "$PROJECT_ROOT/backend/HansOS.slnx" 2>&1 | tail -3 >&2; then
+    log "[Dependency] dotnet restore completed"
+    BUILD_OK=true
+  fi
+elif [[ "$BUILD_TYPE" == "frontend-install" ]]; then
+  log "[Dependency] package.json changed — running pnpm install..."
+
+  if (cd "$PROJECT_ROOT/frontend" && pnpm install 2>&1 | tail -3 >&2); then
+    log "[Dependency] pnpm install completed"
     BUILD_OK=true
   fi
 fi

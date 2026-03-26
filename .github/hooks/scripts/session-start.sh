@@ -52,9 +52,29 @@ log "━━━━━━━━━━━━━━━━━━━━━━━━━
 log " WORKFLOW AUTOMATION ACTIVE"
 log "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 log ""
-log " Coding: Simplifier → Code Review + Security → Build → Commit"
+log " Coding: Simplifier → [Code Review + Security] → Linus → Build → Commit"
 log " Planning: CEO Review → Eng Review → Linus Review"
-log " Commands: workflow status | workflow reset | commit this"
+log " Commands: workflow status | workflow reset | commit this | merge this"
+
+# ── Worktree detection ──────────────────────────────────────────────────────
+
+current_branch=$(git branch --show-current 2>/dev/null || echo "unknown")
+git_dir=$(git rev-parse --git-dir 2>/dev/null || echo "")
+is_worktree=false
+
+if echo "$git_dir" | grep -q "worktrees"; then
+  is_worktree=true
+fi
+
+if [[ "$current_branch" == "main" || "$current_branch" == "master" ]]; then
+  log " ⚠️  你在 main 分支上。程式變更請先建立 worktree："
+  log "    git worktree add ../Hans-OS-<branch> -b feature/<name>"
+elif [[ "$is_worktree" == "true" ]]; then
+  log " ✅ Worktree: $current_branch"
+else
+  log " 📌 Branch: $current_branch"
+fi
+
 log ""
 
 # ── Auto-create progress.md ─────────────────────────────────────────────────

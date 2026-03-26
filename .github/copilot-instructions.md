@@ -114,36 +114,56 @@ Monorepo with backend API + frontend SPA. Full details in `.github/references/ar
 
 ## Workflow (Automated via Hooks)
 
-Three-phase pipeline enforced by `.github/hooks/`. Not all changes need all phases.
+Pipeline enforced by `.github/hooks/`. Not all changes need all phases.
 
 ```
-Brainstorming (optional) → Planning (optional) → Coding Phase → Commit
+接到需求 → 建立 Worktree → 腦力激盪 (optional) → 計畫模式 (required)
+  → 實作程式碼 → 審查管線 → 合併回主線 → 刪除 Worktree
 ```
+
+### Git Worktree (Required for Code Changes)
+
+程式變更**必須**在 git worktree 上開發，不可直接在 main 上作業。
+
+```bash
+git worktree add ../Hans-OS-<branch-name> -b <branch-name>
+cd ../Hans-OS-<branch-name>
+```
+
+- 分支命名：`feature/add-xxx`、`fix/xxx-error`、`refactor/xxx`
+- 建立後自動執行 `dotnet restore` + `pnpm install`
 
 ### Phase 1: Brainstorming (optional)
 
-Invoke: `@brainstorming`
+Invoke: `@brainstorming` (model: `claude-opus-4.6`)
 Output: Design spec document.
 
-### Phase 2: Planning (optional)
+### Phase 2: Planning (**required** for code changes)
 
 Invoke: `@planning-reviewer`
 Three-perspective review: CEO (scope), Engineering (execution), Linus (simplicity).
+All agents use model: `claude-opus-4.6`.
 
 ### Phase 3: Coding Phase (hooks enforced)
 
 ```
-Code Simplifier → Code Review → Security Review → Linus Review → gstack Review → Build & Commit
+Simplifier (gpt-5.4) → [Code Review + Security] parallel (claude-opus-4.6) → Linus (claude-opus-4.6) → Build & Commit
 ```
 
-| Step | Agent | Purpose |
-|------|-------|---------|
-| 1 | `@code-simplifier` | Simplify code (primary constructors, guard clauses, etc.) |
-| 2 | `@code-review` | Code quality, architecture compliance, naming |
-| 3 | `@security-scanner` | OWASP Top 10, injection, auth bypass |
-| 4 | `@linus-reviewer` | Good Taste, backward compatibility, simplicity |
-| 5 | `@gstack-reviewer` | SQL safety, race conditions, trust boundary |
-| 6 | Build & Commit | `dotnet build` + `pnpm check:type` + `dotnet test` + git commit |
+| Step | Agent | Model | Purpose |
+|------|-------|-------|---------|
+| 1 | `@code-simplifier` | `gpt-5.4` | Simplify code (primary constructors, guard clauses, etc.) |
+| 2 | `@code-review` | `claude-opus-4.6` | Code quality, architecture, naming + SQL safety, race conditions, trust boundary |
+| 3 | `@security-scanner` | `claude-opus-4.6` | OWASP Top 10, injection, auth bypass |
+| 4 | `@linus-reviewer` | `claude-opus-4.6` | Good Taste, backward compatibility, simplicity |
+| 5 | Build & Commit | — | `dotnet build` + `pnpm check:type` + `dotnet test` + git commit |
+
+**Dispatch**: Step 2+3 平行 → Step 4 等 2+3 完成後才執行
+
+### Phase 4: Merge Back to Main
+
+使用 `merge this` 觸發合併流程：
+1. `git merge main` → build/test → `git merge --no-ff` → cleanup worktree
 
 ### Workflow Commands
 
@@ -153,13 +173,14 @@ Code Simplifier → Code Review → Security Review → Linus Review → gstack 
 | `workflow reset` | Reset all workflow state (start fresh) |
 | `workflow skip <step>` | Skip a specific step (not recommended) |
 | `commit this` | Trigger full commit workflow |
-| `review this` / `code-review` | Run full review without commit |
+| `merge this` | Merge feature branch back to main and cleanup |
+| `code-review` | Run full review without commit |
 
 ### Workflow Agents
 
 | Agent | Description |
 |-------|-------------|
-| `@commit-workflow` | Full 6-step commit pipeline (guided execution) |
+| `@commit-workflow` | Full 5-step commit pipeline (guided execution) |
 | `@review-workflow` | Full review pipeline without commit |
 
 ### Skip Rules
@@ -171,7 +192,7 @@ Code Simplifier → Code Review → Security Review → Linus Review → gstack 
 
 ### Smart Reset Rules
 
-- **Simplifier exemption**: After simplifier completes, subsequent code edits only reset post-simplifier steps (Code Review, Security), NOT simplifier itself.
+- **Simplifier exemption**: After simplifier completes, subsequent code edits only reset post-simplifier steps (Code Review, Security, Linus), NOT simplifier itself.
 - **Small change tolerance**: Cumulative edits < 10 lines after review → warning only, reviews preserved. >= 10 lines → reset.
 
 ---
@@ -182,22 +203,26 @@ Hooks run automatically and enforce workflow rules. Defined in `.github/hooks/ho
 
 | Hook | Script | Function |
 |------|--------|----------|
-| `sessionStart` | `session-start.sh` | Initialize workflow, show status |
+| `sessionStart` | `session-start.sh` | Initialize workflow, show status, worktree detection |
 | `sessionEnd` | `session-end.sh` | Cleanup, write progress log |
-| `userPromptSubmitted` | `workflow-orchestrator.sh` | Detect commands, step completion |
-| `preToolUse` | `pre-edit-check.sh` | Main branch protection, file protection |
-| `preToolUse` | `pre-bash-check.sh` | Block `git add .`, commit gating |
-| `postToolUse` | `post-edit-build.sh` | Auto-build after code edits |
+| `userPromptSubmitted` | `workflow-orchestrator.sh` | Detect commands, step completion, `merge this` |
+| `preToolUse` | `pre-edit-check.sh` | Main branch protection, file protection, migration safety |
+| `preToolUse` | `pre-bash-check.sh` | Block `git add .`, commit gating, merge gate |
+| `postToolUse` | `post-edit-build.sh` | Auto-build after code edits, dependency auto-restore |
 | `postToolUse` | `post-tool-track.sh` | Track modifications, Smart Reset |
 | `errorOccurred` | `error-handler.sh` | Error logging |
 
 ### Auto-enforced Rules
 - **Main branch protection**: Cannot edit code files on `main`/`master` (workflow files OK)
-- **Protected files**: `.github/hooks/` and `.github/workflow/state.json` cannot be modified
+- **Worktree required**: Code changes must be on a git worktree (session start detection)
+- **Merge gate**: `git merge` to main requires all workflow steps complete
+- **Protected files**: `.github/hooks/` and workflow state files cannot be modified
 - **git add . blocked**: Must stage specific files only
 - **Commit gating**: Code changes require all workflow steps complete before `git commit`
 - **Auto-build**: `.cs` edits trigger `dotnet build`, `.vue`/`.ts` edits trigger `pnpm check:type`
 - **Build strike system**: 3 fails → warning, 5 fails → stop and report
+- **Dependency auto-restore**: `.csproj` → `dotnet restore`, `package.json` → `pnpm install`
+- **Migration safety**: Cannot delete existing migration files; PascalCase naming enforced
 
 ---
 
