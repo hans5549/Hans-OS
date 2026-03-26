@@ -7,6 +7,7 @@ import { Card, Tabs, TabPane } from 'ant-design-vue';
 
 import BankInitialBalance from './components/BankInitialBalance.vue';
 import DepartmentManagement from './components/DepartmentManagement.vue';
+import HistoricalDataImport from './components/HistoricalDataImport.vue';
 
 defineOptions({ name: 'TsfSettingsPage' });
 
@@ -25,6 +26,11 @@ const activeTab = ref('departments');
         <TabPane key="bank-balance" tab="收支表起始資料">
           <div class="pl-4">
             <BankInitialBalance />
+          </div>
+        </TabPane>
+        <TabPane key="import" tab="歷史資料匯入">
+          <div class="pl-4">
+            <HistoricalDataImport />
           </div>
         </TabPane>
       </Tabs>

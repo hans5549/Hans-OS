@@ -10,7 +10,9 @@ namespace HansOS.Api.Controllers;
 [ApiController]
 [Route("bank-transactions")]
 [Authorize]
-public class BankTransactionController(IBankTransactionService transactionService) : ControllerBase
+public class BankTransactionController(
+    IBankTransactionService transactionService,
+    IBankTransactionImportService importService) : ControllerBase
 {
     [HttpGet("{bankName}")]
     public async Task<ApiEnvelope<List<BankTransactionResponse>>> GetTransactions(
@@ -59,5 +61,12 @@ public class BankTransactionController(IBankTransactionService transactionServic
         var periodLabel = month.HasValue ? $"{year}年{month}月" : $"{year}年度";
         var fileName = $"{bankName}收支表_{periodLabel}.xlsx";
         return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+    }
+
+    [HttpPost("import")]
+    public async Task<ApiEnvelope<ImportResultResponse>> ImportHistoricalData(CancellationToken ct)
+    {
+        var result = await importService.ImportFromSeedDataAsync(ct);
+        return ApiEnvelope<ImportResultResponse>.Success(result);
     }
 }

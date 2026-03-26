@@ -127,3 +127,23 @@ export async function exportBankTransactionsApi(
   link.click();
   window.URL.revokeObjectURL(downloadUrl);
 }
+
+// ── 匯入相關 ──────────────────────────────────────
+
+export interface BankImportDetail {
+  bankName: string;
+  transactionCount: number;
+  initialBalance: number;
+}
+
+export interface ImportResultResponse {
+  totalTransactions: number;
+  banks: BankImportDetail[];
+}
+
+/** 匯入歷史收支資料（全量替換） */
+export async function importBankTransactionsApi() {
+  return requestClient.post<ImportResultResponse>(
+    '/bank-transactions/import',
+  );
+}

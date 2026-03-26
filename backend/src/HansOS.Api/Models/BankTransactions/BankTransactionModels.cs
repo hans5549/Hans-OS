@@ -48,3 +48,13 @@ public record BankTransactionSummaryResponse(
     decimal TotalIncome,
     decimal TotalExpense,
     decimal ClosingBalance);
+
+// Import result DTOs
+public record ImportResultResponse(
+    int TotalTransactions,
+    List<BankImportDetail> Banks);
+
+public record BankImportDetail(
+    string BankName,
+    int TransactionCount,
+    decimal InitialBalance);
