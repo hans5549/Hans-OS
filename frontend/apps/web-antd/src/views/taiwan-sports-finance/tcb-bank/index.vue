@@ -1,9 +1,9 @@
 <script lang="ts" setup>
-import { Fallback } from '@vben/common-ui';
+import BankStatementTable from '../_shared/BankStatementTable.vue';
 
 defineOptions({ name: 'TsfTcbBankPage' });
 </script>
 
 <template>
-  <Fallback status="coming-soon" />
+  <BankStatementTable bank-name="合作金庫" />
 </template>

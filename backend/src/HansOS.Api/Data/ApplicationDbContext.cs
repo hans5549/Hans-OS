@@ -13,6 +13,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<RoleMenu> RoleMenus => Set<RoleMenu>();
     public DbSet<SportsDepartment> SportsDepartments => Set<SportsDepartment>();
     public DbSet<BankInitialBalance> BankInitialBalances => Set<BankInitialBalance>();
+    public DbSet<BankTransaction> BankTransactions => Set<BankTransaction>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -98,6 +99,27 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             e.Property(b => b.BankName).HasMaxLength(100).IsRequired();
             e.Property(b => b.InitialAmount).HasPrecision(18, 2);
             e.HasIndex(b => b.BankName).IsUnique();
+        });
+
+        // BankTransaction
+        builder.Entity<BankTransaction>(e =>
+        {
+            e.HasKey(t => t.Id);
+            e.Property(t => t.BankName).HasMaxLength(100).IsRequired();
+            e.Property(t => t.Description).HasMaxLength(200).IsRequired();
+            e.Property(t => t.RequestingUnit).HasMaxLength(100);
+            e.Property(t => t.Amount).HasPrecision(18, 2);
+            e.Property(t => t.Fee).HasPrecision(18, 2);
+            e.Property(t => t.TransactionType)
+             .HasConversion<string>()
+             .HasMaxLength(20);
+
+            e.HasOne(t => t.Department)
+             .WithMany()
+             .HasForeignKey(t => t.DepartmentId)
+             .OnDelete(DeleteBehavior.SetNull);
+
+            e.HasIndex(t => new { t.BankName, t.TransactionDate });
         });
     }
 }
