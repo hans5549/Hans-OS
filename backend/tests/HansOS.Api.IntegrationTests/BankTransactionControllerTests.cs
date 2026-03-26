@@ -399,6 +399,15 @@ public class BankTransactionControllerTests(HansOsWebApplicationFactory factory)
         data.GetProperty("totalExpense").GetDecimal().Should().Be(8030m);
     }
 
+    // ── Import ────────────────────────────────────────────────
+
+    [Fact]
+    public async Task ImportHistoricalData_Unauthorized_Returns401()
+    {
+        var response = await _client.PostAsync("/bank-transactions/import", null);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
     // ── Export ───────────────────────────────────────────────
 
     [Fact]

@@ -66,7 +66,14 @@ public class BankTransactionController(
     [HttpPost("import")]
     public async Task<ApiEnvelope<ImportResultResponse>> ImportHistoricalData(CancellationToken ct)
     {
-        var result = await importService.ImportFromSeedDataAsync(ct);
-        return ApiEnvelope<ImportResultResponse>.Success(result);
+        try
+        {
+            var result = await importService.ImportFromSeedDataAsync(ct);
+            return ApiEnvelope<ImportResultResponse>.Success(result);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return ApiEnvelope<ImportResultResponse>.Fail(ex.Message);
+        }
     }
 }
