@@ -117,6 +117,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
              .HasConversion<string>()
              .HasMaxLength(20);
             e.Property(b => b.Note).HasMaxLength(1000);
+            e.Property(b => b.GrantedBudget).HasPrecision(18, 2);
         });
 
         // DepartmentBudget
@@ -131,6 +132,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
              .WithMany()
              .HasForeignKey(db => db.DepartmentId)
              .OnDelete(DeleteBehavior.Restrict);
+            e.Property(db => db.AllocatedAmount).HasPrecision(18, 2);
             e.HasIndex(db => new { db.AnnualBudgetId, db.DepartmentId }).IsUnique();
         });
 

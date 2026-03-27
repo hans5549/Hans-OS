@@ -40,4 +40,11 @@ public class AnnualBudgetController(IAnnualBudgetService budgetService) : Contro
         int year, Guid departmentId, [FromBody] SaveBudgetItemsRequest request, CancellationToken ct)
         => ApiEnvelope<List<BudgetItemResponse>>.Success(
             await budgetService.SaveDepartmentItemsAsync(year, departmentId, request, ct));
+
+    /// <summary>更新核定總預算</summary>
+    [HttpPut("{year:int}/granted-budget")]
+    public async Task<ApiEnvelope<AnnualBudgetOverviewResponse>> UpdateGrantedBudget(
+        int year, [FromBody] UpdateGrantedBudgetRequest request, CancellationToken ct)
+        => ApiEnvelope<AnnualBudgetOverviewResponse>.Success(
+            await budgetService.UpdateGrantedBudgetAsync(year, request.GrantedBudget, ct));
 }

@@ -12,6 +12,7 @@ public record AnnualBudgetOverviewResponse(
     string? Note,
     decimal TotalBudget,
     decimal TotalActual,
+    decimal? GrantedBudget,
     List<DepartmentBudgetSummaryResponse> Departments);
 
 /// <summary>部門預算摘要</summary>
@@ -21,6 +22,7 @@ public record DepartmentBudgetSummaryResponse(
     string DepartmentName,
     decimal BudgetAmount,
     decimal ActualAmount,
+    decimal? AllocatedAmount,
     int ItemCount);
 
 /// <summary>預算項目</summary>
@@ -54,3 +56,7 @@ public record BudgetItemInput(
 /// <summary>更新預算狀態</summary>
 public record UpdateBudgetStatusRequest(
     [Required] string Status);
+
+/// <summary>更新核定總預算</summary>
+public record UpdateGrantedBudgetRequest(
+    [Required][Range(0, (double)decimal.MaxValue)] decimal GrantedBudget);

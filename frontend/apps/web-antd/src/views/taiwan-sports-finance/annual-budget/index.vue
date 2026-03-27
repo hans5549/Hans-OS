@@ -19,7 +19,11 @@ import type {
   DepartmentBudgetSummaryResponse,
 } from '#/api';
 
-import { getAnnualBudgetOverviewApi, updateBudgetStatusApi } from '#/api';
+import {
+  getAnnualBudgetOverviewApi,
+  updateBudgetStatusApi,
+  updateGrantedBudgetApi,
+} from '#/api';
 
 import DepartmentBudgetDrawer from './components/DepartmentBudgetDrawer.vue';
 
@@ -29,6 +33,8 @@ const currentYear = new Date().getFullYear();
 const selectedYear = ref(currentYear);
 const loading = ref(false);
 const overview = ref<AnnualBudgetOverviewResponse | null>(null);
+const grantedBudgetInput = ref<number | undefined>(undefined);
+const savingGrantedBudget = ref(false);
 
 // Drawer 狀態
 const drawerOpen = ref(false);
@@ -54,7 +60,17 @@ const columns = [
     customRender: ({ record }: { record: DepartmentBudgetSummaryResponse }) =>
       record.budgetAmount.toLocaleString('zh-TW'),
     dataIndex: 'budgetAmount',
-    title: '預算金額',
+    title: '需求預算',
+    width: 140,
+  },
+  {
+    align: 'right' as const,
+    customRender: ({ record }: { record: DepartmentBudgetSummaryResponse }) =>
+      record.allocatedAmount != null
+        ? record.allocatedAmount.toLocaleString('zh-TW')
+        : '—',
+    dataIndex: 'allocatedAmount',
+    title: '核定預算',
     width: 140,
   },
   {
@@ -92,8 +108,27 @@ async function fetchOverview() {
   loading.value = true;
   try {
     overview.value = await getAnnualBudgetOverviewApi(selectedYear.value);
+    grantedBudgetInput.value = overview.value.grantedBudget ?? undefined;
   } finally {
     loading.value = false;
+  }
+}
+
+async function saveGrantedBudget() {
+  if (grantedBudgetInput.value == null || grantedBudgetInput.value < 0) {
+    message.warning('請輸入有效的核定總預算金額');
+    return;
+  }
+  savingGrantedBudget.value = true;
+  try {
+    overview.value = await updateGrantedBudgetApi(selectedYear.value, {
+      grantedBudget: grantedBudgetInput.value,
+    });
+    message.success('核定總預算已儲存');
+  } catch {
+    message.error('核定總預算儲存失敗');
+  } finally {
+    savingGrantedBudget.value = false;
   }
 }
 
@@ -165,6 +200,30 @@ onMounted(fetchOverview);
         </div>
       </div>
 
+      <!-- 核定總預算 -->
+      <div v-if="overview" class="mb-4 flex items-center gap-4">
+        <span class="text-sm text-gray-500">核定總預算：</span>
+        <InputNumber
+          v-model:value="grantedBudgetInput"
+          :formatter="
+            (v: string | number | undefined) =>
+              v != null ? `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : ''
+          "
+          :min="0"
+          :parser="(v: string | undefined) => v?.replace(/,/g, '') ?? ''"
+          placeholder="請輸入核定總預算"
+          style="width: 200px"
+        />
+        <Button
+          :loading="savingGrantedBudget"
+          size="small"
+          type="primary"
+          @click="saveGrantedBudget"
+        >
+          儲存
+        </Button>
+      </div>
+
       <!-- 總表 -->
       <Table
         :columns="columns"
@@ -173,7 +232,7 @@ onMounted(fetchOverview);
         :pagination="false"
         row-key="departmentBudgetId"
         size="middle"
-        :scroll="{ x: 720 }"
+        :scroll="{ x: 860 }"
       >
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'action'">
@@ -192,6 +251,13 @@ onMounted(fetchOverview);
             <td>合計</td>
             <td class="text-right">
               {{ overview.totalBudget.toLocaleString('zh-TW') }}
+            </td>
+            <td class="text-right">
+              {{
+                overview.grantedBudget != null
+                  ? overview.grantedBudget.toLocaleString('zh-TW')
+                  : '—'
+              }}
             </td>
             <td class="text-right">
               {{ overview.totalActual.toLocaleString('zh-TW') }}

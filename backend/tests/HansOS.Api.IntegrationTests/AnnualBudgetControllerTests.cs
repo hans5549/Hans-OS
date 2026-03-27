@@ -314,6 +314,187 @@ public class AnnualBudgetControllerTests(HansOsWebApplicationFactory factory)
         data.GetProperty("totalBudget").GetDecimal().Should().BeGreaterThanOrEqualTo(30000m);
     }
 
+    // ── UpdateGrantedBudget ─────────────────────────
+
+    [Fact]
+    public async Task UpdateGrantedBudget_Unauthorized_Returns401()
+    {
+        var response = await _client.PutAsJsonAsync("/annual-budgets/2026/granted-budget", new
+        {
+            grantedBudget = 100000m,
+        });
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task UpdateGrantedBudget_ValidAmount_ReturnsOverviewWithAllocations()
+    {
+        var token = await LoginAndGetTokenAsync();
+        var deptA = await EnsureDepartmentAsync("核定預算A部門");
+        var deptB = await EnsureDepartmentAsync("核定預算B部門");
+        await InitializeAnnualBudgetAsync(2079, token);
+
+        // 部門A: 需求 60,000
+        await SaveDepartmentItemsAsync(2079, deptA, token,
+            BudgetItemPayload(1, "活動A1", "項目A1", 40000m),
+            BudgetItemPayload(2, "活動A2", "項目A2", 20000m));
+
+        // 部門B: 需求 40,000
+        await SaveDepartmentItemsAsync(2079, deptB, token,
+            BudgetItemPayload(1, "活動B1", "項目B1", 40000m));
+
+        // 設定核定總預算 80,000（需求總額至少 100,000）
+        var response = await AuthorizedPutAsync("/annual-budgets/2079/granted-budget", token,
+            new { grantedBudget = 80000m });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await ReadBodyAsync(response);
+        var data = body.GetProperty("data");
+
+        data.GetProperty("grantedBudget").GetDecimal().Should().Be(80000m);
+
+        // 驗證各部門核定預算按比例分配
+        var departments = data.GetProperty("departments");
+        decimal totalAllocated = 0m;
+        foreach (var dept in departments.EnumerateArray())
+        {
+            var deptId = dept.GetProperty("departmentId").GetString();
+            var allocatedAmount = dept.GetProperty("allocatedAmount").GetDecimal();
+
+            if (deptId == deptA.ToString())
+            {
+                // 60,000 / 100,000 * 80,000 = 48,000
+                allocatedAmount.Should().Be(48000m);
+            }
+            else if (deptId == deptB.ToString())
+            {
+                // 40,000 / 100,000 * 80,000 = 32,000
+                allocatedAmount.Should().Be(32000m);
+            }
+
+            totalAllocated += allocatedAmount;
+        }
+
+        // 所有部門核定預算合計應等於核定總預算
+        totalAllocated.Should().Be(80000m);
+    }
+
+    [Fact]
+    public async Task UpdateGrantedBudget_NegativeAmount_Returns400()
+    {
+        var token = await LoginAndGetTokenAsync();
+        await InitializeAnnualBudgetAsync(2078, token);
+
+        var response = await AuthorizedPutAsync("/annual-budgets/2078/granted-budget", token,
+            new { grantedBudget = -1m });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task UpdateGrantedBudget_ZeroAmount_SetsAllAllocationsToZero()
+    {
+        var token = await LoginAndGetTokenAsync();
+        var deptId = await EnsureDepartmentAsync("核定零預算部門");
+        await InitializeAnnualBudgetAsync(2077, token);
+        await SaveDepartmentItemsAsync(2077, deptId, token,
+            BudgetItemPayload(1, "活動Z", "項目Z", 10000m));
+
+        var response = await AuthorizedPutAsync("/annual-budgets/2077/granted-budget", token,
+            new { grantedBudget = 0m });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await ReadBodyAsync(response);
+        var departments = body.GetProperty("data").GetProperty("departments");
+        foreach (var dept in departments.EnumerateArray())
+        {
+            dept.GetProperty("allocatedAmount").GetDecimal().Should().Be(0m);
+        }
+    }
+
+    [Fact]
+    public async Task UpdateGrantedBudget_NoItems_SetsAllAllocationsToZero()
+    {
+        var token = await LoginAndGetTokenAsync();
+        await EnsureDepartmentAsync("核定空預算部門");
+        await InitializeAnnualBudgetAsync(2076, token);
+
+        var response = await AuthorizedPutAsync("/annual-budgets/2076/granted-budget", token,
+            new { grantedBudget = 50000m });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await ReadBodyAsync(response);
+        var departments = body.GetProperty("data").GetProperty("departments");
+        foreach (var dept in departments.EnumerateArray())
+        {
+            dept.GetProperty("allocatedAmount").GetDecimal().Should().Be(0m);
+        }
+    }
+
+    [Fact]
+    public async Task SaveDepartmentItems_AfterGrantedBudgetSet_RecalculatesAllocations()
+    {
+        var token = await LoginAndGetTokenAsync();
+        var deptC = await EnsureDepartmentAsync("核定重算C部門");
+        var deptD = await EnsureDepartmentAsync("核定重算D部門");
+        await InitializeAnnualBudgetAsync(2075, token);
+
+        // 先設定部門C需求 50,000
+        await SaveDepartmentItemsAsync(2075, deptC, token,
+            BudgetItemPayload(1, "活動C", "項目C", 50000m));
+
+        // 設定核定總預算 100,000
+        await AuthorizedPutAsync("/annual-budgets/2075/granted-budget", token,
+            new { grantedBudget = 100000m });
+
+        // 新增部門D需求 50,000 → 重算比例
+        await SaveDepartmentItemsAsync(2075, deptD, token,
+            BudgetItemPayload(1, "活動D", "項目D", 50000m));
+
+        // 取得最新 overview 確認重算
+        var resp = await AuthorizedGetAsync("/annual-budgets/2075", token);
+        var body = await ReadBodyAsync(resp);
+        var departments = body.GetProperty("data").GetProperty("departments");
+
+        foreach (var dept in departments.EnumerateArray())
+        {
+            var deptId = dept.GetProperty("departmentId").GetString();
+            if (deptId == deptC.ToString() || deptId == deptD.ToString())
+            {
+                // 各 50,000 / 100,000 * 100,000 = 50,000
+                dept.GetProperty("allocatedAmount").GetDecimal().Should().Be(50000m);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task GetOverview_WithGrantedBudget_ReturnsGrantedBudgetField()
+    {
+        var token = await LoginAndGetTokenAsync();
+        await InitializeAnnualBudgetAsync(2074, token);
+
+        // 設定核定總預算
+        await AuthorizedPutAsync("/annual-budgets/2074/granted-budget", token,
+            new { grantedBudget = 500000m });
+
+        var resp = await AuthorizedGetAsync("/annual-budgets/2074", token);
+        var body = await ReadBodyAsync(resp);
+        var data = body.GetProperty("data");
+
+        data.GetProperty("grantedBudget").GetDecimal().Should().Be(500000m);
+    }
+
+    [Fact]
+    public async Task GetOverview_WithoutGrantedBudget_ReturnsNullGrantedBudget()
+    {
+        var token = await LoginAndGetTokenAsync();
+        var resp = await AuthorizedGetAsync("/annual-budgets/2073", token);
+        var body = await ReadBodyAsync(resp);
+        var data = body.GetProperty("data");
+
+        data.GetProperty("grantedBudget").ValueKind.Should().Be(JsonValueKind.Null);
+    }
+
     // ── Helpers ──────────────────────────────────────
 
     private async Task<Guid> EnsureDepartmentAsync(string name)

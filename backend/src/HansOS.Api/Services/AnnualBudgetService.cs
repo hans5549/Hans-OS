@@ -74,7 +74,26 @@ public class AnnualBudgetService(
         deptBudget.UpdatedAt = now;
         await db.SaveChangesAsync(ct);
 
+        // 若核定總預算已設定，重新計算各部門核定預算
+        await RecalculateAllocationsAsync(deptBudget.AnnualBudgetId, ct);
+
         return await GetBudgetItemsAsync(deptBudget.Id, ct);
+    }
+
+    public async Task<AnnualBudgetOverviewResponse> UpdateGrantedBudgetAsync(
+        int year, decimal grantedBudget, CancellationToken ct = default)
+    {
+        ValidateYear(year);
+        var budget = await EnsureBudgetAsync(year, ct);
+
+        budget.GrantedBudget = grantedBudget;
+        budget.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync(ct);
+
+        await RecalculateAllocationsAsync(budget.Id, ct);
+
+        var departments = await GetDepartmentSummariesAsync(budget.Id, ct);
+        return CreateOverviewResponse(budget, departments);
     }
 
     /// <summary>確保年度預算存在，並自動為所有部門建立 DepartmentBudget</summary>
@@ -157,6 +176,61 @@ public class AnnualBudgetService(
             .Include(d => d.AnnualBudget)
             .FirstOrDefaultAsync(d => d.AnnualBudget.Year == year && d.DepartmentId == departmentId, ct)
             ?? throw new KeyNotFoundException($"{year} 年度中找不到部門 {departmentId} 的預算");
+    }
+
+    /// <summary>根據核定總預算按比例重算各部門核定預算</summary>
+    private async Task RecalculateAllocationsAsync(Guid annualBudgetId, CancellationToken ct)
+    {
+        var budget = await db.AnnualBudgets.FindAsync([annualBudgetId], ct);
+        if (budget?.GrantedBudget is not { } grantedBudget)
+            return;
+
+        var deptBudgets = await db.DepartmentBudgets
+            .Where(d => d.AnnualBudgetId == annualBudgetId)
+            .ToListAsync(ct);
+
+        var deptTotals = await db.DepartmentBudgets
+            .Where(d => d.AnnualBudgetId == annualBudgetId)
+            .Select(d => new { d.Id, Total = d.Items.Sum(i => i.Amount) })
+            .ToListAsync(ct);
+
+        var totalBudget = deptTotals.Sum(d => d.Total);
+        var totalMap = deptTotals.ToDictionary(d => d.Id, d => d.Total);
+
+        if (totalBudget == 0m)
+        {
+            foreach (var dept in deptBudgets)
+                dept.AllocatedAmount = 0m;
+        }
+        else
+        {
+            var now = DateTime.UtcNow;
+            decimal allocatedSum = 0m;
+            DepartmentBudget? largestDept = null;
+            decimal largestBudget = -1m;
+
+            foreach (var dept in deptBudgets)
+            {
+                var deptTotal = totalMap.GetValueOrDefault(dept.Id, 0m);
+                var allocated = Math.Round(grantedBudget * deptTotal / totalBudget, 2, MidpointRounding.AwayFromZero);
+                dept.AllocatedAmount = allocated;
+                dept.UpdatedAt = now;
+                allocatedSum += allocated;
+
+                if (deptTotal > largestBudget)
+                {
+                    largestBudget = deptTotal;
+                    largestDept = dept;
+                }
+            }
+
+            // 將四捨五入差額加到最大預算部門
+            var diff = grantedBudget - allocatedSum;
+            if (diff != 0m && largestDept is not null)
+                largestDept.AllocatedAmount += diff;
+        }
+
+        await db.SaveChangesAsync(ct);
     }
 
     private async Task<List<BudgetItemResponse>> GetBudgetItemsAsync(Guid departmentBudgetId, CancellationToken ct)
@@ -253,6 +327,7 @@ public class AnnualBudgetService(
                 d.Department.Name,
                 d.Items.Sum(i => i.Amount),
                 d.Items.Sum(i => i.ActualAmount ?? 0m),
+                d.AllocatedAmount,
                 d.Items.Count))
             .ToListAsync(ct);
 
@@ -266,6 +341,7 @@ public class AnnualBudgetService(
             budget.Note,
             departments.Sum(d => d.BudgetAmount),
             departments.Sum(d => d.ActualAmount),
+            budget.GrantedBudget,
             departments);
 
     private static void ValidateYear(int year)

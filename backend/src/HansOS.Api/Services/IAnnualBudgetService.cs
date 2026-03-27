@@ -17,4 +17,8 @@ public interface IAnnualBudgetService
     /// <summary>批次儲存部門預算項目</summary>
     Task<List<BudgetItemResponse>> SaveDepartmentItemsAsync(
         int year, Guid departmentId, SaveBudgetItemsRequest request, CancellationToken ct = default);
+
+    /// <summary>更新核定總預算並重算各部門核定預算</summary>
+    Task<AnnualBudgetOverviewResponse> UpdateGrantedBudgetAsync(
+        int year, decimal grantedBudget, CancellationToken ct = default);
 }

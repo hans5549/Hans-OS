@@ -9,6 +9,7 @@ export interface AnnualBudgetOverviewResponse {
   note: string | null;
   totalBudget: number;
   totalActual: number;
+  grantedBudget: number | null;
   departments: DepartmentBudgetSummaryResponse[];
 }
 
@@ -18,6 +19,7 @@ export interface DepartmentBudgetSummaryResponse {
   departmentName: string;
   budgetAmount: number;
   actualAmount: number;
+  allocatedAmount: number | null;
   itemCount: number;
 }
 
@@ -51,6 +53,10 @@ export interface UpdateBudgetStatusRequest {
   status: string;
 }
 
+export interface UpdateGrantedBudgetRequest {
+  grantedBudget: number;
+}
+
 // ── API ───────────────────────────────────────────
 
 /** 取得年度預算總覽（自動初始化） */
@@ -80,5 +86,15 @@ export const saveDepartmentBudgetItemsApi = (
 ) =>
   requestClient.put<BudgetItemResponse[]>(
     `/annual-budgets/${year}/departments/${departmentId}/items`,
+    data,
+  );
+
+/** 更新核定總預算 */
+export const updateGrantedBudgetApi = (
+  year: number,
+  data: UpdateGrantedBudgetRequest,
+) =>
+  requestClient.put<AnnualBudgetOverviewResponse>(
+    `/annual-budgets/${year}/granted-budget`,
     data,
   );
