@@ -324,6 +324,370 @@ public class ActivityControllerTests(HansOsWebApplicationFactory factory)
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
+    // ── DTO Validation ──────────────────────────────
+
+    [Fact]
+    public async Task Create_YearBelow2000_Returns400()
+    {
+        var token = await LoginAndGetTokenAsync();
+        var deptId = await EnsureDepartmentAsync("年份驗證部門");
+
+        var payload = new
+        {
+            departmentId = deptId,
+            year = 1999,
+            month = 6,
+            name = "年份過小",
+        };
+
+        var response = await AuthorizedPostAsync("/activities", token, payload);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Create_YearAbove2100_Returns400()
+    {
+        var token = await LoginAndGetTokenAsync();
+        var deptId = await EnsureDepartmentAsync("年份驗證部門");
+
+        var payload = new
+        {
+            departmentId = deptId,
+            year = 2101,
+            month = 6,
+            name = "年份過大",
+        };
+
+        var response = await AuthorizedPostAsync("/activities", token, payload);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Create_Month0_Returns400()
+    {
+        var token = await LoginAndGetTokenAsync();
+        var deptId = await EnsureDepartmentAsync("月份驗證部門");
+
+        var payload = new
+        {
+            departmentId = deptId,
+            year = 2094,
+            month = 0,
+            name = "月份為零",
+        };
+
+        var response = await AuthorizedPostAsync("/activities", token, payload);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Create_Month13_Returns400()
+    {
+        var token = await LoginAndGetTokenAsync();
+        var deptId = await EnsureDepartmentAsync("月份驗證部門");
+
+        var payload = new
+        {
+            departmentId = deptId,
+            year = 2094,
+            month = 13,
+            name = "月份過大",
+        };
+
+        var response = await AuthorizedPostAsync("/activities", token, payload);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Create_NameExceeds200Chars_Returns400()
+    {
+        var token = await LoginAndGetTokenAsync();
+        var deptId = await EnsureDepartmentAsync("名稱驗證部門");
+
+        var payload = new
+        {
+            departmentId = deptId,
+            year = 2094,
+            month = 5,
+            name = new string('A', 201),
+        };
+
+        var response = await AuthorizedPostAsync("/activities", token, payload);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Create_DescriptionExceeds1000Chars_Returns400()
+    {
+        var token = await LoginAndGetTokenAsync();
+        var deptId = await EnsureDepartmentAsync("說明驗證部門");
+
+        var payload = new
+        {
+            departmentId = deptId,
+            year = 2094,
+            month = 5,
+            name = "說明過長測試",
+            description = new string('A', 1001),
+        };
+
+        var response = await AuthorizedPostAsync("/activities", token, payload);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Create_ExpenseNegativeAmount_Returns400()
+    {
+        var token = await LoginAndGetTokenAsync();
+        var deptId = await EnsureDepartmentAsync("開銷驗證部門");
+
+        var payload = new
+        {
+            departmentId = deptId,
+            year = 2094,
+            month = 5,
+            name = "負數金額測試",
+            expenses = new[]
+            {
+                new { description = "負數開銷", amount = -100m, sequence = 1 },
+            },
+        };
+
+        var response = await AuthorizedPostAsync("/activities", token, payload);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Create_ExpenseDescriptionEmpty_Returns400()
+    {
+        var token = await LoginAndGetTokenAsync();
+        var deptId = await EnsureDepartmentAsync("開銷驗證部門");
+
+        var payload = new
+        {
+            departmentId = deptId,
+            year = 2094,
+            month = 5,
+            name = "開銷說明空白測試",
+            expenses = new[]
+            {
+                new { description = "", amount = 100m, sequence = 1 },
+            },
+        };
+
+        var response = await AuthorizedPostAsync("/activities", token, payload);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Create_GroupNameEmpty_Returns400()
+    {
+        var token = await LoginAndGetTokenAsync();
+        var deptId = await EnsureDepartmentAsync("分組驗證部門");
+
+        var payload = new
+        {
+            departmentId = deptId,
+            year = 2094,
+            month = 5,
+            name = "分組名稱空白測試",
+            groups = new[]
+            {
+                new
+                {
+                    name = "",
+                    sequence = 1,
+                    expenses = new[]
+                    {
+                        new { description = "場地費", amount = 100m, sequence = 1 },
+                    },
+                },
+            },
+        };
+
+        var response = await AuthorizedPostAsync("/activities", token, payload);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Create_NullGroupsAndExpenses_Returns200()
+    {
+        var token = await LoginAndGetTokenAsync();
+        var deptId = await EnsureDepartmentAsync("空開銷部門");
+
+        var payload = new
+        {
+            departmentId = deptId,
+            year = 2094,
+            month = 5,
+            name = "無開銷活動",
+        };
+
+        var response = await AuthorizedPostAsync("/activities", token, payload);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = await ReadBodyAsync(response);
+        body.GetProperty("code").GetInt32().Should().Be(0);
+        var data = body.GetProperty("data");
+        data.GetProperty("name").GetString().Should().Be("無開銷活動");
+        data.GetProperty("groups").GetArrayLength().Should().Be(0);
+        data.GetProperty("ungroupedExpenses").GetArrayLength().Should().Be(0);
+        data.GetProperty("totalAmount").GetDecimal().Should().Be(0m);
+    }
+
+    [Fact]
+    public async Task Delete_VerifyCascadeDeletesExpenses()
+    {
+        var token = await LoginAndGetTokenAsync();
+        var deptId = await EnsureDepartmentAsync("級聯刪除部門");
+
+        // 建立含開銷的活動
+        var createResp = await CreateActivityAsync(token, deptId, 2097, 1, "級聯刪除測試", 500m);
+        var createBody = await ReadBodyAsync(createResp);
+        var activityId = createBody.GetProperty("data").GetProperty("id").GetString()!;
+
+        // 確認活動及開銷存在
+        var detailResp = await AuthorizedGetAsync($"/activities/{activityId}", token);
+        detailResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var detailBody = await ReadBodyAsync(detailResp);
+        detailBody.GetProperty("data").GetProperty("ungroupedExpenses")
+            .GetArrayLength().Should().BeGreaterThan(0);
+
+        // 刪除活動
+        var deleteResp = await AuthorizedDeleteAsync($"/activities/{activityId}", token);
+        deleteResp.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        // 確認活動已不存在
+        var getResp = await AuthorizedGetAsync($"/activities/{activityId}", token);
+        getResp.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Update_RemoveAllExpenses_Returns200()
+    {
+        var token = await LoginAndGetTokenAsync();
+        var deptId = await EnsureDepartmentAsync("清空開銷部門");
+
+        // 建立含開銷的活動
+        var createResp = await CreateActivityAsync(token, deptId, 2097, 2, "清空開銷測試", 300m);
+        var createBody = await ReadBodyAsync(createResp);
+        var activityId = createBody.GetProperty("data").GetProperty("id").GetString()!;
+
+        // 更新為空開銷
+        var updatePayload = new
+        {
+            name = "清空開銷測試",
+            groups = Array.Empty<object>(),
+            expenses = Array.Empty<object>(),
+        };
+
+        var updateResp = await AuthorizedPutAsync($"/activities/{activityId}", token, updatePayload);
+        updateResp.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = await ReadBodyAsync(updateResp);
+        var data = body.GetProperty("data");
+        data.GetProperty("groups").GetArrayLength().Should().Be(0);
+        data.GetProperty("ungroupedExpenses").GetArrayLength().Should().Be(0);
+        data.GetProperty("totalAmount").GetDecimal().Should().Be(0m);
+    }
+
+    [Fact]
+    public async Task GetDetail_ActivityWithOnlyGroups_ReturnsCorrectStructure()
+    {
+        var token = await LoginAndGetTokenAsync();
+        var deptId = await EnsureDepartmentAsync("純分組部門");
+
+        var payload = new
+        {
+            departmentId = deptId,
+            year = 2097,
+            month = 3,
+            name = "純分組活動",
+            groups = new[]
+            {
+                new
+                {
+                    name = "第一組",
+                    sequence = 1,
+                    expenses = new[]
+                    {
+                        new { description = "設備費", amount = 1000m, sequence = 1 },
+                    },
+                },
+                new
+                {
+                    name = "第二組",
+                    sequence = 2,
+                    expenses = new[]
+                    {
+                        new { description = "材料費", amount = 2000m, sequence = 1 },
+                    },
+                },
+            },
+        };
+
+        var createResp = await AuthorizedPostAsync("/activities", token, payload);
+        createResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var createBody = await ReadBodyAsync(createResp);
+        var activityId = createBody.GetProperty("data").GetProperty("id").GetString()!;
+
+        var detailResp = await AuthorizedGetAsync($"/activities/{activityId}", token);
+        detailResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await ReadBodyAsync(detailResp);
+        var data = body.GetProperty("data");
+
+        data.GetProperty("groups").GetArrayLength().Should().Be(2);
+        data.GetProperty("ungroupedExpenses").GetArrayLength().Should().Be(0);
+        data.GetProperty("totalAmount").GetDecimal().Should().Be(3000m);
+
+        // 驗證分組內開銷結構
+        var firstGroup = data.GetProperty("groups")[0];
+        firstGroup.GetProperty("name").GetString().Should().Be("第一組");
+        firstGroup.GetProperty("expenses").GetArrayLength().Should().Be(1);
+        firstGroup.GetProperty("subTotal").GetDecimal().Should().Be(1000m);
+    }
+
+    [Fact]
+    public async Task GetDetail_ActivityWithOnlyExpenses_ReturnsCorrectStructure()
+    {
+        var token = await LoginAndGetTokenAsync();
+        var deptId = await EnsureDepartmentAsync("純開銷部門");
+
+        var payload = new
+        {
+            departmentId = deptId,
+            year = 2097,
+            month = 4,
+            name = "純開銷活動",
+            expenses = new[]
+            {
+                new { description = "交通費", amount = 500m, sequence = 1 },
+                new { description = "餐費", amount = 300m, sequence = 2 },
+                new { description = "住宿費", amount = 1200m, sequence = 3 },
+            },
+        };
+
+        var createResp = await AuthorizedPostAsync("/activities", token, payload);
+        createResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var createBody = await ReadBodyAsync(createResp);
+        var activityId = createBody.GetProperty("data").GetProperty("id").GetString()!;
+
+        var detailResp = await AuthorizedGetAsync($"/activities/{activityId}", token);
+        detailResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await ReadBodyAsync(detailResp);
+        var data = body.GetProperty("data");
+
+        data.GetProperty("groups").GetArrayLength().Should().Be(0);
+        data.GetProperty("ungroupedExpenses").GetArrayLength().Should().Be(3);
+        data.GetProperty("totalAmount").GetDecimal().Should().Be(2000m);
+
+        // 驗證個別開銷
+        var expenses = data.GetProperty("ungroupedExpenses");
+        expenses[0].GetProperty("description").GetString().Should().Be("交通費");
+        expenses[1].GetProperty("description").GetString().Should().Be("餐費");
+        expenses[2].GetProperty("description").GetString().Should().Be("住宿費");
+    }
+
     // ── Helpers ──────────────────────────────────────
 
     private async Task<HttpResponseMessage> CreateActivityAsync(

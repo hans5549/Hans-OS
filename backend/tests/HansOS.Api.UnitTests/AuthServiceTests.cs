@@ -169,6 +169,33 @@ public class AuthServiceTests : IDisposable
         codes.Should().Contain("AC_100100");
     }
 
+    /// <summary>
+    /// 沒有 Cookie 時登出不應拋出例外
+    /// </summary>
+    [Fact]
+    public async Task Logout_WithoutCookie_DoesNotThrow()
+    {
+        var httpContext = CreateHttpContext();
+
+        var act = () => _sut.LogoutAsync(httpContext);
+
+        await act.Should().NotThrowAsync();
+    }
+
+    /// <summary>
+    /// Cookie 含無效 Token 時登出不應拋出例外
+    /// </summary>
+    [Fact]
+    public async Task Logout_WithInvalidToken_DoesNotThrow()
+    {
+        var httpContext = CreateHttpContext();
+        httpContext.Request.Headers.Append("Cookie", "jwt=invalid-token-value");
+
+        var act = () => _sut.LogoutAsync(httpContext);
+
+        await act.Should().NotThrowAsync();
+    }
+
     public void Dispose()
     {
         _db.Dispose();

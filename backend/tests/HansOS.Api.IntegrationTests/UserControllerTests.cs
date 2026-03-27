@@ -260,6 +260,179 @@ public class UserControllerTests(HansOsWebApplicationFactory factory)
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
+    [Fact]
+    public async Task ChangePassword_ExactlyMinLength8_Returns200()
+    {
+        const string originalPassword = "H@ns19951204";
+        const string minLengthPassword = "Aa1!xxxx"; // 剛好 8 字元，符合所有複雜度規則
+
+        var token = await LoginAndGetTokenAsync();
+
+        // 變更為最短密碼
+        var changeRequest = new HttpRequestMessage(HttpMethod.Post, "/user/change-password")
+        {
+            Content = JsonContent.Create(new { oldPassword = originalPassword, newPassword = minLengthPassword })
+        };
+        changeRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var changeResponse = await _client.SendAsync(changeRequest);
+        changeResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        // 還原密碼
+        var loginResponse = await _client.PostAsJsonAsync("/auth/login", new
+        {
+            username = "hans",
+            password = minLengthPassword
+        });
+        var loginBody = await loginResponse.Content.ReadFromJsonAsync<JsonElement>();
+        var newToken = loginBody.GetProperty("data").GetProperty("accessToken").GetString()!;
+
+        var restoreRequest = new HttpRequestMessage(HttpMethod.Post, "/user/change-password")
+        {
+            Content = JsonContent.Create(new { oldPassword = minLengthPassword, newPassword = originalPassword })
+        };
+        restoreRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", newToken);
+        await _client.SendAsync(restoreRequest);
+    }
+
+    [Fact]
+    public async Task ChangePassword_ExactlyMaxLength128_Returns200()
+    {
+        const string originalPassword = "H@ns19951204";
+        // 剛好 128 字元：Aa1! + 124 個 'x'
+        var maxLengthPassword = "Aa1!" + new string('x', 124);
+
+        var token = await LoginAndGetTokenAsync();
+
+        // 變更為最長密碼
+        var changeRequest = new HttpRequestMessage(HttpMethod.Post, "/user/change-password")
+        {
+            Content = JsonContent.Create(new { oldPassword = originalPassword, newPassword = maxLengthPassword })
+        };
+        changeRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var changeResponse = await _client.SendAsync(changeRequest);
+        changeResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        // 還原密碼
+        var loginResponse = await _client.PostAsJsonAsync("/auth/login", new
+        {
+            username = "hans",
+            password = maxLengthPassword
+        });
+        var loginBody = await loginResponse.Content.ReadFromJsonAsync<JsonElement>();
+        var newToken = loginBody.GetProperty("data").GetProperty("accessToken").GetString()!;
+
+        var restoreRequest = new HttpRequestMessage(HttpMethod.Post, "/user/change-password")
+        {
+            Content = JsonContent.Create(new { oldPassword = maxLengthPassword, newPassword = originalPassword })
+        };
+        restoreRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", newToken);
+        await _client.SendAsync(restoreRequest);
+    }
+
+    [Fact]
+    public async Task ChangePassword_OldAndNewSame_Returns200()
+    {
+        // Identity 預設不阻擋新舊密碼相同，驗證此行為
+        const string originalPassword = "H@ns19951204";
+
+        var token = await LoginAndGetTokenAsync();
+
+        var request = new HttpRequestMessage(HttpMethod.Post, "/user/change-password")
+        {
+            Content = JsonContent.Create(new { oldPassword = originalPassword, newPassword = originalPassword })
+        };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var response = await _client.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    #endregion
+
+    #region UpdateProfile (Boundary)
+
+    [Fact]
+    public async Task UpdateProfile_PartialFieldsOnly_PreservesOthers()
+    {
+        var token = await LoginAndGetTokenAsync();
+
+        // 先設定所有欄位為已知值
+        var setupRequest = new HttpRequestMessage(HttpMethod.Put, "/user/profile")
+        {
+            Content = JsonContent.Create(new
+            {
+                realName = "Original Name",
+                email = "original@example.com",
+                phone = "0911222333",
+                avatar = "https://example.com/original.png",
+                desc = "原始描述"
+            })
+        };
+        setupRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var setupResponse = await _client.SendAsync(setupRequest);
+        setupResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        // 只更新 RealName，其餘欄位不傳（null）
+        var partialRequest = new HttpRequestMessage(HttpMethod.Put, "/user/profile")
+        {
+            Content = JsonContent.Create(new { realName = "Updated Name" })
+        };
+        partialRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var partialResponse = await _client.SendAsync(partialRequest);
+        partialResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        // 驗證 RealName 已更新，其餘欄位保持不變
+        var infoRequest = new HttpRequestMessage(HttpMethod.Get, "/user/info");
+        infoRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var infoResponse = await _client.SendAsync(infoRequest);
+        var body = await infoResponse.Content.ReadFromJsonAsync<JsonElement>();
+        var data = body.GetProperty("data");
+
+        data.GetProperty("realName").GetString().Should().Be("Updated Name");
+        data.GetProperty("email").GetString().Should().Be("original@example.com");
+        data.GetProperty("phone").GetString().Should().Be("0911222333");
+        data.GetProperty("avatar").GetString().Should().Be("https://example.com/original.png");
+        data.GetProperty("desc").GetString().Should().Be("原始描述");
+
+        // 還原
+        var restoreRequest = new HttpRequestMessage(HttpMethod.Put, "/user/profile")
+        {
+            Content = JsonContent.Create(new { realName = "Hans" })
+        };
+        restoreRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        await _client.SendAsync(restoreRequest);
+    }
+
+    [Fact]
+    public async Task UpdateProfile_InvalidPhone_Returns400()
+    {
+        var token = await LoginAndGetTokenAsync();
+
+        var request = new HttpRequestMessage(HttpMethod.Put, "/user/profile")
+        {
+            Content = JsonContent.Create(new { realName = "Hans", phone = "abc-not-phone" })
+        };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var response = await _client.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task UpdateProfile_InvalidAvatarUrl_Returns400()
+    {
+        var token = await LoginAndGetTokenAsync();
+
+        var request = new HttpRequestMessage(HttpMethod.Put, "/user/profile")
+        {
+            Content = JsonContent.Create(new { realName = "Hans", avatar = "not-a-url" })
+        };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var response = await _client.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
     #endregion
 
     private async Task<string> LoginAndGetTokenAsync()

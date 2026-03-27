@@ -271,6 +271,83 @@ public class TsfSettingsControllerTests(HansOsWebApplicationFactory factory)
         body.GetProperty("code").GetInt32().Should().Be(0);
     }
 
+    // ── Edge / Boundary ────────────────────────────────
+
+    [Fact]
+    public async Task UpdateBankBalance_NegativeAmount_Returns200_NoValidation()
+    {
+        // 目前 DTO 無負數驗證，負數金額應被接受（記錄目前行為）
+        var token = await LoginAndGetTokenAsync();
+        var bankId = await SeedBankBalanceViaDbAsync();
+
+        var request = AuthPut($"/tsf-settings/bank-balances/{bankId}", token, new
+        {
+            initialAmount = -5000m,
+        });
+        var response = await _client.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
+        body.GetProperty("code").GetInt32().Should().Be(0);
+    }
+
+    [Fact]
+    public async Task UpdateBankBalance_ZeroAmount_Returns200()
+    {
+        var token = await LoginAndGetTokenAsync();
+        var bankId = await SeedBankBalanceViaDbAsync();
+
+        var request = AuthPut($"/tsf-settings/bank-balances/{bankId}", token, new
+        {
+            initialAmount = 0m,
+        });
+        var response = await _client.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
+        body.GetProperty("code").GetInt32().Should().Be(0);
+    }
+
+    [Fact]
+    public async Task CreateDepartment_WhitespaceOnlyName_Returns400()
+    {
+        // [Required] 應攔截純空白字串
+        var token = await LoginAndGetTokenAsync();
+        var request = AuthPost("/tsf-settings/departments", token, new
+        {
+            name = "   ",
+        });
+
+        var response = await _client.SendAsync(request);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task UpdateDepartment_DuplicateNameOfAnother_Returns400()
+    {
+        var token = await LoginAndGetTokenAsync();
+
+        // 建立部門 A
+        var reqA = AuthPost("/tsf-settings/departments", token, new { name = "邊界測試A" });
+        await _client.SendAsync(reqA);
+
+        // 建立部門 B
+        var reqB = AuthPost("/tsf-settings/departments", token, new { name = "邊界測試B" });
+        var respB = await _client.SendAsync(reqB);
+        var bodyB = await respB.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
+        var idB = bodyB.GetProperty("data").GetProperty("id").GetString();
+
+        // 將 B 的名稱改為 A → 應回傳 400（重複名稱）
+        var updateReq = AuthPut($"/tsf-settings/departments/{idB}", token, new
+        {
+            name = "邊界測試A",
+            note = (string?)null,
+        });
+        var response = await _client.SendAsync(updateReq);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
     // ── Helpers ──────────────────────────────────────
 
     private async Task<string> LoginAndGetTokenAsync()
@@ -316,5 +393,23 @@ public class TsfSettingsControllerTests(HansOsWebApplicationFactory factory)
         var req = new HttpRequestMessage(HttpMethod.Delete, url);
         req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         return req;
+    }
+
+    /// <summary>透過 DI 容器直接建立 BankInitialBalance，回傳其 Id</summary>
+    private async Task<Guid> SeedBankBalanceViaDbAsync()
+    {
+        var id = Guid.NewGuid();
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        db.BankInitialBalances.Add(new BankInitialBalance
+        {
+            Id = id,
+            BankName = $"邊界測試銀行_{id:N}",
+            InitialAmount = 10000m,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+        });
+        await db.SaveChangesAsync();
+        return id;
     }
 }

@@ -1,3 +1,5 @@
+using ClosedXML.Excel;
+
 using FluentAssertions;
 using HansOS.Api.Data;
 using HansOS.Api.Data.Entities;
@@ -208,6 +210,74 @@ public class BankTransactionServiceTests : IDisposable
         result.Should().NotBeEmpty();
         result[0].Should().Be(0x50);
         result[1].Should().Be(0x4B);
+    }
+
+    // ── GetPeriodSummary Edge Cases — TODO 4 ────────────────
+
+    /// <summary>只有收入交易時，支出應為零</summary>
+    [Fact]
+    public async Task GetPeriodSummary_OnlyIncome_ExpenseIsZero()
+    {
+        await SeedTransactionAsync("上海銀行", TransactionType.Income, new DateOnly(2027, 1, 1), 5000, "收入A");
+        await SeedTransactionAsync("上海銀行", TransactionType.Income, new DateOnly(2027, 1, 15), 3000, "收入B");
+
+        var result = await _sut.GetPeriodSummaryAsync("上海銀行", 2027, 1);
+
+        result.TotalIncome.Should().Be(8000m);
+        result.TotalExpense.Should().Be(0m);
+        result.ClosingBalance.Should().Be(result.OpeningBalance + 8000m);
+    }
+
+    /// <summary>只有支出交易時，收入應為零</summary>
+    [Fact]
+    public async Task GetPeriodSummary_OnlyExpense_IncomeIsZero()
+    {
+        await SeedTransactionAsync("上海銀行", TransactionType.Expense, new DateOnly(2027, 2, 1), 2000, "支出A");
+        await SeedTransactionAsync("上海銀行", TransactionType.Expense, new DateOnly(2027, 2, 15), 1000, "支出B");
+
+        var result = await _sut.GetPeriodSummaryAsync("上海銀行", 2027, 2);
+
+        result.TotalIncome.Should().Be(0m);
+        result.TotalExpense.Should().Be(3000m);
+        result.ClosingBalance.Should().Be(result.OpeningBalance - 3000m);
+    }
+
+    // ── ExportToExcel Edge Cases — TODO 3 ───────────────────
+
+    /// <summary>只有收入交易時產出有效的 Excel，支出欄應為 0</summary>
+    [Fact]
+    public async Task ExportToExcel_OnlyIncome_ProducesValidExcel()
+    {
+        await SeedTransactionAsync("上海銀行", TransactionType.Income, new DateOnly(2027, 3, 1), 10000, "收入");
+
+        var result = await _sut.ExportToExcelAsync("上海銀行", 2027, 3);
+
+        result.Should().NotBeEmpty();
+        using var stream = new MemoryStream(result);
+        using var workbook = new XLWorkbook(stream);
+        var ws = workbook.Worksheets.First();
+
+        ws.Cell(5, 1).GetString().Should().Be("日期");
+        ws.Cell(6, 5).GetDouble().Should().Be(10000);
+        ws.Cell(6, 6).GetDouble().Should().Be(0);
+    }
+
+    /// <summary>只有支出交易時產出有效的 Excel，收入欄應為 0</summary>
+    [Fact]
+    public async Task ExportToExcel_OnlyExpense_ProducesValidExcel()
+    {
+        await SeedTransactionAsync("上海銀行", TransactionType.Expense, new DateOnly(2027, 4, 1), 3000, "支出");
+
+        var result = await _sut.ExportToExcelAsync("上海銀行", 2027, 4);
+
+        result.Should().NotBeEmpty();
+        using var stream = new MemoryStream(result);
+        using var workbook = new XLWorkbook(stream);
+        var ws = workbook.Worksheets.First();
+
+        ws.Cell(5, 1).GetString().Should().Be("日期");
+        ws.Cell(6, 5).GetDouble().Should().Be(0);
+        ws.Cell(6, 6).GetDouble().Should().Be(3000);
     }
 
     // ── Helpers ─────────────────────────────────────

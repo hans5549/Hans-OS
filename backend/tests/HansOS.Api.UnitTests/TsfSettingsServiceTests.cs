@@ -150,6 +150,36 @@ public class TsfSettingsServiceTests : IDisposable
         await act.Should().ThrowAsync<KeyNotFoundException>();
     }
 
+    // ── Edge / Boundary ───────────────────────────────
+
+    [Fact]
+    public async Task UpdateBankInitialBalance_NegativeAmount_SavesSuccessfully()
+    {
+        // 目前 Service 層無負數驗證，確認負數金額可正常儲存
+        var id = await SeedBankBalanceAsync("負數測試銀行", 10000m);
+
+        var request = new UpdateBankInitialBalanceRequest(-5000m);
+        await _sut.UpdateBankInitialBalanceAsync(id, request);
+
+        var updated = await _db.BankInitialBalances.FindAsync(id);
+        updated!.InitialAmount.Should().Be(-5000m);
+    }
+
+    [Fact]
+    public async Task CreateDepartment_NameBoundary100Chars_CreatesSuccessfully()
+    {
+        // StringLength(100) 的邊界值：剛好 100 字元應成功
+        var name100 = new string('測', 100);
+        var request = new CreateDepartmentRequest(name100, null);
+
+        var result = await _sut.CreateDepartmentAsync(request);
+
+        result.Name.Should().HaveLength(100);
+        var saved = await _db.SportsDepartments.FindAsync(result.Id);
+        saved.Should().NotBeNull();
+        saved!.Name.Should().Be(name100);
+    }
+
     // ── Helpers ─────────────────────────────────────
 
     private async Task<Guid> SeedDepartmentAsync(string name, string? note = null)

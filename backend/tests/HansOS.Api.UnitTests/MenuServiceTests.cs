@@ -99,6 +99,113 @@ public class MenuServiceTests : IDisposable
         result.Should().BeEmpty();
     }
 
+    [Fact]
+    public async Task GetMenusByRoles_MultipleRoles_MergesMenusCorrectly()
+    {
+        // Arrange — 兩個角色各自擁有部分選單，其中一個選單同時指派給兩個角色
+        var adminRoleId = "admin-role-id";
+        var editorRoleId = "editor-role-id";
+        var sharedMenuId = Guid.NewGuid();
+        var adminOnlyMenuId = Guid.NewGuid();
+        var editorOnlyMenuId = Guid.NewGuid();
+
+        _db.Roles.AddRange(
+            new IdentityRole { Id = adminRoleId, Name = "Admin", NormalizedName = "ADMIN" },
+            new IdentityRole { Id = editorRoleId, Name = "Editor", NormalizedName = "EDITOR" });
+
+        _db.Menus.AddRange(
+            new Menu
+            {
+                Id = sharedMenuId, Name = "Shared", Path = "/shared",
+                Component = "/shared/index", Title = "Shared",
+                Type = MenuType.Menu, Order = 1
+            },
+            new Menu
+            {
+                Id = adminOnlyMenuId, Name = "AdminOnly", Path = "/admin-only",
+                Component = "/admin/index", Title = "Admin Only",
+                Type = MenuType.Menu, Order = 2
+            },
+            new Menu
+            {
+                Id = editorOnlyMenuId, Name = "EditorOnly", Path = "/editor-only",
+                Component = "/editor/index", Title = "Editor Only",
+                Type = MenuType.Menu, Order = 3
+            });
+
+        _db.RoleMenus.AddRange(
+            new RoleMenu { RoleId = adminRoleId, MenuId = sharedMenuId },
+            new RoleMenu { RoleId = editorRoleId, MenuId = sharedMenuId },
+            new RoleMenu { RoleId = adminRoleId, MenuId = adminOnlyMenuId },
+            new RoleMenu { RoleId = editorRoleId, MenuId = editorOnlyMenuId });
+
+        await _db.SaveChangesAsync();
+
+        // Act — 同時傳入兩個角色名稱
+        var result = await _sut.GetMenusByRolesAsync(["Admin", "Editor"]);
+
+        // Assert — 三個選單都應回傳，且共用選單不重複
+        result.Should().HaveCount(3);
+        result.Select(r => r.Name).Should().BeEquivalentTo(["Shared", "AdminOnly", "EditorOnly"]);
+    }
+
+    [Fact]
+    public async Task GetMenusByRoles_DeeplyNestedMenus_BuildsCorrectTree()
+    {
+        // Arrange — 三層深度：祖父 → 父層 → 子層
+        var roleId = "deep-role-id";
+        var grandparentId = Guid.NewGuid();
+        var parentId = Guid.NewGuid();
+        var childId = Guid.NewGuid();
+
+        _db.Roles.Add(new IdentityRole { Id = roleId, Name = "viewer", NormalizedName = "VIEWER" });
+
+        _db.Menus.AddRange(
+            new Menu
+            {
+                Id = grandparentId, Name = "Level1", Path = "/level1",
+                Component = "BasicLayout", Title = "Level 1",
+                Type = MenuType.Catalog, Order = 1
+            },
+            new Menu
+            {
+                Id = parentId, ParentId = grandparentId, Name = "Level2", Path = "/level2",
+                Component = "/level2/index", Title = "Level 2",
+                Type = MenuType.Catalog, Order = 1
+            },
+            new Menu
+            {
+                Id = childId, ParentId = parentId, Name = "Level3", Path = "/level3",
+                Component = "/level3/index", Title = "Level 3",
+                Type = MenuType.Menu, Order = 1
+            });
+
+        // 三層都指派給角色
+        _db.RoleMenus.AddRange(
+            new RoleMenu { RoleId = roleId, MenuId = grandparentId },
+            new RoleMenu { RoleId = roleId, MenuId = parentId },
+            new RoleMenu { RoleId = roleId, MenuId = childId });
+
+        await _db.SaveChangesAsync();
+
+        // Act
+        var result = await _sut.GetMenusByRolesAsync(["viewer"]);
+
+        // Assert — 驗證三層樹結構
+        result.Should().HaveCount(1);
+        var level1 = result[0];
+        level1.Name.Should().Be("Level1");
+        level1.Children.Should().HaveCount(1);
+
+        var level2 = level1.Children![0];
+        level2.Name.Should().Be("Level2");
+        level2.Children.Should().HaveCount(1);
+
+        var level3 = level2.Children![0];
+        level3.Name.Should().Be("Level3");
+        level3.Children.Should().BeNull();
+    }
+
     public void Dispose()
     {
         _db.Dispose();

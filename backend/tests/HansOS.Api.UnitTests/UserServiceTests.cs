@@ -180,4 +180,37 @@ public class UserServiceTests
 
         await act.Should().ThrowAsync<KeyNotFoundException>();
     }
+
+    // ── 邊界測試 ───────────────────────────────────
+
+    [Fact]
+    public async Task GetUserInfo_UserWithNoRoles_ReturnsEmptyRolesArray()
+    {
+        // 使用者沒有任何角色時，應回傳空陣列而非錯誤
+        var user = new ApplicationUser
+        {
+            Id = "user-no-roles",
+            UserName = "noroles",
+            RealName = "No Roles User",
+            Avatar = null,
+            HomePath = null,
+            Email = null,
+            PhoneNumber = null,
+            Desc = null,
+            IsActive = true
+        };
+        _userManager.FindByIdAsync("user-no-roles").Returns(user);
+        _userManager.GetRolesAsync(user).Returns(new List<string>());
+
+        var result = await _sut.GetUserInfoAsync("user-no-roles");
+
+        result.Roles.Should().NotBeNull();
+        result.Roles.Should().BeEmpty();
+        result.Username.Should().Be("noroles");
+        result.Avatar.Should().Be(string.Empty);
+        result.HomePath.Should().Be("/analytics");
+        result.Email.Should().Be(string.Empty);
+        result.Phone.Should().Be(string.Empty);
+        result.Desc.Should().Be(string.Empty);
+    }
 }
