@@ -534,7 +534,7 @@ public class BankTransactionControllerTests(HansOsWebApplicationFactory factory)
         using var workbook = new XLWorkbook(stream);
         var ws = workbook.Worksheets.First();
 
-        var expectedHeaders = new[] { "日期", "摘要", "歸屬部門", "需求單位", "收入", "支出", "手續費", "餘額", "收據", "已回收", "已寄送" };
+        var expectedHeaders = new[] { "日期", "摘要", "歸屬部門", "收入", "支出", "手續費", "餘額", "收據", "已回收", "已寄送" };
         for (var i = 0; i < expectedHeaders.Length; i++)
         {
             ws.Cell(5, i + 1).GetString().Should().Be(expectedHeaders[i],
@@ -577,16 +577,16 @@ public class BankTransactionControllerTests(HansOsWebApplicationFactory factory)
         // Row 6: 第一筆交易（收入）—— 日期使用 ToString("yyyy/MM/dd") 的格式
         ws.Cell(6, 1).GetString().Should().Be(new DateOnly(2027, 2, 1).ToString("yyyy/MM/dd"));
         ws.Cell(6, 2).GetString().Should().Be("匯出資料測試收入");
-        ws.Cell(6, 5).GetDouble().Should().Be(8000);
-        ws.Cell(6, 6).GetDouble().Should().Be(0);
-        ws.Cell(6, 7).GetDouble().Should().Be(10);
+        ws.Cell(6, 4).GetDouble().Should().Be(8000);
+        ws.Cell(6, 5).GetDouble().Should().Be(0);
+        ws.Cell(6, 6).GetDouble().Should().Be(10);
 
         // Row 7: 第二筆交易（支出）
         ws.Cell(7, 1).GetString().Should().Be(new DateOnly(2027, 2, 15).ToString("yyyy/MM/dd"));
         ws.Cell(7, 2).GetString().Should().Be("匯出資料測試支出");
-        ws.Cell(7, 5).GetDouble().Should().Be(0);
-        ws.Cell(7, 6).GetDouble().Should().Be(3000);
-        ws.Cell(7, 7).GetDouble().Should().Be(20);
+        ws.Cell(7, 4).GetDouble().Should().Be(0);
+        ws.Cell(7, 5).GetDouble().Should().Be(3000);
+        ws.Cell(7, 6).GetDouble().Should().Be(20);
     }
 
     /// <summary>匯出 Excel 摘要區段包含正確的期初與期末餘額</summary>
@@ -671,11 +671,11 @@ public class BankTransactionControllerTests(HansOsWebApplicationFactory factory)
         // 合計列在 row 8（6 + 2 筆交易）
         var totalRow = 8;
         ws.Cell(totalRow, 1).GetString().Should().Be("合計");
-        ws.Cell(totalRow, 5).GetDouble().Should().Be(5000, because: "收入合計");
+        ws.Cell(totalRow, 4).GetDouble().Should().Be(5000, because: "收入合計");
         // TotalExpense = 2000(支出) + 40(全部手續費) = 2040
         // 合計列支出 = TotalExpense - allFees = 2040 - 40 = 2000（純支出金額）
-        ws.Cell(totalRow, 6).GetDouble().Should().Be(2000, because: "支出合計（不含手續費）");
-        ws.Cell(totalRow, 7).GetDouble().Should().Be(40, because: "手續費合計 = 10 + 30");
+        ws.Cell(totalRow, 5).GetDouble().Should().Be(2000, because: "支出合計（不含手續費）");
+        ws.Cell(totalRow, 6).GetDouble().Should().Be(40, because: "手續費合計 = 10 + 30");
     }
 
     // ── CRUD Validation — TODO 4 ────────────────────────────
