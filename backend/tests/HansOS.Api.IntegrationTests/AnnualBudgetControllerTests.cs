@@ -955,6 +955,362 @@ public class AnnualBudgetControllerTests(HansOsWebApplicationFactory factory)
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
+    // ── Import ──────────────────────────────────────
+
+    [Fact]
+    public async Task Import_Unauthorized_Returns401()
+    {
+        var response = await _client.PostAsJsonAsync("/annual-budgets/2026/import", new
+        {
+            departments = new[]
+            {
+                new { departmentName = "測試部門", items = new[] { new { sequence = 1, activityName = "A", contentItem = "B", amount = 100m } } }
+            }
+        });
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task Import_ValidData_ReturnsSuccess()
+    {
+        var token = await LoginAndGetTokenAsync();
+        var deptName = "匯入測試部門A";
+        await EnsureDepartmentAsync(deptName);
+        await InitializeAnnualBudgetAsync(2061, token);
+
+        var response = await AuthorizedPostAsync("/annual-budgets/2061/import", token, new
+        {
+            departments = new[]
+            {
+                new
+                {
+                    departmentName = deptName,
+                    items = new[]
+                    {
+                        new { sequence = 1, activityName = "排球營", contentItem = "場地費", amount = 10000m, note = "室內排球場" },
+                        new { sequence = 2, activityName = "排球營", contentItem = "教練費", amount = 3000m, note = (string?)null },
+                        new { sequence = 3, activityName = "全國賽", contentItem = "場地費", amount = 54000m, note = "三面網" }
+                    }
+                }
+            }
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await ReadBodyAsync(response);
+        body.GetProperty("code").GetInt32().Should().Be(0);
+
+        var data = body.GetProperty("data");
+        data.GetProperty("year").GetInt32().Should().Be(2061);
+        data.GetProperty("totalDepartments").GetInt32().Should().Be(1);
+        data.GetProperty("totalItems").GetInt32().Should().Be(3);
+        data.GetProperty("totalAmount").GetDecimal().Should().Be(67000m);
+
+        var dept = data.GetProperty("departments")[0];
+        dept.GetProperty("departmentName").GetString().Should().Be(deptName);
+        dept.GetProperty("isNewDepartment").GetBoolean().Should().BeFalse();
+        dept.GetProperty("itemCount").GetInt32().Should().Be(3);
+    }
+
+    [Fact]
+    public async Task Import_OverwriteMode_ClearsExistingItems()
+    {
+        var token = await LoginAndGetTokenAsync();
+        var deptId = await EnsureDepartmentAsync("匯入覆蓋部門");
+        await InitializeAnnualBudgetAsync(2062, token);
+
+        // 先寫入 2 筆
+        await SaveDepartmentItemsAsync(2062, deptId, token,
+            BudgetItemPayload(1, "舊活動A", "舊項目A", 5000m),
+            BudgetItemPayload(2, "舊活動B", "舊項目B", 3000m));
+
+        // 匯入覆蓋：只有 1 筆新資料
+        var response = await AuthorizedPostAsync("/annual-budgets/2062/import", token, new
+        {
+            departments = new[]
+            {
+                new
+                {
+                    departmentName = "匯入覆蓋部門",
+                    items = new[]
+                    {
+                        new { sequence = 1, activityName = "新活動", contentItem = "新項目", amount = 10000m, note = (string?)null }
+                    }
+                }
+            }
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        // 驗證只剩 1 筆
+        var itemsResp = await AuthorizedGetAsync(DepartmentItemsUrl(2062, deptId), token);
+        var itemsBody = await ReadBodyAsync(itemsResp);
+        var items = itemsBody.GetProperty("data");
+        items.GetArrayLength().Should().Be(1);
+        items[0].GetProperty("activityName").GetString().Should().Be("新活動");
+    }
+
+    [Fact]
+    public async Task Import_NewDepartment_AutoCreates()
+    {
+        var token = await LoginAndGetTokenAsync();
+        var uniqueName = $"自動建立部門_{Guid.NewGuid():N}"[..20];
+
+        var response = await AuthorizedPostAsync("/annual-budgets/2063/import", token, new
+        {
+            departments = new[]
+            {
+                new
+                {
+                    departmentName = uniqueName,
+                    items = new[]
+                    {
+                        new { sequence = 1, activityName = "活動", contentItem = "項目", amount = 1000m, note = (string?)null }
+                    }
+                }
+            }
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await ReadBodyAsync(response);
+        var dept = body.GetProperty("data").GetProperty("departments")[0];
+        dept.GetProperty("isNewDepartment").GetBoolean().Should().BeTrue();
+        dept.GetProperty("departmentId").GetString().Should().NotBeNullOrEmpty();
+    }
+
+    [Fact]
+    public async Task Import_MultipleDepartments_AllImported()
+    {
+        var token = await LoginAndGetTokenAsync();
+        await EnsureDepartmentAsync("批量匯入A部門");
+        await EnsureDepartmentAsync("批量匯入B部門");
+        await InitializeAnnualBudgetAsync(2064, token);
+
+        var response = await AuthorizedPostAsync("/annual-budgets/2064/import", token, new
+        {
+            departments = new[]
+            {
+                new
+                {
+                    departmentName = "批量匯入A部門",
+                    items = new[]
+                    {
+                        new { sequence = 1, activityName = "A活動", contentItem = "A項目", amount = 5000m, note = (string?)null }
+                    }
+                },
+                new
+                {
+                    departmentName = "批量匯入B部門",
+                    items = new[]
+                    {
+                        new { sequence = 1, activityName = "B活動1", contentItem = "B項目1", amount = 3000m, note = (string?)null },
+                        new { sequence = 2, activityName = "B活動2", contentItem = "B項目2", amount = 7000m, note = (string?)null }
+                    }
+                }
+            }
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await ReadBodyAsync(response);
+        var data = body.GetProperty("data");
+        data.GetProperty("totalDepartments").GetInt32().Should().Be(2);
+        data.GetProperty("totalItems").GetInt32().Should().Be(3);
+        data.GetProperty("totalAmount").GetDecimal().Should().Be(15000m);
+    }
+
+    [Fact]
+    public async Task Import_EmptyDepartments_Returns400()
+    {
+        var token = await LoginAndGetTokenAsync();
+
+        var response = await AuthorizedPostAsync("/annual-budgets/2065/import", token, new
+        {
+            departments = Array.Empty<object>()
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Import_YearOutOfRange_Returns400()
+    {
+        var token = await LoginAndGetTokenAsync();
+
+        var response = await AuthorizedPostAsync("/annual-budgets/2101/import", token, new
+        {
+            departments = new[]
+            {
+                new
+                {
+                    departmentName = "部門",
+                    items = new[]
+                    {
+                        new { sequence = 1, activityName = "A", contentItem = "B", amount = 100m, note = (string?)null }
+                    }
+                }
+            }
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    // ── Import Preview ──────────────────────────────
+
+    [Fact]
+    public async Task ImportPreview_Unauthorized_Returns401()
+    {
+        var response = await _client.PostAsJsonAsync("/annual-budgets/2026/import/preview", new
+        {
+            departments = new[]
+            {
+                new { departmentName = "測試", items = new[] { new { sequence = 1, activityName = "A", contentItem = "B", amount = 100m } } }
+            }
+        });
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task ImportPreview_DoesNotWriteData()
+    {
+        var token = await LoginAndGetTokenAsync();
+        var deptId = await EnsureDepartmentAsync("預覽不寫入部門");
+        await InitializeAnnualBudgetAsync(2066, token);
+
+        // 先寫入 1 筆
+        await SaveDepartmentItemsAsync(2066, deptId, token,
+            BudgetItemPayload(1, "原有活動", "原有項目", 5000m));
+
+        // 呼叫預覽 API
+        await AuthorizedPostAsync("/annual-budgets/2066/import/preview", token, new
+        {
+            departments = new[]
+            {
+                new
+                {
+                    departmentName = "預覽不寫入部門",
+                    items = new[]
+                    {
+                        new { sequence = 1, activityName = "新活動", contentItem = "新項目", amount = 10000m, note = (string?)null }
+                    }
+                }
+            }
+        });
+
+        // 驗證原有資料未被覆蓋
+        var itemsResp = await AuthorizedGetAsync(DepartmentItemsUrl(2066, deptId), token);
+        var body = await ReadBodyAsync(itemsResp);
+        var items = body.GetProperty("data");
+        items.GetArrayLength().Should().Be(1);
+        items[0].GetProperty("activityName").GetString().Should().Be("原有活動");
+    }
+
+    [Fact]
+    public async Task ImportPreview_WarnsAboutOverwrite()
+    {
+        var token = await LoginAndGetTokenAsync();
+        var deptId = await EnsureDepartmentAsync("預覽警告部門");
+        await InitializeAnnualBudgetAsync(2067, token);
+
+        // 先寫入資料
+        await SaveDepartmentItemsAsync(2067, deptId, token,
+            BudgetItemPayload(1, "既有活動", "既有項目", 5000m));
+
+        var response = await AuthorizedPostAsync("/annual-budgets/2067/import/preview", token, new
+        {
+            departments = new[]
+            {
+                new
+                {
+                    departmentName = "預覽警告部門",
+                    items = new[]
+                    {
+                        new { sequence = 1, activityName = "新", contentItem = "新", amount = 100m, note = (string?)null }
+                    }
+                }
+            }
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await ReadBodyAsync(response);
+        var data = body.GetProperty("data");
+        var warnings = data.GetProperty("warnings");
+        warnings.GetArrayLength().Should().BeGreaterThan(0);
+
+        var warningTexts = Enumerable.Range(0, warnings.GetArrayLength())
+            .Select(i => warnings[i].GetString())
+            .ToList();
+        warningTexts.Should().Contain(w => w!.Contains("覆蓋"));
+    }
+
+    [Fact]
+    public async Task ImportPreview_NewDepartment_ShowsWarning()
+    {
+        var token = await LoginAndGetTokenAsync();
+        var uniqueName = $"預覽新部門_{Guid.NewGuid():N}"[..18];
+
+        var response = await AuthorizedPostAsync("/annual-budgets/2068/import/preview", token, new
+        {
+            departments = new[]
+            {
+                new
+                {
+                    departmentName = uniqueName,
+                    items = new[]
+                    {
+                        new { sequence = 1, activityName = "A", contentItem = "B", amount = 100m, note = (string?)null }
+                    }
+                }
+            }
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await ReadBodyAsync(response);
+        var data = body.GetProperty("data");
+        data.GetProperty("departments")[0].GetProperty("isNewDepartment").GetBoolean().Should().BeTrue();
+
+        var warnings = data.GetProperty("warnings");
+        var warningTexts = Enumerable.Range(0, warnings.GetArrayLength())
+            .Select(i => warnings[i].GetString())
+            .ToList();
+        warningTexts.Should().Contain(w => w!.Contains("自動建立"));
+    }
+
+    // ── API Spec ────────────────────────────────────
+
+    [Fact]
+    public async Task ApiSpec_NoAuth_ReturnsEndpoints()
+    {
+        var response = await _client.GetAsync("/api-spec");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await ReadBodyAsync(response);
+        body.GetProperty("code").GetInt32().Should().Be(0);
+
+        var data = body.GetProperty("data");
+        data.GetProperty("title").GetString().Should().Be("Hans-OS API");
+        data.GetProperty("endpoints").GetArrayLength().Should().BeGreaterThan(0);
+    }
+
+    [Fact]
+    public async Task ApiSpec_ContainsImportEndpoint()
+    {
+        var response = await _client.GetAsync("/api-spec");
+        var body = await ReadBodyAsync(response);
+        var endpoints = body.GetProperty("data").GetProperty("endpoints");
+
+        var hasImport = false;
+        foreach (var ep in endpoints.EnumerateArray())
+        {
+            var route = ep.GetProperty("route").GetString();
+            if (route is not null && route.Contains("import") && route.Contains("POST"))
+            {
+                hasImport = true;
+                break;
+            }
+        }
+
+        hasImport.Should().BeTrue("should contain the budget import endpoint");
+    }
+
     // ── Helpers ──────────────────────────────────────
 
     private async Task<Guid> EnsureDepartmentAsync(string name)
@@ -997,6 +1353,9 @@ public class AnnualBudgetControllerTests(HansOsWebApplicationFactory factory)
     private Task<HttpResponseMessage> AuthorizedPutAsync(string url, string token, object data)
         => _client.SendAsync(AuthPut(url, token, data));
 
+    private Task<HttpResponseMessage> AuthorizedPostAsync(string url, string token, object data)
+        => _client.SendAsync(AuthPost(url, token, data));
+
     private Task<HttpResponseMessage> InitializeAnnualBudgetAsync(int year, string token)
         => AuthorizedGetAsync($"/annual-budgets/{year}", token);
 
@@ -1035,6 +1394,9 @@ public class AnnualBudgetControllerTests(HansOsWebApplicationFactory factory)
 
     private static HttpRequestMessage AuthPut(string url, string token, object data)
         => CreateAuthorizedRequest(HttpMethod.Put, url, token, JsonContent.Create(data));
+
+    private static HttpRequestMessage AuthPost(string url, string token, object data)
+        => CreateAuthorizedRequest(HttpMethod.Post, url, token, JsonContent.Create(data));
 
     private static HttpRequestMessage CreateAuthorizedRequest(
         HttpMethod method,
