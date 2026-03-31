@@ -47,6 +47,7 @@ public class BankTransactionService(ApplicationDbContext db) : IBankTransactionS
                 t.Amount,
                 t.Fee,
                 t.HasReceipt,
+                t.ReceiptCollected,
                 t.ReceiptMailed,
                 runningBalance));
         }
@@ -110,6 +111,7 @@ public class BankTransactionService(ApplicationDbContext db) : IBankTransactionS
             Amount = request.Amount,
             Fee = request.Fee,
             HasReceipt = request.HasReceipt,
+            ReceiptCollected = request.ReceiptCollected,
             ReceiptMailed = request.ReceiptMailed,
             CreatedAt = now,
             UpdatedAt = now,
@@ -135,6 +137,7 @@ public class BankTransactionService(ApplicationDbContext db) : IBankTransactionS
             entity.Amount,
             entity.Fee,
             entity.HasReceipt,
+            entity.ReceiptCollected,
             entity.ReceiptMailed,
             0);
     }
@@ -163,6 +166,7 @@ public class BankTransactionService(ApplicationDbContext db) : IBankTransactionS
         entity.Amount = request.Amount;
         entity.Fee = request.Fee;
         entity.HasReceipt = request.HasReceipt;
+        entity.ReceiptCollected = request.ReceiptCollected;
         entity.ReceiptMailed = request.ReceiptMailed;
         entity.UpdatedAt = DateTime.UtcNow;
 
@@ -209,7 +213,7 @@ public class BankTransactionService(ApplicationDbContext db) : IBankTransactionS
         worksheet.Cell(3, 8).Value = summary.ClosingBalance;
 
         // Headers
-        var headers = new[] { "日期", "摘要", "歸屬部門", "需求單位", "收入", "支出", "手續費", "餘額", "收據", "已寄送" };
+        var headers = new[] { "日期", "摘要", "歸屬部門", "需求單位", "收入", "支出", "手續費", "餘額", "收據", "已回收", "已寄送" };
         for (var i = 0; i < headers.Length; i++)
         {
             worksheet.Cell(5, i + 1).Value = headers[i];
@@ -232,7 +236,8 @@ public class BankTransactionService(ApplicationDbContext db) : IBankTransactionS
             worksheet.Cell(r, 7).Value = t.Fee;
             worksheet.Cell(r, 8).Value = t.RunningBalance;
             worksheet.Cell(r, 9).Value = t.HasReceipt ? "✓" : "";
-            worksheet.Cell(r, 10).Value = t.ReceiptMailed ? "✓" : "";
+            worksheet.Cell(r, 10).Value = t.ReceiptCollected ? "✓" : "";
+            worksheet.Cell(r, 11).Value = t.ReceiptMailed ? "✓" : "";
         }
 
         // Totals row
@@ -254,6 +259,39 @@ public class BankTransactionService(ApplicationDbContext db) : IBankTransactionS
         using var stream = new MemoryStream();
         workbook.SaveAs(stream);
         return stream.ToArray();
+    }
+
+    public async Task<ReceiptTrackingSummaryResponse> GetReceiptTrackingAsync(
+        int year, int? month = null, CancellationToken ct = default)
+    {
+        var (startDate, endDate) = GetPeriodRange(year, month);
+
+        var items = await db.BankTransactions
+            .AsNoTracking()
+            .Include(t => t.Department)
+            .Where(t => t.TransactionDate >= startDate
+                        && t.TransactionDate <= endDate
+                        && (t.HasReceipt && (!t.ReceiptCollected || !t.ReceiptMailed)))
+            .OrderBy(t => t.BankName)
+            .ThenBy(t => t.TransactionDate)
+            .Select(t => new ReceiptTrackingResponse(
+                t.Id,
+                t.BankName,
+                t.TransactionDate,
+                t.Description,
+                t.DepartmentId,
+                t.Department != null ? t.Department.Name : null,
+                t.Amount,
+                t.HasReceipt,
+                t.ReceiptCollected,
+                t.ReceiptMailed))
+            .ToListAsync(ct);
+
+        return new ReceiptTrackingSummaryResponse(
+            items.Count,
+            items.Count(i => !i.ReceiptCollected),
+            items.Count(i => !i.ReceiptMailed),
+            items);
     }
 
     private async Task<decimal> CalculateOpeningBalanceAsync(

@@ -14,6 +14,7 @@ public record CreateBankTransactionRequest(
     [Required][Range(0.01, double.MaxValue)] decimal Amount,
     [Range(0, double.MaxValue)] decimal Fee = 0,
     bool HasReceipt = false,
+    bool ReceiptCollected = false,
     bool ReceiptMailed = false);
 
 public record UpdateBankTransactionRequest(
@@ -25,6 +26,7 @@ public record UpdateBankTransactionRequest(
     [Required][Range(0.01, double.MaxValue)] decimal Amount,
     [Range(0, double.MaxValue)] decimal Fee = 0,
     bool HasReceipt = false,
+    bool ReceiptCollected = false,
     bool ReceiptMailed = false);
 
 // Response DTOs
@@ -40,8 +42,29 @@ public record BankTransactionResponse(
     decimal Amount,
     decimal Fee,
     bool HasReceipt,
+    bool ReceiptCollected,
     bool ReceiptMailed,
     decimal RunningBalance);
+
+/// <summary>收據追蹤回應</summary>
+public record ReceiptTrackingResponse(
+    Guid Id,
+    string BankName,
+    DateOnly TransactionDate,
+    string Description,
+    Guid? DepartmentId,
+    string? DepartmentName,
+    decimal Amount,
+    bool HasReceipt,
+    bool ReceiptCollected,
+    bool ReceiptMailed);
+
+/// <summary>收據追蹤統計摘要</summary>
+public record ReceiptTrackingSummaryResponse(
+    int TotalCount,
+    int NotCollectedCount,
+    int NotMailedCount,
+    List<ReceiptTrackingResponse> Items);
 
 public record BankTransactionSummaryResponse(
     decimal OpeningBalance,

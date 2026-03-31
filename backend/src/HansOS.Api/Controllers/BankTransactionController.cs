@@ -63,6 +63,14 @@ public class BankTransactionController(
         return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
     }
 
+    [HttpGet("receipt-tracking")]
+    public async Task<ApiEnvelope<ReceiptTrackingSummaryResponse>> GetReceiptTracking(
+        [FromQuery] int year, [FromQuery] int? month, CancellationToken ct)
+    {
+        var result = await transactionService.GetReceiptTrackingAsync(year, month, ct);
+        return ApiEnvelope<ReceiptTrackingSummaryResponse>.Success(result);
+    }
+
     [HttpPost("import")]
     public async Task<ApiEnvelope<ImportResultResponse>> ImportHistoricalData(CancellationToken ct)
     {

@@ -16,6 +16,7 @@ export interface BankTransactionResponse {
   amount: number;
   fee: number;
   hasReceipt: boolean;
+  receiptCollected: boolean;
   receiptMailed: boolean;
   runningBalance: number;
 }
@@ -36,6 +37,7 @@ export interface CreateBankTransactionRequest {
   amount: number;
   fee?: number;
   hasReceipt?: boolean;
+  receiptCollected?: boolean;
   receiptMailed?: boolean;
 }
 
@@ -48,6 +50,7 @@ export interface UpdateBankTransactionRequest {
   amount: number;
   fee?: number;
   hasReceipt?: boolean;
+  receiptCollected?: boolean;
   receiptMailed?: boolean;
 }
 
@@ -145,5 +148,41 @@ export interface ImportResultResponse {
 export async function importBankTransactionsApi() {
   return requestClient.post<ImportResultResponse>(
     '/bank-transactions/import',
+  );
+}
+
+// ── 收據追蹤 ──────────────────────────────────────
+
+export interface ReceiptTrackingResponse {
+  id: string;
+  bankName: string;
+  transactionDate: string;
+  description: string;
+  departmentId: string | null;
+  departmentName: string | null;
+  amount: number;
+  hasReceipt: boolean;
+  receiptCollected: boolean;
+  receiptMailed: boolean;
+}
+
+export interface ReceiptTrackingSummaryResponse {
+  totalCount: number;
+  notCollectedCount: number;
+  notMailedCount: number;
+  items: ReceiptTrackingResponse[];
+}
+
+/** 取得需關注的收據清單（跨銀行） */
+export async function getReceiptTrackingApi(
+  year: number,
+  month?: number,
+) {
+  const params = new URLSearchParams({ year: String(year) });
+  if (month !== undefined) {
+    params.set('month', String(month));
+  }
+  return requestClient.get<ReceiptTrackingSummaryResponse>(
+    `/bank-transactions/receipt-tracking?${params}`,
   );
 }

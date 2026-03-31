@@ -18,6 +18,7 @@ public class BankTransaction
     public decimal Amount { get; set; }
     public decimal Fee { get; set; }
     public bool HasReceipt { get; set; }
+    public bool ReceiptCollected { get; set; }
     public bool ReceiptMailed { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }

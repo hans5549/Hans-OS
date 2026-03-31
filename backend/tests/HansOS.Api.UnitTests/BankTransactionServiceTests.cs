@@ -280,6 +280,127 @@ public class BankTransactionServiceTests : IDisposable
         ws.Cell(6, 6).GetDouble().Should().Be(3000);
     }
 
+    // ── CreateTransaction — ReceiptCollected ───────────────
+
+    /// <summary>建立交易時 ReceiptCollected=true 應正確儲存至資料庫</summary>
+    [Fact]
+    public async Task CreateTransaction_WithReceiptCollected_MapsCorrectly()
+    {
+        var request = new CreateBankTransactionRequest(
+            TransactionType: TransactionType.Income,
+            TransactionDate: new DateOnly(2028, 1, 1),
+            Description: "收據已領取",
+            DepartmentId: null,
+            RequestingUnit: null,
+            Amount: 1000,
+            Fee: 0,
+            HasReceipt: true,
+            ReceiptCollected: true,
+            ReceiptMailed: false);
+
+        var result = await _sut.CreateTransactionAsync("上海銀行", request);
+
+        result.ReceiptCollected.Should().BeTrue();
+
+        var saved = await _db.BankTransactions.FindAsync(result.Id);
+        saved!.ReceiptCollected.Should().BeTrue();
+    }
+
+    // ── GetReceiptTrackingAsync ──────────────────────────────
+
+    /// <summary>HasReceipt=true, ReceiptCollected=false 的交易應出現在追蹤清單</summary>
+    [Fact]
+    public async Task GetReceiptTracking_ReturnsUnprocessedReceipts()
+    {
+        await SeedTransactionWithReceiptAsync("上海銀行", TransactionType.Income,
+            new DateOnly(2030, 1, 10), 1000, "未處理收據",
+            hasReceipt: true, receiptCollected: false, receiptMailed: false);
+
+        var result = await _sut.GetReceiptTrackingAsync(2030, 1);
+
+        result.TotalCount.Should().Be(1);
+        result.Items.Should().ContainSingle(i => i.Description == "未處理收據");
+    }
+
+    /// <summary>收據已全部處理完成（Collected=true, Mailed=true）不應出現在追蹤清單</summary>
+    [Fact]
+    public async Task GetReceiptTracking_ExcludesFullyProcessed()
+    {
+        await SeedTransactionWithReceiptAsync("上海銀行", TransactionType.Income,
+            new DateOnly(2030, 2, 10), 1000, "已處理完成",
+            hasReceipt: true, receiptCollected: true, receiptMailed: true);
+
+        var result = await _sut.GetReceiptTrackingAsync(2030, 2);
+
+        result.TotalCount.Should().Be(0);
+        result.Items.Should().BeEmpty();
+    }
+
+    /// <summary>HasReceipt=true, ReceiptCollected=false 應出現（尚未領取）</summary>
+    [Fact]
+    public async Task GetReceiptTracking_IncludesNotCollected()
+    {
+        await SeedTransactionWithReceiptAsync("上海銀行", TransactionType.Expense,
+            new DateOnly(2030, 3, 10), 2000, "未領取收據",
+            hasReceipt: true, receiptCollected: false, receiptMailed: true);
+
+        var result = await _sut.GetReceiptTrackingAsync(2030, 3);
+
+        result.TotalCount.Should().Be(1);
+        result.NotCollectedCount.Should().Be(1);
+        result.Items.Should().ContainSingle(i => i.Description == "未領取收據");
+    }
+
+    /// <summary>HasReceipt=true, ReceiptMailed=false 應出現（尚未寄送）</summary>
+    [Fact]
+    public async Task GetReceiptTracking_IncludesNotMailed()
+    {
+        await SeedTransactionWithReceiptAsync("合作金庫", TransactionType.Income,
+            new DateOnly(2030, 4, 10), 3000, "未寄送收據",
+            hasReceipt: true, receiptCollected: true, receiptMailed: false);
+
+        var result = await _sut.GetReceiptTrackingAsync(2030, 4);
+
+        result.TotalCount.Should().Be(1);
+        result.NotMailedCount.Should().Be(1);
+        result.Items.Should().ContainSingle(i => i.Description == "未寄送收據");
+    }
+
+    /// <summary>混合狀態的交易，驗證 TotalCount/NotCollectedCount/NotMailedCount 正確計算</summary>
+    [Fact]
+    public async Task GetReceiptTracking_CountsCorrectly()
+    {
+        // 未領取、未寄送 → 計入 total, notCollected, notMailed
+        await SeedTransactionWithReceiptAsync("上海銀行", TransactionType.Income,
+            new DateOnly(2030, 5, 1), 1000, "狀態A",
+            hasReceipt: true, receiptCollected: false, receiptMailed: false);
+
+        // 已領取、未寄送 → 計入 total, notMailed
+        await SeedTransactionWithReceiptAsync("上海銀行", TransactionType.Income,
+            new DateOnly(2030, 5, 5), 2000, "狀態B",
+            hasReceipt: true, receiptCollected: true, receiptMailed: false);
+
+        // 未領取、已寄送 → 計入 total, notCollected
+        await SeedTransactionWithReceiptAsync("合作金庫", TransactionType.Expense,
+            new DateOnly(2030, 5, 10), 3000, "狀態C",
+            hasReceipt: true, receiptCollected: false, receiptMailed: true);
+
+        // 已全部處理 → 不計入任何
+        await SeedTransactionWithReceiptAsync("合作金庫", TransactionType.Income,
+            new DateOnly(2030, 5, 15), 4000, "狀態D-已完成",
+            hasReceipt: true, receiptCollected: true, receiptMailed: true);
+
+        // 無收據 → 不計入任何
+        await SeedTransactionAsync("上海銀行", TransactionType.Income,
+            new DateOnly(2030, 5, 20), 5000, "無收據");
+
+        var result = await _sut.GetReceiptTrackingAsync(2030, 5);
+
+        result.TotalCount.Should().Be(3);
+        result.NotCollectedCount.Should().Be(2);
+        result.NotMailedCount.Should().Be(2);
+    }
+
     // ── Helpers ─────────────────────────────────────
 
     private async Task<Guid> SeedTransactionAsync(
@@ -296,7 +417,32 @@ public class BankTransactionServiceTests : IDisposable
             Amount = amount,
             Fee = fee,
             HasReceipt = false,
+            ReceiptCollected = false,
             ReceiptMailed = false,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+        };
+        _db.BankTransactions.Add(entity);
+        await _db.SaveChangesAsync();
+        return entity.Id;
+    }
+
+    private async Task<Guid> SeedTransactionWithReceiptAsync(
+        string bankName, TransactionType type, DateOnly date, decimal amount, string description,
+        bool hasReceipt, bool receiptCollected, bool receiptMailed, decimal fee = 0)
+    {
+        var entity = new BankTransaction
+        {
+            Id = Guid.NewGuid(),
+            BankName = bankName,
+            TransactionType = type,
+            TransactionDate = date,
+            Description = description,
+            Amount = amount,
+            Fee = fee,
+            HasReceipt = hasReceipt,
+            ReceiptCollected = receiptCollected,
+            ReceiptMailed = receiptMailed,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
         };

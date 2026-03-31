@@ -20,6 +20,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Activity> Activities => Set<Activity>();
     public DbSet<ActivityGroup> ActivityGroups => Set<ActivityGroup>();
     public DbSet<ActivityExpense> ActivityExpenses => Set<ActivityExpense>();
+    public DbSet<PendingRemittance> PendingRemittances => Set<PendingRemittance>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -164,6 +165,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             e.Property(t => t.TransactionType)
              .HasConversion<string>()
              .HasMaxLength(20);
+            e.Property(t => t.ReceiptCollected).HasDefaultValue(false);
 
             e.HasOne(t => t.Department)
              .WithMany()
@@ -171,6 +173,29 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
              .OnDelete(DeleteBehavior.SetNull);
 
             e.HasIndex(t => new { t.BankName, t.TransactionDate });
+        });
+
+        // PendingRemittance
+        builder.Entity<PendingRemittance>(e =>
+        {
+            e.HasKey(r => r.Id);
+            e.Property(r => r.Description).HasMaxLength(200).IsRequired();
+            e.Property(r => r.Amount).HasPrecision(18, 2);
+            e.Property(r => r.SourceAccount).HasMaxLength(100).IsRequired();
+            e.Property(r => r.TargetAccount).HasMaxLength(100).IsRequired();
+            e.Property(r => r.RecipientName).HasMaxLength(100);
+            e.Property(r => r.Note).HasMaxLength(1000);
+            e.Property(r => r.Status)
+             .HasConversion<string>()
+             .HasMaxLength(20);
+
+            e.HasOne(r => r.Department)
+             .WithMany()
+             .HasForeignKey(r => r.DepartmentId)
+             .OnDelete(DeleteBehavior.SetNull);
+
+            e.HasIndex(r => r.Status);
+            e.HasIndex(r => r.DepartmentId);
         });
 
         // Activity

@@ -20,4 +20,7 @@ public interface IBankTransactionService
 
     Task<byte[]> ExportToExcelAsync(
         string bankName, int year, int? month = null, CancellationToken ct = default);
+
+    Task<ReceiptTrackingSummaryResponse> GetReceiptTrackingAsync(
+        int year, int? month = null, CancellationToken ct = default);
 }

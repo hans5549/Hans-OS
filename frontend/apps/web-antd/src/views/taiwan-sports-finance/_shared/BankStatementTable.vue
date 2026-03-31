@@ -128,6 +128,7 @@ const columns = [
   { dataIndex: 'fee', title: '手續費', width: 100, align: 'right' as const },
   { dataIndex: 'runningBalance', title: '餘額', width: 130, align: 'right' as const },
   { key: 'receipt', title: '收據', width: 70, align: 'center' as const },
+  { key: 'collected', title: '已回收', width: 70, align: 'center' as const },
   { key: 'mailed', title: '已寄送', width: 70, align: 'center' as const },
   { key: 'action', title: '操作', width: 100, fixed: 'right' as const },
 ];
@@ -173,6 +174,7 @@ const formState = ref<CreateBankTransactionRequest>({
   amount: 0,
   fee: 0,
   hasReceipt: false,
+  receiptCollected: false,
   receiptMailed: false,
 });
 
@@ -186,6 +188,7 @@ function openCreateModal() {
     amount: 0,
     fee: 0,
     hasReceipt: false,
+    receiptCollected: false,
     receiptMailed: false,
   };
   modalVisible.value = true;
@@ -203,6 +206,7 @@ function openEditModal(record: BankTransactionResponse) {
     amount: record.amount,
     fee: record.fee,
     hasReceipt: record.hasReceipt,
+    receiptCollected: record.receiptCollected,
     receiptMailed: record.receiptMailed,
   };
   modalVisible.value = true;
@@ -433,6 +437,11 @@ async function handleExport() {
               <span v-if="(record as BankTransactionResponse).hasReceipt" class="text-green-600">✓</span>
             </template>
 
+            <!-- 已回收 -->
+            <template v-if="column.key === 'collected'">
+              <span v-if="(record as BankTransactionResponse).receiptCollected" class="text-green-600">✓</span>
+            </template>
+
             <!-- 已寄送 -->
             <template v-if="column.key === 'mailed'">
               <span v-if="(record as BankTransactionResponse).receiptMailed" class="text-green-600">✓</span>
@@ -476,7 +485,7 @@ async function handleExport() {
               <Table.Summary.Cell :index="6" align="right">
                 <span class="font-bold text-orange-500">{{ formatCurrency(totalFee) }}</span>
               </Table.Summary.Cell>
-              <Table.Summary.Cell :index="7" :col-span="4" />
+              <Table.Summary.Cell :index="7" :col-span="5" />
             </Table.Summary.Row>
           </template>
 
@@ -588,6 +597,7 @@ async function handleExport() {
         <FormItem>
           <div class="flex gap-6">
             <Checkbox v-model:checked="formState.hasReceipt">有收據</Checkbox>
+            <Checkbox v-model:checked="formState.receiptCollected">收據已回收</Checkbox>
             <Checkbox v-model:checked="formState.receiptMailed">收據已寄送</Checkbox>
           </div>
         </FormItem>

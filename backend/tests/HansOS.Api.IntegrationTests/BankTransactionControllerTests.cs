@@ -538,7 +538,7 @@ public class BankTransactionControllerTests(HansOsWebApplicationFactory factory)
         using var workbook = new XLWorkbook(stream);
         var ws = workbook.Worksheets.First();
 
-        var expectedHeaders = new[] { "日期", "摘要", "歸屬部門", "需求單位", "收入", "支出", "手續費", "餘額", "收據", "已寄送" };
+        var expectedHeaders = new[] { "日期", "摘要", "歸屬部門", "需求單位", "收入", "支出", "手續費", "餘額", "收據", "已回收", "已寄送" };
         for (var i = 0; i < expectedHeaders.Length; i++)
         {
             ws.Cell(5, i + 1).GetString().Should().Be(expectedHeaders[i],
@@ -829,5 +829,245 @@ public class BankTransactionControllerTests(HansOsWebApplicationFactory factory)
             .First(t => t.GetProperty("id").GetString() == id);
         updated.GetProperty("transactionType").GetInt32().Should().Be(1);
         updated.GetProperty("description").GetString().Should().Be("類型轉換測試（已改為支出）");
+    }
+
+    // ── ReceiptCollected Field ──────────────────────────────
+
+    /// <summary>建立交易時帶 receiptCollected=true，回傳結果應包含該欄位</summary>
+    [Fact]
+    public async Task Create_WithReceiptCollected_ReturnsCreatedTransaction()
+    {
+        var token = await LoginAndGetTokenAsync();
+        var response = await _client.SendAsync(AuthPost("/bank-transactions/上海銀行", token, new
+        {
+            transactionType = 0,
+            transactionDate = "2028-01-15",
+            description = "收據已領取測試",
+            amount = 5000,
+            hasReceipt = true,
+            receiptCollected = true,
+            receiptMailed = false,
+        }));
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
+        body.GetProperty("code").GetInt32().Should().Be(0);
+
+        var data = body.GetProperty("data");
+        data.GetProperty("hasReceipt").GetBoolean().Should().BeTrue();
+        data.GetProperty("receiptCollected").GetBoolean().Should().BeTrue();
+        data.GetProperty("receiptMailed").GetBoolean().Should().BeFalse();
+    }
+
+    /// <summary>更新交易的 receiptCollected 欄位，驗證 GET 回傳更新後的值</summary>
+    [Fact]
+    public async Task Update_ReceiptCollectedField_UpdatesSuccessfully()
+    {
+        var token = await LoginAndGetTokenAsync();
+
+        // 建立交易（receiptCollected=false）
+        var createResponse = await _client.SendAsync(AuthPost("/bank-transactions/合作金庫", token, new
+        {
+            transactionType = 0,
+            transactionDate = "2028-02-01",
+            description = "收據領取更新測試",
+            amount = 3000,
+            hasReceipt = true,
+            receiptCollected = false,
+            receiptMailed = false,
+        }));
+        var createBody = await createResponse.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
+        var id = createBody.GetProperty("data").GetProperty("id").GetString();
+
+        // 更新 receiptCollected=true
+        var updateResponse = await _client.SendAsync(AuthPut($"/bank-transactions/{id}", token, new
+        {
+            transactionType = 0,
+            transactionDate = "2028-02-01",
+            description = "收據領取更新測試",
+            amount = 3000,
+            hasReceipt = true,
+            receiptCollected = true,
+            receiptMailed = false,
+        }));
+        updateResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        // 驗證 GET 回傳更新後的值
+        var getResponse = await _client.SendAsync(
+            AuthGet("/bank-transactions/合作金庫?year=2028&month=2", token));
+        var getBody = await getResponse.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
+        var transactions = getBody.GetProperty("data");
+
+        var updated = transactions.EnumerateArray()
+            .First(t => t.GetProperty("id").GetString() == id);
+        updated.GetProperty("receiptCollected").GetBoolean().Should().BeTrue();
+    }
+
+    // ── GET Receipt Tracking ────────────────────────────────
+
+    /// <summary>未登入查詢收據追蹤應回傳 401</summary>
+    [Fact]
+    public async Task GetReceiptTracking_Unauthorized_Returns401()
+    {
+        var response = await _client.GetAsync("/bank-transactions/receipt-tracking?year=2029");
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    /// <summary>查詢年度未處理收據，應回傳尚未領取的收據</summary>
+    [Fact]
+    public async Task GetReceiptTracking_WithYear_ReturnsUnprocessedReceipts()
+    {
+        var token = await LoginAndGetTokenAsync();
+
+        // 建立有收據但未領取的交易
+        await _client.SendAsync(AuthPost("/bank-transactions/上海銀行", token, new
+        {
+            transactionType = 0,
+            transactionDate = "2029-01-10",
+            description = "收據追蹤測試-未領取",
+            amount = 1000,
+            hasReceipt = true,
+            receiptCollected = false,
+            receiptMailed = false,
+        }));
+
+        // 建立無收據的交易（不應出現）
+        await _client.SendAsync(AuthPost("/bank-transactions/上海銀行", token, new
+        {
+            transactionType = 0,
+            transactionDate = "2029-01-15",
+            description = "收據追蹤測試-無收據",
+            amount = 2000,
+            hasReceipt = false,
+            receiptCollected = false,
+            receiptMailed = false,
+        }));
+
+        var response = await _client.SendAsync(
+            AuthGet("/bank-transactions/receipt-tracking?year=2029", token));
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
+        body.GetProperty("code").GetInt32().Should().Be(0);
+
+        var data = body.GetProperty("data");
+        data.GetProperty("totalCount").GetInt32().Should().BeGreaterThanOrEqualTo(1);
+        data.GetProperty("notCollectedCount").GetInt32().Should().BeGreaterThanOrEqualTo(1);
+
+        var items = data.GetProperty("items");
+        items.EnumerateArray()
+            .Any(i => i.GetProperty("description").GetString() == "收據追蹤測試-未領取")
+            .Should().BeTrue();
+        items.EnumerateArray()
+            .Any(i => i.GetProperty("description").GetString() == "收據追蹤測試-無收據")
+            .Should().BeFalse();
+    }
+
+    /// <summary>指定年月篩選，只回傳該月的未處理收據</summary>
+    [Fact]
+    public async Task GetReceiptTracking_WithYearAndMonth_FiltersCorrectly()
+    {
+        var token = await LoginAndGetTokenAsync();
+
+        // 三月的交易
+        await _client.SendAsync(AuthPost("/bank-transactions/上海銀行", token, new
+        {
+            transactionType = 0,
+            transactionDate = "2029-03-10",
+            description = "收據追蹤-三月",
+            amount = 1000,
+            hasReceipt = true,
+            receiptCollected = false,
+            receiptMailed = false,
+        }));
+
+        // 四月的交易
+        await _client.SendAsync(AuthPost("/bank-transactions/上海銀行", token, new
+        {
+            transactionType = 0,
+            transactionDate = "2029-04-10",
+            description = "收據追蹤-四月",
+            amount = 2000,
+            hasReceipt = true,
+            receiptCollected = false,
+            receiptMailed = false,
+        }));
+
+        // 查詢三月
+        var response = await _client.SendAsync(
+            AuthGet("/bank-transactions/receipt-tracking?year=2029&month=3", token));
+
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
+        var items = body.GetProperty("data").GetProperty("items");
+
+        items.EnumerateArray()
+            .Any(i => i.GetProperty("description").GetString() == "收據追蹤-三月")
+            .Should().BeTrue();
+        items.EnumerateArray()
+            .Any(i => i.GetProperty("description").GetString() == "收據追蹤-四月")
+            .Should().BeFalse();
+    }
+
+    /// <summary>無未處理收據時回傳空清單</summary>
+    [Fact]
+    public async Task GetReceiptTracking_NoUnprocessedReceipts_ReturnsEmptyList()
+    {
+        var token = await LoginAndGetTokenAsync();
+
+        // 查詢一個不太會有資料的年月
+        var response = await _client.SendAsync(
+            AuthGet("/bank-transactions/receipt-tracking?year=2029&month=12", token));
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
+        var data = body.GetProperty("data");
+        data.GetProperty("totalCount").GetInt32().Should().Be(0);
+        data.GetProperty("notCollectedCount").GetInt32().Should().Be(0);
+        data.GetProperty("notMailedCount").GetInt32().Should().Be(0);
+        data.GetProperty("items").GetArrayLength().Should().Be(0);
+    }
+
+    /// <summary>不同銀行的未處理收據都應被回傳</summary>
+    [Fact]
+    public async Task GetReceiptTracking_MixedBanks_ReturnsBothBankResults()
+    {
+        var token = await LoginAndGetTokenAsync();
+
+        // 上海銀行的未處理收據
+        await _client.SendAsync(AuthPost("/bank-transactions/上海銀行", token, new
+        {
+            transactionType = 0,
+            transactionDate = "2029-05-01",
+            description = "混合銀行測試-上海",
+            amount = 1000,
+            hasReceipt = true,
+            receiptCollected = false,
+            receiptMailed = false,
+        }));
+
+        // 合作金庫的未處理收據
+        await _client.SendAsync(AuthPost("/bank-transactions/合作金庫", token, new
+        {
+            transactionType = 1,
+            transactionDate = "2029-05-15",
+            description = "混合銀行測試-合庫",
+            amount = 2000,
+            hasReceipt = true,
+            receiptCollected = true,
+            receiptMailed = false,
+        }));
+
+        var response = await _client.SendAsync(
+            AuthGet("/bank-transactions/receipt-tracking?year=2029&month=5", token));
+
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
+        var items = body.GetProperty("data").GetProperty("items");
+
+        items.EnumerateArray()
+            .Any(i => i.GetProperty("description").GetString() == "混合銀行測試-上海")
+            .Should().BeTrue();
+        items.EnumerateArray()
+            .Any(i => i.GetProperty("description").GetString() == "混合銀行測試-合庫")
+            .Should().BeTrue();
     }
 }
