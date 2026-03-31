@@ -165,11 +165,10 @@ public class BankTransactionControllerTests(HansOsWebApplicationFactory factory)
             transactionType = 0,
             transactionDate = "2026-03-01",
             description = "會費收入",
-            amount = 5000.50,
+            amount = 5000,
             fee = 15,
             hasReceipt = true,
             receiptMailed = false,
-            requestingUnit = "教務處",
         }));
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -180,11 +179,10 @@ public class BankTransactionControllerTests(HansOsWebApplicationFactory factory)
         data.GetProperty("id").GetString().Should().NotBeNullOrEmpty();
         data.GetProperty("bankName").GetString().Should().Be("上海銀行");
         data.GetProperty("description").GetString().Should().Be("會費收入");
-        data.GetProperty("amount").GetDecimal().Should().Be(5000.50m);
+        data.GetProperty("amount").GetDecimal().Should().Be(5000m);
         data.GetProperty("fee").GetDecimal().Should().Be(15m);
         data.GetProperty("hasReceipt").GetBoolean().Should().BeTrue();
         data.GetProperty("receiptMailed").GetBoolean().Should().BeFalse();
-        data.GetProperty("requestingUnit").GetString().Should().Be("教務處");
     }
 
     [Fact]
@@ -243,7 +241,6 @@ public class BankTransactionControllerTests(HansOsWebApplicationFactory factory)
             transactionDate = "2026-04-02",
             description = "場地租金（更新）",
             amount = 2500,
-            requestingUnit = "總務處",
         }));
 
         updateResponse.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -258,7 +255,6 @@ public class BankTransactionControllerTests(HansOsWebApplicationFactory factory)
         var updated = transactions[0];
         updated.GetProperty("description").GetString().Should().Be("場地租金（更新）");
         updated.GetProperty("amount").GetDecimal().Should().Be(2500m);
-        updated.GetProperty("requestingUnit").GetString().Should().Be("總務處");
     }
 
     [Fact]

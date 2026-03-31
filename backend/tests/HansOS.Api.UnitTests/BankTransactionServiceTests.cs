@@ -85,8 +85,7 @@ public class BankTransactionServiceTests : IDisposable
             TransactionDate: new DateOnly(2026, 4, 1),
             Description: "會費收入",
             DepartmentId: null,
-            RequestingUnit: "教務處",
-            Amount: 5000.50m,
+            Amount: 5000,
             Fee: 15,
             HasReceipt: true,
             ReceiptMailed: false);
@@ -96,10 +95,9 @@ public class BankTransactionServiceTests : IDisposable
         result.Id.Should().NotBeEmpty();
         result.BankName.Should().Be("上海銀行");
         result.Description.Should().Be("會費收入");
-        result.Amount.Should().Be(5000.50m);
+        result.Amount.Should().Be(5000m);
         result.Fee.Should().Be(15m);
         result.HasReceipt.Should().BeTrue();
-        result.RequestingUnit.Should().Be("教務處");
 
         // 驗證已存入資料庫
         var saved = await _db.BankTransactions.FindAsync(result.Id);
@@ -114,7 +112,6 @@ public class BankTransactionServiceTests : IDisposable
             TransactionDate: new DateOnly(2026, 4, 1),
             Description: "測試",
             DepartmentId: Guid.NewGuid(),
-            RequestingUnit: null,
             Amount: 100);
 
         var act = () => _sut.CreateTransactionAsync("上海銀行", request);
@@ -135,7 +132,6 @@ public class BankTransactionServiceTests : IDisposable
             TransactionDate: new DateOnly(2026, 5, 2),
             Description: "已更新",
             DepartmentId: null,
-            RequestingUnit: "總務處",
             Amount: 2000,
             Fee: 10,
             HasReceipt: true,
@@ -147,7 +143,6 @@ public class BankTransactionServiceTests : IDisposable
         updated!.Description.Should().Be("已更新");
         updated.Amount.Should().Be(2000m);
         updated.TransactionType.Should().Be(TransactionType.Expense);
-        updated.RequestingUnit.Should().Be("總務處");
     }
 
     [Fact]
@@ -158,7 +153,6 @@ public class BankTransactionServiceTests : IDisposable
             TransactionDate: new DateOnly(2026, 5, 1),
             Description: "不存在",
             DepartmentId: null,
-            RequestingUnit: null,
             Amount: 100);
 
         var act = () => _sut.UpdateTransactionAsync(Guid.NewGuid(), request);
@@ -258,8 +252,8 @@ public class BankTransactionServiceTests : IDisposable
         var ws = workbook.Worksheets.First();
 
         ws.Cell(5, 1).GetString().Should().Be("日期");
-        ws.Cell(6, 5).GetDouble().Should().Be(10000);
-        ws.Cell(6, 6).GetDouble().Should().Be(0);
+        ws.Cell(6, 4).GetDouble().Should().Be(10000);
+        ws.Cell(6, 5).GetDouble().Should().Be(0);
     }
 
     /// <summary>只有支出交易時產出有效的 Excel，收入欄應為 0</summary>
@@ -276,8 +270,8 @@ public class BankTransactionServiceTests : IDisposable
         var ws = workbook.Worksheets.First();
 
         ws.Cell(5, 1).GetString().Should().Be("日期");
-        ws.Cell(6, 5).GetDouble().Should().Be(0);
-        ws.Cell(6, 6).GetDouble().Should().Be(3000);
+        ws.Cell(6, 4).GetDouble().Should().Be(0);
+        ws.Cell(6, 5).GetDouble().Should().Be(3000);
     }
 
     // ── CreateTransaction — ReceiptCollected ───────────────
@@ -291,7 +285,6 @@ public class BankTransactionServiceTests : IDisposable
             TransactionDate: new DateOnly(2028, 1, 1),
             Description: "收據已領取",
             DepartmentId: null,
-            RequestingUnit: null,
             Amount: 1000,
             Fee: 0,
             HasReceipt: true,

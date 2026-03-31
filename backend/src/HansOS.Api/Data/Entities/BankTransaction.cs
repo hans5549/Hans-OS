@@ -13,7 +13,6 @@ public class BankTransaction
     public DateOnly TransactionDate { get; set; }
     public string Description { get; set; } = string.Empty;
     public Guid? DepartmentId { get; set; }
-    public string? RequestingUnit { get; set; }
     public TransactionType TransactionType { get; set; }
     public decimal Amount { get; set; }
     public decimal Fee { get; set; }

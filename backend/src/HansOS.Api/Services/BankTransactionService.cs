@@ -43,7 +43,6 @@ public class BankTransactionService(ApplicationDbContext db) : IBankTransactionS
                 t.Description,
                 t.DepartmentId,
                 t.Department?.Name,
-                t.RequestingUnit,
                 t.Amount,
                 t.Fee,
                 t.HasReceipt,
@@ -107,7 +106,6 @@ public class BankTransactionService(ApplicationDbContext db) : IBankTransactionS
             TransactionDate = request.TransactionDate,
             Description = request.Description.Trim(),
             DepartmentId = request.DepartmentId,
-            RequestingUnit = request.RequestingUnit?.Trim(),
             Amount = request.Amount,
             Fee = request.Fee,
             HasReceipt = request.HasReceipt,
@@ -133,7 +131,6 @@ public class BankTransactionService(ApplicationDbContext db) : IBankTransactionS
             entity.Description,
             entity.DepartmentId,
             department?.Name,
-            entity.RequestingUnit,
             entity.Amount,
             entity.Fee,
             entity.HasReceipt,
@@ -162,7 +159,6 @@ public class BankTransactionService(ApplicationDbContext db) : IBankTransactionS
         entity.TransactionDate = request.TransactionDate;
         entity.Description = request.Description.Trim();
         entity.DepartmentId = request.DepartmentId;
-        entity.RequestingUnit = request.RequestingUnit?.Trim();
         entity.Amount = request.Amount;
         entity.Fee = request.Fee;
         entity.HasReceipt = request.HasReceipt;
@@ -197,7 +193,7 @@ public class BankTransactionService(ApplicationDbContext db) : IBankTransactionS
 
         // Title
         worksheet.Cell(1, 1).Value = $"{bankName}收支表 — {periodLabel}";
-        worksheet.Range(1, 1, 1, 11).Merge().Style
+        worksheet.Range(1, 1, 1, 10).Merge().Style
             .Font.SetBold(true)
             .Font.SetFontSize(14)
             .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
@@ -213,7 +209,7 @@ public class BankTransactionService(ApplicationDbContext db) : IBankTransactionS
         worksheet.Cell(3, 8).Value = summary.ClosingBalance;
 
         // Headers
-        var headers = new[] { "日期", "摘要", "歸屬部門", "需求單位", "收入", "支出", "手續費", "餘額", "收據", "已回收", "已寄送" };
+        var headers = new[] { "日期", "摘要", "歸屬部門", "收入", "支出", "手續費", "餘額", "收據", "已回收", "已寄送" };
         for (var i = 0; i < headers.Length; i++)
         {
             worksheet.Cell(5, i + 1).Value = headers[i];
@@ -230,28 +226,27 @@ public class BankTransactionService(ApplicationDbContext db) : IBankTransactionS
             worksheet.Cell(r, 1).Value = t.TransactionDate.ToString("yyyy/MM/dd");
             worksheet.Cell(r, 2).Value = t.Description;
             worksheet.Cell(r, 3).Value = t.DepartmentName ?? "";
-            worksheet.Cell(r, 4).Value = t.RequestingUnit ?? "";
-            worksheet.Cell(r, 5).Value = t.TransactionType == TransactionType.Income ? t.Amount : 0;
-            worksheet.Cell(r, 6).Value = t.TransactionType == TransactionType.Expense ? t.Amount : 0;
-            worksheet.Cell(r, 7).Value = t.Fee;
-            worksheet.Cell(r, 8).Value = t.RunningBalance;
-            worksheet.Cell(r, 9).Value = t.HasReceipt ? "✓" : "";
-            worksheet.Cell(r, 10).Value = t.ReceiptCollected ? "✓" : "";
-            worksheet.Cell(r, 11).Value = t.ReceiptMailed ? "✓" : "";
+            worksheet.Cell(r, 4).Value = t.TransactionType == TransactionType.Income ? t.Amount : 0;
+            worksheet.Cell(r, 5).Value = t.TransactionType == TransactionType.Expense ? t.Amount : 0;
+            worksheet.Cell(r, 6).Value = t.Fee;
+            worksheet.Cell(r, 7).Value = t.RunningBalance;
+            worksheet.Cell(r, 8).Value = t.HasReceipt ? "✓" : "";
+            worksheet.Cell(r, 9).Value = t.ReceiptCollected ? "✓" : "";
+            worksheet.Cell(r, 10).Value = t.ReceiptMailed ? "✓" : "";
         }
 
         // Totals row
         var totalRow = transactions.Count + 6;
         worksheet.Cell(totalRow, 1).Value = "合計";
-        worksheet.Cell(totalRow, 5).Value = summary.TotalIncome;
-        worksheet.Cell(totalRow, 6).Value = summary.TotalExpense - transactions.Sum(t => t.Fee);
-        worksheet.Cell(totalRow, 7).Value = transactions.Sum(t => t.Fee);
+        worksheet.Cell(totalRow, 4).Value = summary.TotalIncome;
+        worksheet.Cell(totalRow, 5).Value = summary.TotalExpense - transactions.Sum(t => t.Fee);
+        worksheet.Cell(totalRow, 6).Value = transactions.Sum(t => t.Fee);
         worksheet.Range(totalRow, 1, totalRow, headers.Length).Style.Font.SetBold(true);
 
         // Format currency columns
-        foreach (var col in new[] { 5, 6, 7, 8 })
+        foreach (var col in new[] { 4, 5, 6, 7 })
         {
-            worksheet.Column(col).Style.NumberFormat.Format = "#,##0.00";
+            worksheet.Column(col).Style.NumberFormat.Format = "#,##0";
         }
 
         worksheet.Columns().AdjustToContents();

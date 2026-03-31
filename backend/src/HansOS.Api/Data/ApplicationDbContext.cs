@@ -159,9 +159,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             e.HasKey(t => t.Id);
             e.Property(t => t.BankName).HasMaxLength(100).IsRequired();
             e.Property(t => t.Description).HasMaxLength(200).IsRequired();
-            e.Property(t => t.RequestingUnit).HasMaxLength(100);
-            e.Property(t => t.Amount).HasPrecision(18, 2);
-            e.Property(t => t.Fee).HasPrecision(18, 2);
+            e.Property(t => t.Amount).HasPrecision(18, 0);
+            e.Property(t => t.Fee).HasPrecision(18, 0);
             e.Property(t => t.TransactionType)
              .HasConversion<string>()
              .HasMaxLength(20);

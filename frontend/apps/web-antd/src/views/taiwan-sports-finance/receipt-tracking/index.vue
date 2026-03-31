@@ -137,8 +137,8 @@ const columns = [
 
 function formatCurrency(val: number): string {
   return val.toLocaleString('zh-TW', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
   });
 }
 

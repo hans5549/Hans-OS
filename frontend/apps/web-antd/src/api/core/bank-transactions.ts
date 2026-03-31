@@ -12,7 +12,6 @@ export interface BankTransactionResponse {
   description: string;
   departmentId: string | null;
   departmentName: string | null;
-  requestingUnit: string | null;
   amount: number;
   fee: number;
   hasReceipt: boolean;
@@ -33,7 +32,6 @@ export interface CreateBankTransactionRequest {
   transactionDate: string;
   description: string;
   departmentId?: string;
-  requestingUnit?: string;
   amount: number;
   fee?: number;
   hasReceipt?: boolean;
@@ -46,7 +44,6 @@ export interface UpdateBankTransactionRequest {
   transactionDate: string;
   description: string;
   departmentId?: string;
-  requestingUnit?: string;
   amount: number;
   fee?: number;
   hasReceipt?: boolean;

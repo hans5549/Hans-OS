@@ -26,6 +26,7 @@ import {
   Statistic,
   Table,
   Tag,
+  Tooltip,
 } from 'ant-design-vue';
 import dayjs from 'dayjs';
 
@@ -120,16 +121,13 @@ onMounted(fetchData);
 
 const columns = [
   { dataIndex: 'transactionDate', title: '日期', width: 110 },
-  { dataIndex: 'description', title: '摘要', ellipsis: true },
+  { dataIndex: 'description', title: '摘要', ellipsis: true, minWidth: 400 },
   { dataIndex: 'departmentName', title: '歸屬部門', width: 120 },
-  { dataIndex: 'requestingUnit', title: '需求單位', width: 120 },
   { key: 'income', title: '收入', width: 120, align: 'right' as const },
   { key: 'expense', title: '支出', width: 120, align: 'right' as const },
   { dataIndex: 'fee', title: '手續費', width: 100, align: 'right' as const },
   { dataIndex: 'runningBalance', title: '餘額', width: 130, align: 'right' as const },
-  { key: 'receipt', title: '收據', width: 70, align: 'center' as const },
-  { key: 'collected', title: '已回收', width: 70, align: 'center' as const },
-  { key: 'mailed', title: '已寄送', width: 70, align: 'center' as const },
+  { key: 'receiptStatus', title: '收據狀態', width: 130, align: 'center' as const },
   { key: 'action', title: '操作', width: 100, fixed: 'right' as const },
 ];
 
@@ -155,8 +153,8 @@ const totalFee = computed(() =>
 
 function formatCurrency(val: number): string {
   return val.toLocaleString('zh-TW', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
   });
 }
 
@@ -202,7 +200,6 @@ function openEditModal(record: BankTransactionResponse) {
     transactionDate: record.transactionDate,
     description: record.description,
     departmentId: record.departmentId ?? undefined,
-    requestingUnit: record.requestingUnit ?? undefined,
     amount: record.amount,
     fee: record.fee,
     hasReceipt: record.hasReceipt,
@@ -228,14 +225,12 @@ async function handleSubmit() {
       await updateBankTransactionApi(editingId.value, {
         ...formState.value,
         description: formState.value.description.trim(),
-        requestingUnit: formState.value.requestingUnit?.trim() || undefined,
       });
       message.success('交易已更新');
     } else {
       await createBankTransactionApi(props.bankName, {
         ...formState.value,
         description: formState.value.description.trim(),
-        requestingUnit: formState.value.requestingUnit?.trim() || undefined,
       });
       message.success('交易已新增');
     }
@@ -320,7 +315,7 @@ async function handleExport() {
           <Col :md="6" :xs="12">
             <Card size="small">
               <Statistic
-                :precision="2"
+                :precision="0"
                 prefix="$"
                 title="期初餘額"
                 :value="summary.openingBalance"
@@ -330,7 +325,7 @@ async function handleExport() {
           <Col :md="6" :xs="12">
             <Card size="small">
               <Statistic
-                :precision="2"
+                :precision="0"
                 prefix="$"
                 title="期間收入"
                 :value="summary.totalIncome"
@@ -341,7 +336,7 @@ async function handleExport() {
           <Col :md="6" :xs="12">
             <Card size="small">
               <Statistic
-                :precision="2"
+                :precision="0"
                 prefix="$"
                 title="期間支出"
                 :value="summary.totalExpense"
@@ -352,7 +347,7 @@ async function handleExport() {
           <Col :md="6" :xs="12">
             <Card size="small">
               <Statistic
-                :precision="2"
+                :precision="0"
                 prefix="$"
                 title="期末餘額"
                 :value="summary.closingBalance"
@@ -427,24 +422,28 @@ async function handleExport() {
               </Tag>
             </template>
 
-            <!-- 需求單位 -->
-            <template v-if="column.dataIndex === 'requestingUnit'">
-              {{ (record as BankTransactionResponse).requestingUnit ?? '' }}
-            </template>
-
-            <!-- 收據 -->
-            <template v-if="column.key === 'receipt'">
-              <span v-if="(record as BankTransactionResponse).hasReceipt" class="text-green-600">✓</span>
-            </template>
-
-            <!-- 已回收 -->
-            <template v-if="column.key === 'collected'">
-              <span v-if="(record as BankTransactionResponse).receiptCollected" class="text-green-600">✓</span>
-            </template>
-
-            <!-- 已寄送 -->
-            <template v-if="column.key === 'mailed'">
-              <span v-if="(record as BankTransactionResponse).receiptMailed" class="text-green-600">✓</span>
+            <!-- 收據狀態（三圖標合一） -->
+            <template v-if="column.key === 'receiptStatus'">
+              <div class="flex items-center justify-center gap-2">
+                <Tooltip :title="(record as BankTransactionResponse).hasReceipt ? '有收據' : '無收據'">
+                  <span
+                    class="i-lucide-receipt text-base"
+                    :class="(record as BankTransactionResponse).hasReceipt ? 'text-green-600' : 'text-gray-300'"
+                  />
+                </Tooltip>
+                <Tooltip :title="(record as BankTransactionResponse).receiptCollected ? '已回收' : '未回收'">
+                  <span
+                    class="i-lucide-hand text-base"
+                    :class="(record as BankTransactionResponse).receiptCollected ? 'text-green-600' : 'text-gray-300'"
+                  />
+                </Tooltip>
+                <Tooltip :title="(record as BankTransactionResponse).receiptMailed ? '已寄送' : '未寄送'">
+                  <span
+                    class="i-lucide-mail-check text-base"
+                    :class="(record as BankTransactionResponse).receiptMailed ? 'text-green-600' : 'text-gray-300'"
+                  />
+                </Tooltip>
+              </div>
             </template>
 
             <!-- 操作 -->
@@ -473,19 +472,19 @@ async function handleExport() {
           <!-- 合計列 -->
           <template #summary>
             <Table.Summary.Row>
-              <Table.Summary.Cell :index="0" :col-span="4">
+              <Table.Summary.Cell :index="0" :col-span="3">
                 <span class="font-bold">合計</span>
               </Table.Summary.Cell>
-              <Table.Summary.Cell :index="4" align="right">
+              <Table.Summary.Cell :index="3" align="right">
                 <span class="font-bold text-green-600">{{ formatCurrency(totalIncome) }}</span>
               </Table.Summary.Cell>
-              <Table.Summary.Cell :index="5" align="right">
+              <Table.Summary.Cell :index="4" align="right">
                 <span class="font-bold text-red-600">{{ formatCurrency(totalExpense) }}</span>
               </Table.Summary.Cell>
-              <Table.Summary.Cell :index="6" align="right">
+              <Table.Summary.Cell :index="5" align="right">
                 <span class="font-bold text-orange-500">{{ formatCurrency(totalFee) }}</span>
               </Table.Summary.Cell>
-              <Table.Summary.Cell :index="7" :col-span="5" />
+              <Table.Summary.Cell :index="6" :col-span="3" />
             </Table.Summary.Row>
           </template>
 
@@ -537,34 +536,21 @@ async function handleExport() {
           />
         </FormItem>
 
-        <Row :gutter="16">
-          <Col :span="12">
-            <FormItem label="歸屬部門">
-              <Select
-                v-model:value="formState.departmentId"
-                allow-clear
-                placeholder="請選擇部門（選填）"
-              >
-                <SelectOption
-                  v-for="dept in departments"
-                  :key="dept.id"
-                  :value="dept.id"
-                >
-                  {{ dept.name }}
-                </SelectOption>
-              </Select>
-            </FormItem>
-          </Col>
-          <Col :span="12">
-            <FormItem label="需求單位">
-              <Input
-                v-model:value="formState.requestingUnit"
-                :maxlength="100"
-                placeholder="提出需求的單位（選填）"
-              />
-            </FormItem>
-          </Col>
-        </Row>
+        <FormItem label="歸屬部門">
+          <Select
+            v-model:value="formState.departmentId"
+            allow-clear
+            placeholder="請選擇部門（選填）"
+          >
+            <SelectOption
+              v-for="dept in departments"
+              :key="dept.id"
+              :value="dept.id"
+            >
+              {{ dept.name }}
+            </SelectOption>
+          </Select>
+        </FormItem>
 
         <Row :gutter="16">
           <Col :span="12">
@@ -573,9 +559,9 @@ async function handleExport() {
                 v-model:value="formState.amount"
                 class="w-full"
                 :formatter="(val: string | number | undefined) => `$ ${val}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')"
-                :min="0.01"
+                :min="1"
                 :parser="(val: string | undefined) => Number(val?.replace(/\$\s?|(,*)/g, '') ?? '0')"
-                :precision="2"
+                :precision="0"
               />
             </FormItem>
           </Col>
@@ -587,7 +573,7 @@ async function handleExport() {
                 :formatter="(val: string | number | undefined) => `$ ${val}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')"
                 :min="0"
                 :parser="(val: string | undefined) => Number(val?.replace(/\$\s?|(,*)/g, '') ?? '0')"
-                :precision="2"
+                :precision="0"
                 placeholder="選填"
               />
             </FormItem>
