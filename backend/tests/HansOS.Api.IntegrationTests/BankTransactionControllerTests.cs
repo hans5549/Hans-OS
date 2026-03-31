@@ -167,8 +167,6 @@ public class BankTransactionControllerTests(HansOsWebApplicationFactory factory)
             description = "會費收入",
             amount = 5000,
             fee = 15,
-            hasReceipt = true,
-            receiptMailed = false,
         }));
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -181,7 +179,8 @@ public class BankTransactionControllerTests(HansOsWebApplicationFactory factory)
         data.GetProperty("description").GetString().Should().Be("會費收入");
         data.GetProperty("amount").GetDecimal().Should().Be(5000m);
         data.GetProperty("fee").GetDecimal().Should().Be(15m);
-        data.GetProperty("hasReceipt").GetBoolean().Should().BeTrue();
+        // 收入不追蹤收據，應為 false
+        data.GetProperty("receiptCollected").GetBoolean().Should().BeFalse();
         data.GetProperty("receiptMailed").GetBoolean().Should().BeFalse();
     }
 
@@ -534,7 +533,7 @@ public class BankTransactionControllerTests(HansOsWebApplicationFactory factory)
         using var workbook = new XLWorkbook(stream);
         var ws = workbook.Worksheets.First();
 
-        var expectedHeaders = new[] { "日期", "摘要", "歸屬部門", "收入", "支出", "手續費", "餘額", "收據", "已回收", "已寄送" };
+        var expectedHeaders = new[] { "日期", "摘要", "歸屬部門", "收入", "支出", "手續費", "餘額", "已回收", "已寄送" };
         for (var i = 0; i < expectedHeaders.Length; i++)
         {
             ws.Cell(5, i + 1).GetString().Should().Be(expectedHeaders[i],
@@ -829,18 +828,17 @@ public class BankTransactionControllerTests(HansOsWebApplicationFactory factory)
 
     // ── ReceiptCollected Field ──────────────────────────────
 
-    /// <summary>建立交易時帶 receiptCollected=true，回傳結果應包含該欄位</summary>
+    /// <summary>建立支出交易時帶 receiptCollected=true，回傳結果應包含該欄位</summary>
     [Fact]
     public async Task Create_WithReceiptCollected_ReturnsCreatedTransaction()
     {
         var token = await LoginAndGetTokenAsync();
         var response = await _client.SendAsync(AuthPost("/bank-transactions/上海銀行", token, new
         {
-            transactionType = 0,
+            transactionType = 1,
             transactionDate = "2028-01-15",
             description = "收據已領取測試",
             amount = 5000,
-            hasReceipt = true,
             receiptCollected = true,
             receiptMailed = false,
         }));
@@ -850,25 +848,23 @@ public class BankTransactionControllerTests(HansOsWebApplicationFactory factory)
         body.GetProperty("code").GetInt32().Should().Be(0);
 
         var data = body.GetProperty("data");
-        data.GetProperty("hasReceipt").GetBoolean().Should().BeTrue();
         data.GetProperty("receiptCollected").GetBoolean().Should().BeTrue();
         data.GetProperty("receiptMailed").GetBoolean().Should().BeFalse();
     }
 
-    /// <summary>更新交易的 receiptCollected 欄位，驗證 GET 回傳更新後的值</summary>
+    /// <summary>更新支出交易的 receiptCollected 欄位，驗證 GET 回傳更新後的值</summary>
     [Fact]
     public async Task Update_ReceiptCollectedField_UpdatesSuccessfully()
     {
         var token = await LoginAndGetTokenAsync();
 
-        // 建立交易（receiptCollected=false）
+        // 建立支出交易（receiptCollected=false）
         var createResponse = await _client.SendAsync(AuthPost("/bank-transactions/合作金庫", token, new
         {
-            transactionType = 0,
+            transactionType = 1,
             transactionDate = "2028-02-01",
             description = "收據領取更新測試",
             amount = 3000,
-            hasReceipt = true,
             receiptCollected = false,
             receiptMailed = false,
         }));
@@ -878,11 +874,10 @@ public class BankTransactionControllerTests(HansOsWebApplicationFactory factory)
         // 更新 receiptCollected=true
         var updateResponse = await _client.SendAsync(AuthPut($"/bank-transactions/{id}", token, new
         {
-            transactionType = 0,
+            transactionType = 1,
             transactionDate = "2028-02-01",
             description = "收據領取更新測試",
             amount = 3000,
-            hasReceipt = true,
             receiptCollected = true,
             receiptMailed = false,
         }));
@@ -909,34 +904,30 @@ public class BankTransactionControllerTests(HansOsWebApplicationFactory factory)
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
-    /// <summary>查詢年度未處理收據，應回傳尚未領取的收據</summary>
+    /// <summary>查詢年度未處理收據，應回傳支出交易中尚未處理的收據</summary>
     [Fact]
     public async Task GetReceiptTracking_WithYear_ReturnsUnprocessedReceipts()
     {
         var token = await LoginAndGetTokenAsync();
 
-        // 建立有收據但未領取的交易
+        // 建立支出交易（收據未領取）
         await _client.SendAsync(AuthPost("/bank-transactions/上海銀行", token, new
         {
-            transactionType = 0,
+            transactionType = 1,
             transactionDate = "2029-01-10",
-            description = "收據追蹤測試-未領取",
+            description = "收據追蹤測試-支出未領取",
             amount = 1000,
-            hasReceipt = true,
             receiptCollected = false,
             receiptMailed = false,
         }));
 
-        // 建立無收據的交易（不應出現）
+        // 建立收入交易（不應出現在收據追蹤）
         await _client.SendAsync(AuthPost("/bank-transactions/上海銀行", token, new
         {
             transactionType = 0,
             transactionDate = "2029-01-15",
-            description = "收據追蹤測試-無收據",
+            description = "收據追蹤測試-收入",
             amount = 2000,
-            hasReceipt = false,
-            receiptCollected = false,
-            receiptMailed = false,
         }));
 
         var response = await _client.SendAsync(
@@ -952,10 +943,10 @@ public class BankTransactionControllerTests(HansOsWebApplicationFactory factory)
 
         var items = data.GetProperty("items");
         items.EnumerateArray()
-            .Any(i => i.GetProperty("description").GetString() == "收據追蹤測試-未領取")
+            .Any(i => i.GetProperty("description").GetString() == "收據追蹤測試-支出未領取")
             .Should().BeTrue();
         items.EnumerateArray()
-            .Any(i => i.GetProperty("description").GetString() == "收據追蹤測試-無收據")
+            .Any(i => i.GetProperty("description").GetString() == "收據追蹤測試-收入")
             .Should().BeFalse();
     }
 
@@ -965,26 +956,24 @@ public class BankTransactionControllerTests(HansOsWebApplicationFactory factory)
     {
         var token = await LoginAndGetTokenAsync();
 
-        // 三月的交易
+        // 三月的支出交易
         await _client.SendAsync(AuthPost("/bank-transactions/上海銀行", token, new
         {
-            transactionType = 0,
+            transactionType = 1,
             transactionDate = "2029-03-10",
             description = "收據追蹤-三月",
             amount = 1000,
-            hasReceipt = true,
             receiptCollected = false,
             receiptMailed = false,
         }));
 
-        // 四月的交易
+        // 四月的支出交易
         await _client.SendAsync(AuthPost("/bank-transactions/上海銀行", token, new
         {
-            transactionType = 0,
+            transactionType = 1,
             transactionDate = "2029-04-10",
             description = "收據追蹤-四月",
             amount = 2000,
-            hasReceipt = true,
             receiptCollected = false,
             receiptMailed = false,
         }));
@@ -1029,26 +1018,24 @@ public class BankTransactionControllerTests(HansOsWebApplicationFactory factory)
     {
         var token = await LoginAndGetTokenAsync();
 
-        // 上海銀行的未處理收據
+        // 上海銀行的支出未處理收據
         await _client.SendAsync(AuthPost("/bank-transactions/上海銀行", token, new
         {
-            transactionType = 0,
+            transactionType = 1,
             transactionDate = "2029-05-01",
             description = "混合銀行測試-上海",
             amount = 1000,
-            hasReceipt = true,
             receiptCollected = false,
             receiptMailed = false,
         }));
 
-        // 合作金庫的未處理收據
+        // 合作金庫的支出未處理收據
         await _client.SendAsync(AuthPost("/bank-transactions/合作金庫", token, new
         {
             transactionType = 1,
             transactionDate = "2029-05-15",
             description = "混合銀行測試-合庫",
             amount = 2000,
-            hasReceipt = true,
             receiptCollected = true,
             receiptMailed = false,
         }));

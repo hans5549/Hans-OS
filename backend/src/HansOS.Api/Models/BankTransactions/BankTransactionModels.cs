@@ -12,7 +12,6 @@ public record CreateBankTransactionRequest(
     Guid? DepartmentId,
     [Required][Range(1, double.MaxValue)] decimal Amount,
     [Range(0, double.MaxValue)] decimal Fee = 0,
-    bool HasReceipt = false,
     bool ReceiptCollected = false,
     bool ReceiptMailed = false);
 
@@ -23,7 +22,6 @@ public record UpdateBankTransactionRequest(
     Guid? DepartmentId,
     [Required][Range(1, double.MaxValue)] decimal Amount,
     [Range(0, double.MaxValue)] decimal Fee = 0,
-    bool HasReceipt = false,
     bool ReceiptCollected = false,
     bool ReceiptMailed = false);
 
@@ -38,7 +36,6 @@ public record BankTransactionResponse(
     string? DepartmentName,
     decimal Amount,
     decimal Fee,
-    bool HasReceipt,
     bool ReceiptCollected,
     bool ReceiptMailed,
     decimal RunningBalance);
@@ -52,7 +49,6 @@ public record ReceiptTrackingResponse(
     Guid? DepartmentId,
     string? DepartmentName,
     decimal Amount,
-    bool HasReceipt,
     bool ReceiptCollected,
     bool ReceiptMailed);
 

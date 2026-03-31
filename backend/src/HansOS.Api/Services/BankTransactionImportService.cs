@@ -225,7 +225,7 @@ public class BankTransactionImportService(
                 TransactionType = transactionType,
                 Amount = amount,
                 Fee = 0,
-                HasReceipt = false,
+                ReceiptCollected = false,
                 ReceiptMailed = false,
                 CreatedAt = now,
                 UpdatedAt = now,

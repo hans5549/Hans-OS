@@ -171,7 +171,6 @@ const formState = ref<CreateBankTransactionRequest>({
   description: '',
   amount: 0,
   fee: 0,
-  hasReceipt: false,
   receiptCollected: false,
   receiptMailed: false,
 });
@@ -185,7 +184,6 @@ function openCreateModal() {
     description: '',
     amount: 0,
     fee: 0,
-    hasReceipt: false,
     receiptCollected: false,
     receiptMailed: false,
   };
@@ -202,7 +200,6 @@ function openEditModal(record: BankTransactionResponse) {
     departmentId: record.departmentId ?? undefined,
     amount: record.amount,
     fee: record.fee,
-    hasReceipt: record.hasReceipt,
     receiptCollected: record.receiptCollected,
     receiptMailed: record.receiptMailed,
   };
@@ -422,28 +419,23 @@ async function handleExport() {
               </Tag>
             </template>
 
-            <!-- 收據狀態（三圖標合一） -->
+            <!-- 收據狀態（支出才顯示） -->
             <template v-if="column.key === 'receiptStatus'">
-              <div class="flex items-center justify-center gap-2">
-                <Tooltip :title="(record as BankTransactionResponse).hasReceipt ? '有收據' : '無收據'">
-                  <span
-                    class="i-lucide-receipt text-base"
-                    :class="(record as BankTransactionResponse).hasReceipt ? 'text-green-600' : 'text-gray-300'"
-                  />
-                </Tooltip>
+              <div v-if="(record as BankTransactionResponse).transactionType === 1" class="flex items-center justify-center gap-2">
                 <Tooltip :title="(record as BankTransactionResponse).receiptCollected ? '已回收' : '未回收'">
                   <span
                     class="i-lucide-hand text-base"
-                    :class="(record as BankTransactionResponse).receiptCollected ? 'text-green-600' : 'text-gray-300'"
+                    :class="(record as BankTransactionResponse).receiptCollected ? 'text-green-600' : 'text-red-400'"
                   />
                 </Tooltip>
                 <Tooltip :title="(record as BankTransactionResponse).receiptMailed ? '已寄送' : '未寄送'">
                   <span
                     class="i-lucide-mail-check text-base"
-                    :class="(record as BankTransactionResponse).receiptMailed ? 'text-green-600' : 'text-gray-300'"
+                    :class="(record as BankTransactionResponse).receiptMailed ? 'text-green-600' : 'text-orange-400'"
                   />
                 </Tooltip>
               </div>
+              <span v-else class="text-gray-300">—</span>
             </template>
 
             <!-- 操作 -->
@@ -580,9 +572,8 @@ async function handleExport() {
           </Col>
         </Row>
 
-        <FormItem>
+        <FormItem v-if="formState.transactionType === 1">
           <div class="flex gap-6">
-            <Checkbox v-model:checked="formState.hasReceipt">有收據</Checkbox>
             <Checkbox v-model:checked="formState.receiptCollected">收據已回收</Checkbox>
             <Checkbox v-model:checked="formState.receiptMailed">收據已寄送</Checkbox>
           </div>

@@ -45,7 +45,6 @@ public class BankTransactionService(ApplicationDbContext db) : IBankTransactionS
                 t.Department?.Name,
                 t.Amount,
                 t.Fee,
-                t.HasReceipt,
                 t.ReceiptCollected,
                 t.ReceiptMailed,
                 runningBalance));
@@ -97,6 +96,7 @@ public class BankTransactionService(ApplicationDbContext db) : IBankTransactionS
             }
         }
 
+        var isExpense = request.TransactionType == TransactionType.Expense;
         var now = DateTime.UtcNow;
         var entity = new BankTransaction
         {
@@ -108,9 +108,8 @@ public class BankTransactionService(ApplicationDbContext db) : IBankTransactionS
             DepartmentId = request.DepartmentId,
             Amount = request.Amount,
             Fee = request.Fee,
-            HasReceipt = request.HasReceipt,
-            ReceiptCollected = request.ReceiptCollected,
-            ReceiptMailed = request.ReceiptMailed,
+            ReceiptCollected = isExpense && request.ReceiptCollected,
+            ReceiptMailed = isExpense && request.ReceiptMailed,
             CreatedAt = now,
             UpdatedAt = now,
         };
@@ -133,7 +132,6 @@ public class BankTransactionService(ApplicationDbContext db) : IBankTransactionS
             department?.Name,
             entity.Amount,
             entity.Fee,
-            entity.HasReceipt,
             entity.ReceiptCollected,
             entity.ReceiptMailed,
             0);
@@ -161,9 +159,9 @@ public class BankTransactionService(ApplicationDbContext db) : IBankTransactionS
         entity.DepartmentId = request.DepartmentId;
         entity.Amount = request.Amount;
         entity.Fee = request.Fee;
-        entity.HasReceipt = request.HasReceipt;
-        entity.ReceiptCollected = request.ReceiptCollected;
-        entity.ReceiptMailed = request.ReceiptMailed;
+        var isExpense = request.TransactionType == TransactionType.Expense;
+        entity.ReceiptCollected = isExpense && request.ReceiptCollected;
+        entity.ReceiptMailed = isExpense && request.ReceiptMailed;
         entity.UpdatedAt = DateTime.UtcNow;
 
         await db.SaveChangesAsync(ct);
@@ -193,7 +191,7 @@ public class BankTransactionService(ApplicationDbContext db) : IBankTransactionS
 
         // Title
         worksheet.Cell(1, 1).Value = $"{bankName}收支表 — {periodLabel}";
-        worksheet.Range(1, 1, 1, 10).Merge().Style
+        worksheet.Range(1, 1, 1, 9).Merge().Style
             .Font.SetBold(true)
             .Font.SetFontSize(14)
             .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
@@ -209,7 +207,7 @@ public class BankTransactionService(ApplicationDbContext db) : IBankTransactionS
         worksheet.Cell(3, 8).Value = summary.ClosingBalance;
 
         // Headers
-        var headers = new[] { "日期", "摘要", "歸屬部門", "收入", "支出", "手續費", "餘額", "收據", "已回收", "已寄送" };
+        var headers = new[] { "日期", "摘要", "歸屬部門", "收入", "支出", "手續費", "餘額", "已回收", "已寄送" };
         for (var i = 0; i < headers.Length; i++)
         {
             worksheet.Cell(5, i + 1).Value = headers[i];
@@ -230,9 +228,10 @@ public class BankTransactionService(ApplicationDbContext db) : IBankTransactionS
             worksheet.Cell(r, 5).Value = t.TransactionType == TransactionType.Expense ? t.Amount : 0;
             worksheet.Cell(r, 6).Value = t.Fee;
             worksheet.Cell(r, 7).Value = t.RunningBalance;
-            worksheet.Cell(r, 8).Value = t.HasReceipt ? "✓" : "";
-            worksheet.Cell(r, 9).Value = t.ReceiptCollected ? "✓" : "";
-            worksheet.Cell(r, 10).Value = t.ReceiptMailed ? "✓" : "";
+            worksheet.Cell(r, 8).Value = t.TransactionType == TransactionType.Expense
+                ? (t.ReceiptCollected ? "✓" : "✗") : "";
+            worksheet.Cell(r, 9).Value = t.TransactionType == TransactionType.Expense
+                ? (t.ReceiptMailed ? "✓" : "✗") : "";
         }
 
         // Totals row
@@ -266,7 +265,8 @@ public class BankTransactionService(ApplicationDbContext db) : IBankTransactionS
             .Include(t => t.Department)
             .Where(t => t.TransactionDate >= startDate
                         && t.TransactionDate <= endDate
-                        && (t.HasReceipt && (!t.ReceiptCollected || !t.ReceiptMailed)))
+                        && t.TransactionType == TransactionType.Expense
+                        && (!t.ReceiptCollected || !t.ReceiptMailed))
             .OrderBy(t => t.BankName)
             .ThenBy(t => t.TransactionDate)
             .Select(t => new ReceiptTrackingResponse(
@@ -277,7 +277,6 @@ public class BankTransactionService(ApplicationDbContext db) : IBankTransactionS
                 t.DepartmentId,
                 t.Department != null ? t.Department.Name : null,
                 t.Amount,
-                t.HasReceipt,
                 t.ReceiptCollected,
                 t.ReceiptMailed))
             .ToListAsync(ct);

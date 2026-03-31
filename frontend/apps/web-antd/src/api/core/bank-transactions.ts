@@ -14,7 +14,6 @@ export interface BankTransactionResponse {
   departmentName: string | null;
   amount: number;
   fee: number;
-  hasReceipt: boolean;
   receiptCollected: boolean;
   receiptMailed: boolean;
   runningBalance: number;
@@ -34,7 +33,6 @@ export interface CreateBankTransactionRequest {
   departmentId?: string;
   amount: number;
   fee?: number;
-  hasReceipt?: boolean;
   receiptCollected?: boolean;
   receiptMailed?: boolean;
 }
@@ -46,7 +44,6 @@ export interface UpdateBankTransactionRequest {
   departmentId?: string;
   amount: number;
   fee?: number;
-  hasReceipt?: boolean;
   receiptCollected?: boolean;
   receiptMailed?: boolean;
 }
@@ -158,7 +155,6 @@ export interface ReceiptTrackingResponse {
   departmentId: string | null;
   departmentName: string | null;
   amount: number;
-  hasReceipt: boolean;
   receiptCollected: boolean;
   receiptMailed: boolean;
 }
