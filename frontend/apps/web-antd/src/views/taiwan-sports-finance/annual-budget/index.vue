@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 
 import { Page } from '@vben/common-ui';
 
@@ -47,6 +47,19 @@ const statusMap: Record<string, { color: string; label: string }> = {
   Settled: { color: 'purple', label: '已結算' },
   Submitted: { color: 'blue', label: '已提交' },
 };
+
+const allowedTransitions: Record<string, string[]> = {
+  Approved: ['Settled'],
+  Draft: ['Submitted'],
+  Settled: [],
+  Submitted: ['Approved', 'Draft'],
+};
+
+const availableStatusOptions = computed(() => {
+  const current = overview.value?.status;
+  if (!current) return [];
+  return allowedTransitions[current] ?? [];
+});
 
 function formatExecutionRate(actualAmount: number, budgetAmount: number) {
   if (budgetAmount === 0) return '—';
@@ -151,8 +164,10 @@ async function handleStatusChange(value: string) {
     await updateBudgetStatusApi(selectedYear.value, { status: value });
     message.success('狀態已更新');
     await fetchOverview();
-  } catch {
-    message.error('狀態更新失敗');
+  } catch (error: unknown) {
+    const apiError = error as { response?: { data?: { message?: string } } };
+    const msg = apiError?.response?.data?.message ?? '狀態更新失敗';
+    message.error(msg);
   }
 }
 
@@ -185,17 +200,23 @@ onMounted(fetchOverview);
           </Tag>
         </div>
 
-        <div v-if="overview" class="flex items-center gap-2">
+        <div
+          v-if="overview && availableStatusOptions.length > 0"
+          class="flex items-center gap-2"
+        >
           <span class="text-sm text-gray-500">切換狀態：</span>
           <Select
             :value="overview.status"
             style="width: 120px"
             @change="(v: unknown) => handleStatusChange(String(v))"
           >
-            <SelectOption value="Draft">草稿</SelectOption>
-            <SelectOption value="Submitted">已提交</SelectOption>
-            <SelectOption value="Approved">已核准</SelectOption>
-            <SelectOption value="Settled">已結算</SelectOption>
+            <SelectOption
+              v-for="status in availableStatusOptions"
+              :key="status"
+              :value="status"
+            >
+              {{ statusMap[status]?.label ?? status }}
+            </SelectOption>
           </Select>
         </div>
       </div>
