@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 
 import { useRoute } from 'vue-router';
 
@@ -7,37 +7,52 @@ import {
   Alert,
   Button,
   Card,
-  Input,
-  InputNumber,
+  Col,
   message,
-  Popconfirm,
+  Row,
+  Select,
   Spin,
-  Table,
   Tag,
 } from 'ant-design-vue';
 
-import type {
-  PublicBudgetItemInput,
-  PublicBudgetResponse,
+import type { PublicBudgetItemInput, PublicBudgetResponse } from '#/api';
+
+import {
+  getPublicDepartmentBudgetApi,
+  getPublicDepartmentOverviewApi,
+  savePublicDepartmentBudgetItemsApi,
 } from '#/api';
+import type { BudgetYearSummary, DepartmentShareOverviewResponse } from '#/api/core/budget-share';
 
-import { getPublicBudgetApi, savePublicBudgetItemsApi } from '#/api';
+import type { BudgetItemRow } from './components/BudgetItemsTable.vue';
+import BudgetItemsTable from './components/BudgetItemsTable.vue';
 
-defineOptions({ name: 'PublicBudgetPage' });
+defineOptions({ name: 'PublicDepartmentBudgetPage' });
 
 const route = useRoute();
 const token = computed(() => route.params.token as string);
 
-const loading = ref(false);
-const saving = ref(false);
-const budget = ref<PublicBudgetResponse | null>(null);
+// ── 狀態 ─────────────────────────────────────────
+const overview = ref<DepartmentShareOverviewResponse | null>(null);
+const loadingOverview = ref(false);
 const error = ref<string | null>(null);
 
-interface BudgetItemRow extends PublicBudgetItemInput {
-  _key: string;
-}
+type ViewMode = 'compare' | 'edit';
+const viewMode = ref<ViewMode>('edit');
 
+// 編輯模式 / 比對模式右側 — 當前年度
+const selectedYear = ref<number>(new Date().getFullYear());
+const budget = ref<PublicBudgetResponse | null>(null);
 const items = ref<BudgetItemRow[]>([]);
+const loadingBudget = ref(false);
+const saving = ref(false);
+
+// 比對模式左側 — 歷史年度
+const compareYear = ref<number | null>(null);
+const compareBudget = ref<PublicBudgetResponse | null>(null);
+const compareItems = ref<BudgetItemRow[]>([]);
+const loadingCompare = ref(false);
+
 let keyCounter = 0;
 const nextKey = () => `row-${++keyCounter}`;
 
@@ -46,59 +61,50 @@ const isEditable = computed(
 );
 
 const statusMap: Record<string, { color: string; label: string }> = {
-  Draft: { color: 'default', label: '草稿' },
-  Submitted: { color: 'blue', label: '已提交' },
   Approved: { color: 'green', label: '已核准' },
+  Draft: { color: 'default', label: '草稿' },
   Settled: { color: 'purple', label: '已結算' },
+  Submitted: { color: 'blue', label: '已提交' },
 };
 
-const formatNumericInput = (value?: number | string) =>
-  `${value ?? ''}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-
-const editableColumns = [
-  {
-    align: 'center' as const,
-    dataIndex: 'sequence',
-    title: '項次',
-    width: 70,
-  },
-  { dataIndex: 'activityName', title: '活動名稱', width: 180 },
-  { dataIndex: 'contentItem', title: '內容項目', width: 160 },
-  {
-    align: 'right' as const,
-    dataIndex: 'amount',
-    title: '預算金額',
-    width: 130,
-  },
-  { dataIndex: 'note', title: '備註說明', ellipsis: true },
-  {
-    align: 'center' as const,
-    fixed: 'right' as const,
-    key: 'action',
-    title: '操作',
-    width: 70,
-  },
-];
-
-const readonlyColumns = editableColumns.filter((c) => c.key !== 'action');
-
-const columns = computed(() =>
-  isEditable.value ? editableColumns : readonlyColumns,
+/** 比對模式左側的年度選項（排除當前選擇的年度） */
+const compareYearOptions = computed(() =>
+  (overview.value?.availableYears ?? [])
+    .filter((y) => y.year !== selectedYear.value)
+    .map((y) => ({ label: `${y.year} 年`, value: y.year })),
 );
 
-const budgetTotal = () =>
-  items.value.reduce((sum, i) => sum + (i.amount || 0), 0);
+/** 編輯模式的年度選項 */
+const yearOptions = computed(() =>
+  (overview.value?.availableYears ?? []).map((y) => ({
+    label: `${y.year} 年`,
+    value: y.year,
+  })),
+);
 
-async function fetchBudget() {
-  loading.value = true;
+// ── 資料載入 ─────────────────────────────────────
+
+function toBudgetItemRows(
+  budgetItems: PublicBudgetResponse['items'],
+): BudgetItemRow[] {
+  return budgetItems.map((item) => ({
+    ...item,
+    _key: nextKey(),
+    note: item.note ?? undefined,
+  }));
+}
+
+async function fetchOverview() {
+  loadingOverview.value = true;
   error.value = null;
   try {
-    budget.value = await getPublicBudgetApi(token.value);
-    items.value = budget.value.items.map((item) => ({
-      ...item,
-      _key: nextKey(),
-      note: item.note ?? undefined,
-    }));
+    overview.value = await getPublicDepartmentOverviewApi(token.value);
+
+    // 如果有年度資料，預設選擇最新年度
+    if (overview.value.availableYears.length > 0) {
+      selectedYear.value = overview.value.availableYears[0]!.year;
+      await fetchBudget();
+    }
   } catch (e: unknown) {
     const err = e as { response?: { status?: number } };
     if (err.response?.status === 401 || err.response?.status === 403) {
@@ -109,9 +115,46 @@ async function fetchBudget() {
       error.value = '載入失敗，請稍後再試';
     }
   } finally {
-    loading.value = false;
+    loadingOverview.value = false;
   }
 }
+
+async function fetchBudget() {
+  loadingBudget.value = true;
+  try {
+    budget.value = await getPublicDepartmentBudgetApi(
+      token.value,
+      selectedYear.value,
+    );
+    items.value = toBudgetItemRows(budget.value.items);
+  } catch {
+    budget.value = null;
+    items.value = [];
+    message.error(`載入 ${selectedYear.value} 年度預算失敗`);
+  } finally {
+    loadingBudget.value = false;
+  }
+}
+
+async function fetchCompareBudget() {
+  if (!compareYear.value) return;
+  loadingCompare.value = true;
+  try {
+    compareBudget.value = await getPublicDepartmentBudgetApi(
+      token.value,
+      compareYear.value,
+    );
+    compareItems.value = toBudgetItemRows(compareBudget.value.items);
+  } catch {
+    compareBudget.value = null;
+    compareItems.value = [];
+    message.error(`載入 ${compareYear.value} 年度歷史資料失敗`);
+  } finally {
+    loadingCompare.value = false;
+  }
+}
+
+// ── 編輯操作 ─────────────────────────────────────
 
 function addRow() {
   const seq =
@@ -120,11 +163,11 @@ function addRow() {
       : 1;
   items.value.push({
     _key: nextKey(),
-    sequence: seq,
     activityName: '',
-    contentItem: '',
     amount: 0,
+    contentItem: '',
     note: undefined,
+    sequence: seq,
   });
 }
 
@@ -149,14 +192,12 @@ async function handleSave() {
     const payload = items.value.map(
       ({ _key, ...rest }): PublicBudgetItemInput => rest,
     );
-    const result = await savePublicBudgetItemsApi(token.value, {
-      items: payload,
-    });
-    items.value = result.map((item) => ({
-      ...item,
-      _key: nextKey(),
-      note: item.note ?? undefined,
-    }));
+    const result = await savePublicDepartmentBudgetItemsApi(
+      token.value,
+      selectedYear.value,
+      { items: payload },
+    );
+    items.value = toBudgetItemRows(result);
     message.success('預算項目已儲存');
   } catch {
     message.error('儲存失敗');
@@ -165,153 +206,241 @@ async function handleSave() {
   }
 }
 
-const formatCurrency = (value: number) => value.toLocaleString('zh-TW');
+// ── Watchers ─────────────────────────────────────
 
-onMounted(fetchBudget);
+watch(selectedYear, () => {
+  fetchBudget();
+  // 比對模式：重設左側年度
+  if (compareYear.value === selectedYear.value) {
+    compareYear.value = null;
+    compareBudget.value = null;
+    compareItems.value = [];
+  }
+});
+
+watch(compareYear, () => {
+  if (compareYear.value) {
+    fetchCompareBudget();
+  } else {
+    compareBudget.value = null;
+    compareItems.value = [];
+  }
+});
+
+watch(viewMode, (mode) => {
+  if (mode === 'compare' && !compareYear.value) {
+    // 預設選擇前一年
+    const prevYear = selectedYear.value - 1;
+    const available = overview.value?.availableYears ?? [];
+    const match = available.find((y: BudgetYearSummary) => y.year === prevYear);
+    if (match) {
+      compareYear.value = prevYear;
+    } else if (available.length > 0) {
+      const otherYears = available.filter(
+        (y: BudgetYearSummary) => y.year !== selectedYear.value,
+      );
+      if (otherYears.length > 0) {
+        compareYear.value = otherYears[0]!.year;
+      }
+    }
+  }
+});
+
+onMounted(fetchOverview);
 </script>
 
 <template>
-  <div class="mx-auto max-w-[1100px] px-4 py-8">
-    <Spin :spinning="loading" tip="載入中...">
+  <div class="mx-auto max-w-[1400px] px-4 py-8">
+    <Spin :spinning="loadingOverview" tip="載入中...">
       <!-- 錯誤狀態 -->
       <div v-if="error" class="py-16 text-center">
         <Alert :message="error" show-icon type="error" />
       </div>
 
+      <!-- 無年度資料 -->
+      <div
+        v-else-if="overview && overview.availableYears.length === 0"
+        class="py-16 text-center"
+      >
+        <Alert
+          :message="`${overview.departmentName} — 尚未有任何年度預算資料`"
+          show-icon
+          type="info"
+        />
+      </div>
+
       <!-- 正常內容 -->
-      <template v-else-if="budget">
-        <Card>
-          <!-- 標題 -->
-          <div class="mb-4 flex items-center justify-between">
-            <div class="flex items-center gap-3">
-              <h2 class="text-xl font-semibold">
-                {{ budget.departmentName }} — {{ budget.year }} 年度預算
-              </h2>
-              <Tag
-                :color="statusMap[budget.budgetStatus]?.color ?? 'default'"
-              >
-                {{ statusMap[budget.budgetStatus]?.label ?? budget.budgetStatus }}
-              </Tag>
-            </div>
-            <div v-if="isEditable" class="flex items-center gap-2">
-              <Button @click="addRow">新增項目</Button>
-              <Button :loading="saving" type="primary" @click="handleSave">
-                儲存
-              </Button>
-            </div>
+      <template v-else-if="overview">
+        <!-- 頁首 -->
+        <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
+          <h1 class="text-2xl font-bold">
+            🏢 {{ overview.departmentName }} — 年度預算
+          </h1>
+          <div class="flex items-center gap-2">
+            <Button
+              :type="viewMode === 'edit' ? 'primary' : 'default'"
+              @click="viewMode = 'edit'"
+            >
+              📝 編輯模式
+            </Button>
+            <Button
+              :disabled="compareYearOptions.length === 0"
+              :type="viewMode === 'compare' ? 'primary' : 'default'"
+              @click="viewMode = 'compare'"
+            >
+              🔀 比對模式
+            </Button>
           </div>
+        </div>
 
-          <!-- 唯讀提示 -->
-          <Alert
-            v-if="!isEditable"
-            class="mb-4"
-            message="目前為唯讀模式，無法編輯預算項目"
-            show-icon
-            type="info"
-          />
-
-          <!-- 預算表格 -->
-          <Table
-            :columns="columns"
-            :data-source="items"
-            :pagination="false"
-            row-key="_key"
-            size="small"
-            :scroll="{ x: 750 }"
-          >
-            <template #bodyCell="{ column, index }">
-              <!-- 項次 -->
-              <template v-if="column.dataIndex === 'sequence'">
-                {{ index + 1 }}
-              </template>
-
-              <!-- 活動名稱 -->
-              <template v-else-if="column.dataIndex === 'activityName'">
-                <Input
-                  v-if="isEditable"
-                  v-model:value="items[index]!.activityName"
-                  :maxlength="200"
-                  placeholder="活動名稱"
-                  size="small"
+        <!-- ═══ 編輯模式 ═══ -->
+        <template v-if="viewMode === 'edit'">
+          <Card>
+            <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <div class="flex items-center gap-3">
+                <span class="text-gray-500">年度：</span>
+                <Select
+                  v-model:value="selectedYear"
+                  :options="yearOptions"
+                  style="width: 120px"
                 />
-                <span v-else>{{ items[index]!.activityName }}</span>
-              </template>
-
-              <!-- 內容項目 -->
-              <template v-else-if="column.dataIndex === 'contentItem'">
-                <Input
-                  v-if="isEditable"
-                  v-model:value="items[index]!.contentItem"
-                  :maxlength="200"
-                  placeholder="內容項目"
-                  size="small"
-                />
-                <span v-else>{{ items[index]!.contentItem }}</span>
-              </template>
-
-              <!-- 預算金額 -->
-              <template v-else-if="column.dataIndex === 'amount'">
-                <InputNumber
-                  v-if="isEditable"
-                  v-model:value="items[index]!.amount"
-                  :formatter="formatNumericInput"
-                  :min="0"
-                  :parser="(v: string) => v.replace(/,/g, '')"
-                  size="small"
-                  style="width: 100%"
-                />
-                <span v-else>{{
-                  formatCurrency(items[index]!.amount)
-                }}</span>
-              </template>
-
-              <!-- 備註 -->
-              <template v-else-if="column.dataIndex === 'note'">
-                <Input
-                  v-if="isEditable"
-                  v-model:value="items[index]!.note"
-                  :maxlength="1000"
-                  placeholder="備註"
-                  size="small"
-                />
-                <span v-else>{{ items[index]!.note ?? '' }}</span>
-              </template>
-
-              <!-- 操作 -->
-              <template v-else-if="column.key === 'action'">
-                <Popconfirm
-                  cancel-text="取消"
-                  ok-text="刪除"
-                  ok-type="danger"
-                  title="確定要刪除此項目？"
-                  @confirm="removeRow(index)"
+                <Tag
+                  v-if="budget"
+                  :color="
+                    statusMap[budget.budgetStatus]?.color ?? 'default'
+                  "
                 >
-                  <Button danger size="small" type="link">刪除</Button>
-                </Popconfirm>
-              </template>
-            </template>
-
-            <!-- 合計列 -->
-            <template #summary>
-              <tr class="font-semibold">
-                <td />
-                <td colspan="2" class="text-right">合計</td>
-                <td class="text-right">{{ formatCurrency(budgetTotal()) }}</td>
-                <td />
-                <td v-if="isEditable" />
-              </tr>
-            </template>
-
-            <template #emptyText>
-              <div class="py-8 text-center text-gray-400">
-                <template v-if="isEditable">
-                  尚無預算項目，請點擊「新增項目」開始編列
-                </template>
-                <template v-else> 尚無預算項目 </template>
+                  {{
+                    statusMap[budget.budgetStatus]?.label ??
+                    budget.budgetStatus
+                  }}
+                </Tag>
               </div>
-            </template>
-          </Table>
-        </Card>
+              <div v-if="isEditable" class="flex items-center gap-2">
+                <Button @click="addRow">新增項目</Button>
+                <Button
+                  :loading="saving"
+                  type="primary"
+                  @click="handleSave"
+                >
+                  儲存
+                </Button>
+              </div>
+            </div>
+
+            <!-- 唯讀提示 -->
+            <Alert
+              v-if="budget && !isEditable"
+              class="mb-4"
+              message="目前為唯讀模式，無法編輯預算項目"
+              show-icon
+              type="info"
+            />
+
+            <BudgetItemsTable
+              v-model:items="items"
+              :editable="isEditable"
+              :loading="loadingBudget"
+              @add-row="addRow"
+              @remove-row="removeRow"
+            />
+          </Card>
+        </template>
+
+        <!-- ═══ 比對模式 ═══ -->
+        <template v-else>
+          <Row :gutter="16">
+            <!-- 左側：歷史年度（唯讀） -->
+            <Col :lg="12" :xs="24">
+              <Card>
+                <div class="mb-4 flex items-center gap-3">
+                  <span class="text-lg font-semibold">📋 歷史參考</span>
+                  <Select
+                    v-model:value="compareYear"
+                    :options="compareYearOptions"
+                    placeholder="選擇年度"
+                    style="width: 120px"
+                  />
+                  <Tag
+                    v-if="compareBudget"
+                    :color="
+                      statusMap[compareBudget.budgetStatus]?.color ??
+                      'default'
+                    "
+                  >
+                    {{
+                      statusMap[compareBudget.budgetStatus]?.label ??
+                      compareBudget.budgetStatus
+                    }}
+                  </Tag>
+                </div>
+
+                <div v-if="!compareYear" class="py-12 text-center text-gray-400">
+                  請選擇一個歷史年度以供參考
+                </div>
+                <BudgetItemsTable
+                  v-else
+                  :editable="false"
+                  :items="compareItems"
+                  :loading="loadingCompare"
+                />
+              </Card>
+            </Col>
+
+            <!-- 右側：當年度（可編輯） -->
+            <Col :lg="12" :xs="24">
+              <Card>
+                <div
+                  class="mb-4 flex flex-wrap items-center justify-between gap-3"
+                >
+                  <div class="flex items-center gap-3">
+                    <span class="text-lg font-semibold">
+                      ✏️ {{ selectedYear }} 年度
+                    </span>
+                    <Tag
+                      v-if="budget"
+                      :color="
+                        statusMap[budget.budgetStatus]?.color ?? 'default'
+                      "
+                    >
+                      {{
+                        statusMap[budget.budgetStatus]?.label ??
+                        budget.budgetStatus
+                      }}
+                    </Tag>
+                  </div>
+                  <div v-if="isEditable" class="flex items-center gap-2">
+                    <Button size="small" @click="addRow">新增</Button>
+                    <Button
+                      :loading="saving"
+                      size="small"
+                      type="primary"
+                      @click="handleSave"
+                    >
+                      儲存
+                    </Button>
+                  </div>
+                </div>
+
+                <Alert
+                  v-if="budget && !isEditable"
+                  class="mb-4"
+                  message="唯讀模式"
+                  show-icon
+                  type="info"
+                />
+
+                <BudgetItemsTable
+                  v-model:items="items"
+                  :editable="isEditable"
+                  :loading="loadingBudget"
+                  @add-row="addRow"
+                  @remove-row="removeRow"
+                />
+              </Card>
+            </Col>
+          </Row>
+        </template>
       </template>
     </Spin>
   </div>

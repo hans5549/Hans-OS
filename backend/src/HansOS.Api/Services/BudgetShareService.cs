@@ -12,102 +12,129 @@ public class BudgetShareService(
 {
     // ── 管理端 ───────────────────────────────────
 
-    public async Task<BudgetShareInfoResponse> CreateShareTokenAsync(
-        int year, Guid departmentId, CancellationToken ct = default)
+    /// <inheritdoc />
+    public async Task<DepartmentShareInfoResponse> GetOrCreateShareTokenAsync(
+        Guid departmentId, CancellationToken ct = default)
     {
-        var deptBudget = await FindDepartmentBudgetAsync(year, departmentId, ct);
-        var existing = await db.BudgetShareTokens
-            .FirstOrDefaultAsync(t => t.DepartmentBudgetId == deptBudget.Id, ct);
+        var dept = await FindDepartmentAsync(departmentId, ct);
+        var token = await db.BudgetShareTokens
+            .FirstOrDefaultAsync(t => t.DepartmentId == dept.Id, ct);
+
+        if (token is not null)
+        {
+            return ToShareInfoResponse(token);
+        }
 
         var now = DateTime.UtcNow;
-
-        if (existing is not null)
+        token = new BudgetShareToken
         {
-            existing.Token = GenerateToken();
-            existing.UpdatedAt = now;
-            logger.LogInformation("重新產生分享 Token: Year={Year}, DeptId={DeptId}", year, departmentId);
-        }
-        else
-        {
-            existing = new BudgetShareToken
-            {
-                Id = Guid.NewGuid(),
-                Token = GenerateToken(),
-                DepartmentBudgetId = deptBudget.Id,
-                Permission = SharePermission.Editable,
-                IsActive = true,
-                CreatedAt = now,
-                UpdatedAt = now,
-            };
-            db.BudgetShareTokens.Add(existing);
-            logger.LogInformation("建立分享 Token: Year={Year}, DeptId={DeptId}", year, departmentId);
-        }
-
+            Id = Guid.NewGuid(),
+            Token = GenerateToken(),
+            DepartmentId = dept.Id,
+            Permission = SharePermission.Editable,
+            IsActive = true,
+            CreatedAt = now,
+            UpdatedAt = now,
+        };
+        db.BudgetShareTokens.Add(token);
         await db.SaveChangesAsync(ct);
 
-        var budgetStatus = await GetBudgetStatusAsync(deptBudget.AnnualBudgetId, ct);
-        return ToShareInfoResponse(existing, budgetStatus);
+        logger.LogInformation("自動建立部門分享 Token: DeptId={DeptId}", departmentId);
+        return ToShareInfoResponse(token);
     }
 
-    public async Task<BudgetShareInfoResponse?> GetShareInfoAsync(
-        int year, Guid departmentId, CancellationToken ct = default)
+    /// <inheritdoc />
+    public async Task<DepartmentShareInfoResponse> UpdateShareAsync(
+        Guid departmentId, UpdateShareRequest request, CancellationToken ct = default)
     {
-        var deptBudget = await FindDepartmentBudgetAsync(year, departmentId, ct);
         var token = await db.BudgetShareTokens
-            .AsNoTracking()
-            .FirstOrDefaultAsync(t => t.DepartmentBudgetId == deptBudget.Id, ct);
-
-        if (token is null)
-            return null;
-
-        var budgetStatus = await GetBudgetStatusAsync(deptBudget.AnnualBudgetId, ct);
-        return ToShareInfoResponse(token, budgetStatus);
-    }
-
-    public async Task<BudgetShareInfoResponse> UpdateShareAsync(
-        int year, Guid departmentId, UpdateShareRequest request, CancellationToken ct = default)
-    {
-        var deptBudget = await FindDepartmentBudgetAsync(year, departmentId, ct);
-        var token = await db.BudgetShareTokens
-            .FirstOrDefaultAsync(t => t.DepartmentBudgetId == deptBudget.Id, ct)
+            .FirstOrDefaultAsync(t => t.DepartmentId == departmentId, ct)
             ?? throw new KeyNotFoundException("此部門尚未建立分享連結");
 
         if (request.Permission is not null)
         {
             if (!Enum.TryParse<SharePermission>(request.Permission, ignoreCase: true, out var perm))
+            {
                 throw new ArgumentException("無效的權限值");
+            }
+
             token.Permission = perm;
         }
 
         if (request.IsActive.HasValue)
+        {
             token.IsActive = request.IsActive.Value;
+        }
 
         token.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(ct);
 
-        var budgetStatus = await GetBudgetStatusAsync(deptBudget.AnnualBudgetId, ct);
-        return ToShareInfoResponse(token, budgetStatus);
+        return ToShareInfoResponse(token);
     }
 
-    public async Task RevokeShareAsync(int year, Guid departmentId, CancellationToken ct = default)
+    /// <inheritdoc />
+    public async Task<DepartmentShareInfoResponse> RegenerateTokenAsync(
+        Guid departmentId, CancellationToken ct = default)
     {
-        var deptBudget = await FindDepartmentBudgetAsync(year, departmentId, ct);
         var token = await db.BudgetShareTokens
-            .FirstOrDefaultAsync(t => t.DepartmentBudgetId == deptBudget.Id, ct)
+            .FirstOrDefaultAsync(t => t.DepartmentId == departmentId, ct)
+            ?? throw new KeyNotFoundException("此部門尚未建立分享連結");
+
+        token.Token = GenerateToken();
+        token.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync(ct);
+
+        logger.LogInformation("重新產生部門分享 Token: DeptId={DeptId}", departmentId);
+        return ToShareInfoResponse(token);
+    }
+
+    /// <inheritdoc />
+    public async Task RevokeShareAsync(Guid departmentId, CancellationToken ct = default)
+    {
+        var token = await db.BudgetShareTokens
+            .FirstOrDefaultAsync(t => t.DepartmentId == departmentId, ct)
             ?? throw new KeyNotFoundException("此部門尚未建立分享連結");
 
         db.BudgetShareTokens.Remove(token);
         await db.SaveChangesAsync(ct);
-        logger.LogInformation("撤銷分享 Token: Year={Year}, DeptId={DeptId}", year, departmentId);
+        logger.LogInformation("撤銷部門分享 Token: DeptId={DeptId}", departmentId);
     }
 
     // ── 公開端 ───────────────────────────────────
 
-    public async Task<PublicBudgetResponse> GetBudgetByTokenAsync(
+    /// <inheritdoc />
+    public async Task<DepartmentShareOverviewResponse> GetDepartmentOverviewByTokenAsync(
         string token, CancellationToken ct = default)
     {
         var share = await ResolveTokenAsync(token, ct);
-        var deptBudget = share.DepartmentBudget;
+
+        var years = await db.DepartmentBudgets
+            .AsNoTracking()
+            .Where(d => d.DepartmentId == share.DepartmentId)
+            .Include(d => d.AnnualBudget)
+            .OrderByDescending(d => d.AnnualBudget.Year)
+            .Select(d => new BudgetYearSummary(d.AnnualBudget.Year, d.AnnualBudget.Status.ToString()))
+            .ToListAsync(ct);
+
+        return new DepartmentShareOverviewResponse(
+            share.Department.Name,
+            share.Permission.ToString(),
+            years);
+    }
+
+    /// <inheritdoc />
+    public async Task<PublicBudgetResponse> GetBudgetByTokenAsync(
+        string token, int year, CancellationToken ct = default)
+    {
+        var share = await ResolveTokenAsync(token, ct);
+
+        var deptBudget = await db.DepartmentBudgets
+            .AsNoTracking()
+            .Include(d => d.AnnualBudget)
+            .FirstOrDefaultAsync(d => d.DepartmentId == share.DepartmentId
+                && d.AnnualBudget.Year == year, ct)
+            ?? throw new KeyNotFoundException($"{year} 年度尚未建立預算");
+
         var budgetStatus = deptBudget.AnnualBudget.Status;
 
         var items = await db.BudgetItems
@@ -119,24 +146,34 @@ public class BudgetShareService(
             .ToListAsync(ct);
 
         return new PublicBudgetResponse(
-            deptBudget.Department.Name,
-            deptBudget.AnnualBudget.Year,
-            ComputeEffectivePermission(share.Permission, budgetStatus),
+            share.Department.Name,
+            year,
+            ComputeEffectivePermission(share.Permission, budgetStatus, year),
             budgetStatus.ToString(),
             items);
     }
 
+    /// <inheritdoc />
     public async Task<List<PublicBudgetItemResponse>> SaveItemsByTokenAsync(
-        string token, PublicSaveBudgetItemsRequest request, CancellationToken ct = default)
+        string token, int year, PublicSaveBudgetItemsRequest request, CancellationToken ct = default)
     {
         var share = await ResolveTokenAsync(token, ct);
-        var budgetStatus = share.DepartmentBudget.AnnualBudget.Status;
-        var effective = ComputeEffectivePermission(share.Permission, budgetStatus);
+
+        var deptBudget = await db.DepartmentBudgets
+            .Include(d => d.AnnualBudget)
+            .FirstOrDefaultAsync(d => d.DepartmentId == share.DepartmentId
+                && d.AnnualBudget.Year == year, ct)
+            ?? throw new KeyNotFoundException($"{year} 年度尚未建立預算");
+
+        var budgetStatus = deptBudget.AnnualBudget.Status;
+        var effective = ComputeEffectivePermission(share.Permission, budgetStatus, year);
 
         if (effective != nameof(SharePermission.Editable))
+        {
             throw new UnauthorizedAccessException("目前為唯讀模式，無法儲存");
+        }
 
-        var deptBudgetId = share.DepartmentBudgetId;
+        var deptBudgetId = deptBudget.Id;
         var existingItems = await db.BudgetItems
             .Where(i => i.DepartmentBudgetId == deptBudgetId)
             .ToListAsync(ct);
@@ -145,7 +182,7 @@ public class BudgetShareService(
         RemoveDeletedItems(existingItems, request.Items);
         UpsertItems(existingItems, request.Items, deptBudgetId, now);
 
-        share.DepartmentBudget.UpdatedAt = now;
+        deptBudget.UpdatedAt = now;
         await db.SaveChangesAsync(ct);
 
         return await db.BudgetItems
@@ -162,46 +199,48 @@ public class BudgetShareService(
     private async Task<BudgetShareToken> ResolveTokenAsync(string token, CancellationToken ct)
     {
         var share = await db.BudgetShareTokens
-            .Include(t => t.DepartmentBudget)
-                .ThenInclude(d => d.AnnualBudget)
-            .Include(t => t.DepartmentBudget)
-                .ThenInclude(d => d.Department)
+            .Include(t => t.Department)
             .FirstOrDefaultAsync(t => t.Token == token, ct)
             ?? throw new KeyNotFoundException("分享連結不存在或已失效");
 
         if (!share.IsActive)
+        {
             throw new UnauthorizedAccessException("此分享連結已停用");
+        }
 
         return share;
     }
 
-    private async Task<DepartmentBudget> FindDepartmentBudgetAsync(
-        int year, Guid departmentId, CancellationToken ct)
-        => await db.DepartmentBudgets
-            .Include(d => d.AnnualBudget)
-            .FirstOrDefaultAsync(d => d.AnnualBudget.Year == year && d.DepartmentId == departmentId, ct)
-            ?? throw new KeyNotFoundException($"{year} 年度中找不到部門 {departmentId} 的預算");
+    private async Task<SportsDepartment> FindDepartmentAsync(Guid departmentId, CancellationToken ct)
+        => await db.SportsDepartments
+            .FirstOrDefaultAsync(d => d.Id == departmentId, ct)
+            ?? throw new KeyNotFoundException($"找不到部門 {departmentId}");
 
-    private async Task<BudgetStatus> GetBudgetStatusAsync(Guid annualBudgetId, CancellationToken ct)
+    /// <summary>計算有效權限（考慮 Token 權限、預算狀態、是否為歷史年度）</summary>
+    private static string ComputeEffectivePermission(
+        SharePermission tokenPermission, BudgetStatus budgetStatus, int year)
     {
-        var budget = await db.AnnualBudgets
-            .AsNoTracking()
-            .FirstAsync(b => b.Id == annualBudgetId, ct);
-        return budget.Status;
+        // 歷史年度一律唯讀
+        if (year < DateTime.UtcNow.Year)
+        {
+            return nameof(SharePermission.ReadOnly);
+        }
+
+        // 非 Draft 狀態一律唯讀
+        if (budgetStatus > BudgetStatus.Draft)
+        {
+            return nameof(SharePermission.ReadOnly);
+        }
+
+        return tokenPermission.ToString();
     }
 
-    private static string ComputeEffectivePermission(SharePermission tokenPermission, BudgetStatus budgetStatus)
-        => budgetStatus > BudgetStatus.Draft
-            ? nameof(SharePermission.ReadOnly)
-            : tokenPermission.ToString();
-
-    private static BudgetShareInfoResponse ToShareInfoResponse(BudgetShareToken token, BudgetStatus budgetStatus)
+    private static DepartmentShareInfoResponse ToShareInfoResponse(BudgetShareToken token)
         => new(
             token.Id,
             token.Token,
             token.Permission.ToString(),
             token.IsActive,
-            ComputeEffectivePermission(token.Permission, budgetStatus),
             token.CreatedAt);
 
     private static string GenerateToken()

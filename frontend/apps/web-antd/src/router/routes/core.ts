@@ -22,17 +22,17 @@ const fallbackNotFoundRoute: RouteRecordRaw = {
 
 /** 基本路由，这些路由是必须存在的 */
 const coreRoutes: RouteRecordRaw[] = [
-  // 公開預算頁面（不需登入）
+  // 公開部門預算頁面（不需登入）
   {
     component: () => import('#/views/public/budget/index.vue'),
     meta: {
       hideInMenu: true,
       hideInTab: true,
       ignoreAccess: true,
-      title: '預算填寫',
+      title: '部門年度預算',
     },
-    name: 'PublicBudget',
-    path: '/public/budget/:token',
+    name: 'PublicDepartmentBudget',
+    path: '/public/department-budget/:token',
   },
   /**
    * 根路由

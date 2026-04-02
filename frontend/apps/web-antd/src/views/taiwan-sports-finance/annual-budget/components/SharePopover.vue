@@ -14,52 +14,36 @@ import {
   Tooltip,
 } from 'ant-design-vue';
 
-import type { BudgetShareInfoResponse } from '#/api';
+import type { DepartmentShareInfoResponse } from '#/api';
 
 import {
-  createBudgetShareApi,
-  getBudgetShareApi,
-  revokeBudgetShareApi,
-  updateBudgetShareApi,
+  getOrCreateShareApi,
+  regenerateShareApi,
+  revokeShareApi,
+  updateShareApi,
 } from '#/api';
 
 const props = defineProps<{
   departmentId: string;
   departmentName: string;
-  year: number;
 }>();
 
 const open = ref(false);
 const loading = ref(false);
-const shareInfo = ref<BudgetShareInfoResponse | null>(null);
+const shareInfo = ref<DepartmentShareInfoResponse | null>(null);
 
 const shareUrl = () => {
   if (!shareInfo.value) return '';
   const base = window.location.origin;
-  return `${base}/public/budget/${shareInfo.value.token}`;
+  return `${base}/public/department-budget/${shareInfo.value.token}`;
 };
 
 async function fetchShareInfo() {
   loading.value = true;
   try {
-    shareInfo.value = await getBudgetShareApi(props.year, props.departmentId);
+    shareInfo.value = await getOrCreateShareApi(props.departmentId);
   } catch {
     shareInfo.value = null;
-  } finally {
-    loading.value = false;
-  }
-}
-
-async function handleCreate() {
-  loading.value = true;
-  try {
-    shareInfo.value = await createBudgetShareApi(
-      props.year,
-      props.departmentId,
-    );
-    message.success('分享連結已建立');
-  } catch {
-    message.error('建立失敗');
   } finally {
     loading.value = false;
   }
@@ -68,10 +52,7 @@ async function handleCreate() {
 async function handleRegenerate() {
   loading.value = true;
   try {
-    shareInfo.value = await createBudgetShareApi(
-      props.year,
-      props.departmentId,
-    );
+    shareInfo.value = await regenerateShareApi(props.departmentId);
     message.success('連結已重新產生（舊連結已失效）');
   } catch {
     message.error('重新產生失敗');
@@ -83,11 +64,9 @@ async function handleRegenerate() {
 async function handleToggleActive(active: boolean) {
   if (!shareInfo.value) return;
   try {
-    shareInfo.value = await updateBudgetShareApi(
-      props.year,
-      props.departmentId,
-      { isActive: active },
-    );
+    shareInfo.value = await updateShareApi(props.departmentId, {
+      isActive: active,
+    });
     message.success(active ? '連結已啟用' : '連結已停用');
   } catch {
     message.error('更新失敗');
@@ -99,11 +78,9 @@ async function handleTogglePermission() {
   const newPerm =
     shareInfo.value.permission === 'Editable' ? 'ReadOnly' : 'Editable';
   try {
-    shareInfo.value = await updateBudgetShareApi(
-      props.year,
-      props.departmentId,
-      { permission: newPerm },
-    );
+    shareInfo.value = await updateShareApi(props.departmentId, {
+      permission: newPerm,
+    });
     message.success(`已切換為${newPerm === 'Editable' ? '可編輯' : '唯讀'}`);
   } catch {
     message.error('更新失敗');
@@ -112,7 +89,7 @@ async function handleTogglePermission() {
 
 async function handleRevoke() {
   try {
-    await revokeBudgetShareApi(props.year, props.departmentId);
+    await revokeShareApi(props.departmentId);
     shareInfo.value = null;
     message.success('分享連結已撤銷');
   } catch {
@@ -141,18 +118,8 @@ watch(open, (val) => {
     <template #content>
       <Spin :spinning="loading">
         <div style="width: 380px">
-          <!-- 尚未建立 -->
-          <template v-if="!shareInfo">
-            <p class="mb-3 text-gray-500">
-              尚未建立「{{ props.departmentName }}」的分享連結
-            </p>
-            <Button block type="primary" @click="handleCreate">
-              建立分享連結
-            </Button>
-          </template>
-
-          <!-- 已有分享連結 -->
-          <template v-else>
+          <!-- 已有分享連結（自動建立，所以一打開就有） -->
+          <template v-if="shareInfo">
             <!-- 連結 + 複製 -->
             <div class="mb-3">
               <label class="mb-1 block text-xs text-gray-500">分享網址</label>
@@ -164,6 +131,9 @@ watch(open, (val) => {
                   </Button>
                 </Tooltip>
               </Space.Compact>
+              <p class="mt-1 text-xs text-gray-400">
+                此連結為「{{ props.departmentName }}」的永久入口，部門人員可自行選擇年度填寫
+              </p>
             </div>
 
             <!-- 權限 -->
@@ -172,35 +142,15 @@ watch(open, (val) => {
               <Space>
                 <Tag
                   :color="
-                    shareInfo.effectivePermission === 'Editable'
-                      ? 'green'
-                      : 'orange'
+                    shareInfo.permission === 'Editable' ? 'green' : 'orange'
                   "
                 >
-                  {{
-                    shareInfo.effectivePermission === 'Editable'
-                      ? '可編輯'
-                      : '唯讀'
-                  }}
+                  {{ shareInfo.permission === 'Editable' ? '可編輯' : '唯讀' }}
                 </Tag>
-                <Button
-                  :disabled="shareInfo.effectivePermission !== shareInfo.permission"
-                  size="small"
-                  @click="handleTogglePermission"
-                >
+                <Button size="small" @click="handleTogglePermission">
                   切換
                 </Button>
               </Space>
-            </div>
-
-            <!-- 狀態鎖定提示 -->
-            <div
-              v-if="shareInfo.effectivePermission !== shareInfo.permission"
-              class="mb-3"
-            >
-              <Tag color="blue">
-                因預算狀態非草稿，已自動鎖定為唯讀
-              </Tag>
             </div>
 
             <!-- 啟用/停用 -->
@@ -234,6 +184,11 @@ watch(open, (val) => {
                 <Button danger size="small">撤銷連結</Button>
               </Popconfirm>
             </div>
+          </template>
+
+          <!-- 載入中或錯誤 -->
+          <template v-else-if="!loading">
+            <p class="text-gray-500">無法載入分享資訊</p>
           </template>
         </div>
       </Spin>

@@ -10,16 +10,16 @@ public enum SharePermission
     Editable = 1,
 }
 
-/// <summary>預算分享連結 Token</summary>
+/// <summary>部門預算分享連結 Token（每個部門一個永久連結）</summary>
 public class BudgetShareToken
 {
     public Guid Id { get; set; }
     public string Token { get; set; } = string.Empty;
-    public Guid DepartmentBudgetId { get; set; }
+    public Guid DepartmentId { get; set; }
     public SharePermission Permission { get; set; }
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 
-    public DepartmentBudget DepartmentBudget { get; set; } = null!;
+    public SportsDepartment Department { get; set; } = null!;
 }

@@ -9,7 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace HansOS.Api.IntegrationTests;
 
-/// <summary>分享管理 (admin) + 公開端 (public) 整合測試</summary>
+/// <summary>部門分享管理 (admin) + 公開端 (public) 整合測試</summary>
 public class BudgetShareControllerTests(HansOsWebApplicationFactory factory)
     : IClassFixture<HansOsWebApplicationFactory>
 {
@@ -21,25 +21,24 @@ public class BudgetShareControllerTests(HansOsWebApplicationFactory factory)
     };
 
     // ═══════════════════════════════════════════════
-    // Admin — 建立分享
+    // Admin — 取得/自動建立分享
     // ═══════════════════════════════════════════════
 
     [Fact]
-    public async Task CreateShare_Unauthorized_Returns401()
+    public async Task GetOrCreateShare_Unauthorized_Returns401()
     {
-        var response = await _client.PostAsync(
-            "/annual-budgets/2070/departments/00000000-0000-0000-0000-000000000001/share", null);
+        var response = await _client.GetAsync(
+            "/annual-budgets/departments/00000000-0000-0000-0000-000000000001/share");
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
-    public async Task CreateShare_ValidDepartment_ReturnsShareInfo()
+    public async Task GetOrCreateShare_ValidDepartment_ReturnsShareInfo()
     {
         var token = await LoginAndGetTokenAsync();
         var deptId = await EnsureDepartmentAsync("分享測試部門A");
-        await InitializeAnnualBudgetAsync(2070, token);
 
-        var resp = await AuthorizedPostAsync(ShareUrl(2070, deptId), token, new { });
+        var resp = await AuthorizedGetAsync(ShareUrl(deptId), token);
         resp.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var body = await ReadBodyAsync(resp);
@@ -49,58 +48,45 @@ public class BudgetShareControllerTests(HansOsWebApplicationFactory factory)
         data.GetProperty("token").GetString().Should().NotBeNullOrEmpty();
         data.GetProperty("permission").GetString().Should().Be("Editable");
         data.GetProperty("isActive").GetBoolean().Should().BeTrue();
-        data.GetProperty("effectivePermission").GetString().Should().Be("Editable");
     }
 
     [Fact]
-    public async Task CreateShare_CalledTwice_RegeneratesToken()
+    public async Task GetOrCreateShare_CalledTwice_ReturnsSameToken()
     {
         var token = await LoginAndGetTokenAsync();
         var deptId = await EnsureDepartmentAsync("分享重複部門");
-        await InitializeAnnualBudgetAsync(2069, token);
 
-        var resp1 = await AuthorizedPostAsync(ShareUrl(2069, deptId), token, new { });
+        var resp1 = await AuthorizedGetAsync(ShareUrl(deptId), token);
         var data1 = (await ReadBodyAsync(resp1)).GetProperty("data");
         var token1 = data1.GetProperty("token").GetString();
 
-        var resp2 = await AuthorizedPostAsync(ShareUrl(2069, deptId), token, new { });
+        var resp2 = await AuthorizedGetAsync(ShareUrl(deptId), token);
         var data2 = (await ReadBodyAsync(resp2)).GetProperty("data");
         var token2 = data2.GetProperty("token").GetString();
 
+        token1.Should().Be(token2, "同一部門重複取得應回傳相同 Token");
+    }
+
+    // ═══════════════════════════════════════════════
+    // Admin — 重新產生 Token
+    // ═══════════════════════════════════════════════
+
+    [Fact]
+    public async Task RegenerateShare_ExistingShare_ReturnsNewToken()
+    {
+        var token = await LoginAndGetTokenAsync();
+        var deptId = await EnsureDepartmentAsync("重新產生部門");
+
+        var resp1 = await AuthorizedGetAsync(ShareUrl(deptId), token);
+        var token1 = (await ReadBodyAsync(resp1)).GetProperty("data")
+            .GetProperty("token").GetString();
+
+        var resp2 = await AuthorizedPostAsync($"{ShareUrl(deptId)}/regenerate", token, new { });
+        resp2.StatusCode.Should().Be(HttpStatusCode.OK);
+        var token2 = (await ReadBodyAsync(resp2)).GetProperty("data")
+            .GetProperty("token").GetString();
+
         token1.Should().NotBe(token2, "重新產生應回傳不同 Token");
-    }
-
-    // ═══════════════════════════════════════════════
-    // Admin — 取得分享
-    // ═══════════════════════════════════════════════
-
-    [Fact]
-    public async Task GetShare_NoShareExists_ReturnsNullData()
-    {
-        var token = await LoginAndGetTokenAsync();
-        var deptId = await EnsureDepartmentAsync("無分享部門");
-        await InitializeAnnualBudgetAsync(2068, token);
-
-        var resp = await AuthorizedGetAsync(ShareUrl(2068, deptId), token);
-        resp.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        var body = await ReadBodyAsync(resp);
-        body.GetProperty("data").ValueKind.Should().Be(JsonValueKind.Null);
-    }
-
-    [Fact]
-    public async Task GetShare_AfterCreate_ReturnsShareInfo()
-    {
-        var token = await LoginAndGetTokenAsync();
-        var deptId = await EnsureDepartmentAsync("取得分享部門");
-        await InitializeAnnualBudgetAsync(2067, token);
-
-        await AuthorizedPostAsync(ShareUrl(2067, deptId), token, new { });
-        var resp = await AuthorizedGetAsync(ShareUrl(2067, deptId), token);
-
-        var body = await ReadBodyAsync(resp);
-        body.GetProperty("code").GetInt32().Should().Be(0);
-        body.GetProperty("data").GetProperty("token").GetString().Should().NotBeNullOrEmpty();
     }
 
     // ═══════════════════════════════════════════════
@@ -112,10 +98,9 @@ public class BudgetShareControllerTests(HansOsWebApplicationFactory factory)
     {
         var token = await LoginAndGetTokenAsync();
         var deptId = await EnsureDepartmentAsync("更新權限部門");
-        await InitializeAnnualBudgetAsync(2066, token);
-        await AuthorizedPostAsync(ShareUrl(2066, deptId), token, new { });
+        await AuthorizedGetAsync(ShareUrl(deptId), token);
 
-        var resp = await AuthorizedPutAsync(ShareUrl(2066, deptId), token,
+        var resp = await AuthorizedPutAsync(ShareUrl(deptId), token,
             new { permission = "ReadOnly" });
 
         resp.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -128,27 +113,13 @@ public class BudgetShareControllerTests(HansOsWebApplicationFactory factory)
     {
         var token = await LoginAndGetTokenAsync();
         var deptId = await EnsureDepartmentAsync("停用分享部門");
-        await InitializeAnnualBudgetAsync(2065, token);
-        await AuthorizedPostAsync(ShareUrl(2065, deptId), token, new { });
+        await AuthorizedGetAsync(ShareUrl(deptId), token);
 
-        var resp = await AuthorizedPutAsync(ShareUrl(2065, deptId), token,
+        var resp = await AuthorizedPutAsync(ShareUrl(deptId), token,
             new { isActive = false });
 
         var data = (await ReadBodyAsync(resp)).GetProperty("data");
         data.GetProperty("isActive").GetBoolean().Should().BeFalse();
-    }
-
-    [Fact]
-    public async Task UpdateShare_NoShareExists_Returns404()
-    {
-        var token = await LoginAndGetTokenAsync();
-        var deptId = await EnsureDepartmentAsync("無分享更新部門");
-        await InitializeAnnualBudgetAsync(2064, token);
-
-        var resp = await AuthorizedPutAsync(ShareUrl(2064, deptId), token,
-            new { permission = "ReadOnly" });
-
-        resp.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     // ═══════════════════════════════════════════════
@@ -160,16 +131,10 @@ public class BudgetShareControllerTests(HansOsWebApplicationFactory factory)
     {
         var token = await LoginAndGetTokenAsync();
         var deptId = await EnsureDepartmentAsync("撤銷分享部門");
-        await InitializeAnnualBudgetAsync(2063, token);
-        await AuthorizedPostAsync(ShareUrl(2063, deptId), token, new { });
+        await AuthorizedGetAsync(ShareUrl(deptId), token);
 
-        var resp = await AuthorizedDeleteAsync(ShareUrl(2063, deptId), token);
+        var resp = await AuthorizedDeleteAsync(ShareUrl(deptId), token);
         resp.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        // 驗證分享已撤銷
-        var getResp = await AuthorizedGetAsync(ShareUrl(2063, deptId), token);
-        var body = await ReadBodyAsync(getResp);
-        body.GetProperty("data").ValueKind.Should().Be(JsonValueKind.Null);
     }
 
     [Fact]
@@ -177,22 +142,65 @@ public class BudgetShareControllerTests(HansOsWebApplicationFactory factory)
     {
         var token = await LoginAndGetTokenAsync();
         var deptId = await EnsureDepartmentAsync("無分享撤銷部門");
-        await InitializeAnnualBudgetAsync(2062, token);
 
-        var resp = await AuthorizedDeleteAsync(ShareUrl(2062, deptId), token);
+        var resp = await AuthorizedDeleteAsync(ShareUrl(deptId), token);
         resp.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     // ═══════════════════════════════════════════════
-    // Public — GET /public/budget/{token}
+    // Public — GET /public/department-budget/{token}
     // ═══════════════════════════════════════════════
 
     [Fact]
-    public async Task PublicGetBudget_ValidToken_ReturnsBudgetData()
+    public async Task PublicGetOverview_ValidToken_ReturnsDepartmentOverview()
     {
-        var (shareToken, _, _) = await CreateShareSetupAsync("公開取得部門", 2061);
+        var (shareToken, authToken, _) = await CreateShareSetupAsync("公開總覽部門", 2061);
 
-        var resp = await _client.GetAsync($"/public/budget/{shareToken}");
+        var resp = await _client.GetAsync($"/public/department-budget/{shareToken}");
+        resp.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = await ReadBodyAsync(resp);
+        body.GetProperty("code").GetInt32().Should().Be(0);
+
+        var data = body.GetProperty("data");
+        data.GetProperty("departmentName").GetString().Should().Be("公開總覽部門");
+        data.GetProperty("permission").GetString().Should().Be("Editable");
+
+        var years = data.GetProperty("availableYears");
+        years.GetArrayLength().Should().BeGreaterThanOrEqualTo(1);
+        years[0].GetProperty("year").GetInt32().Should().Be(2061);
+    }
+
+    [Fact]
+    public async Task PublicGetOverview_InvalidToken_Returns404()
+    {
+        var resp = await _client.GetAsync("/public/department-budget/nonexistent-token-abc123");
+        resp.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task PublicGetOverview_InactiveToken_Returns401()
+    {
+        var (shareToken, authToken, deptId) = await CreateShareSetupAsync("停用公開部門", 2060);
+
+        // 停用 Token
+        await AuthorizedPutAsync(ShareUrl(deptId), authToken,
+            new { isActive = false });
+
+        var resp = await _client.GetAsync($"/public/department-budget/{shareToken}");
+        resp.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    // ═══════════════════════════════════════════════
+    // Public — GET /public/department-budget/{token}/years/{year}
+    // ═══════════════════════════════════════════════
+
+    [Fact]
+    public async Task PublicGetBudget_ValidTokenAndYear_ReturnsBudgetData()
+    {
+        var (shareToken, _, _) = await CreateShareSetupAsync("公開取得部門", 2059);
+
+        var resp = await _client.GetAsync($"/public/department-budget/{shareToken}/years/2059");
         resp.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var body = await ReadBodyAsync(resp);
@@ -200,48 +208,38 @@ public class BudgetShareControllerTests(HansOsWebApplicationFactory factory)
 
         var data = body.GetProperty("data");
         data.GetProperty("departmentName").GetString().Should().Be("公開取得部門");
-        data.GetProperty("year").GetInt32().Should().Be(2061);
+        data.GetProperty("year").GetInt32().Should().Be(2059);
         data.GetProperty("effectivePermission").GetString().Should().Be("Editable");
         data.GetProperty("budgetStatus").GetString().Should().Be("Draft");
     }
 
     [Fact]
-    public async Task PublicGetBudget_InvalidToken_Returns404()
+    public async Task PublicGetBudget_NonExistentYear_Returns404()
     {
-        var resp = await _client.GetAsync("/public/budget/nonexistent-token-abc123");
+        var (shareToken, _, _) = await CreateShareSetupAsync("年度不存在部門", 2058);
+
+        var resp = await _client.GetAsync($"/public/department-budget/{shareToken}/years/9999");
         resp.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
-    [Fact]
-    public async Task PublicGetBudget_InactiveToken_Returns401()
-    {
-        var (shareToken, authToken, deptId) = await CreateShareSetupAsync("停用公開部門", 2060);
-
-        // 停用 Token
-        await AuthorizedPutAsync(ShareUrl(2060, deptId), authToken,
-            new { isActive = false });
-
-        var resp = await _client.GetAsync($"/public/budget/{shareToken}");
-        resp.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-    }
-
     // ═══════════════════════════════════════════════
-    // Public — PUT /public/budget/{token}/items
+    // Public — PUT /public/department-budget/{token}/years/{year}/items
     // ═══════════════════════════════════════════════
 
     [Fact]
     public async Task PublicSaveItems_EditableToken_SavesSuccessfully()
     {
-        var (shareToken, _, _) = await CreateShareSetupAsync("公開儲存部門", 2059);
+        var (shareToken, _, _) = await CreateShareSetupAsync("公開儲存部門", 2057);
 
-        var resp = await _client.PutAsJsonAsync($"/public/budget/{shareToken}/items", new
-        {
-            items = new[]
+        var resp = await _client.PutAsJsonAsync(
+            $"/public/department-budget/{shareToken}/years/2057/items", new
             {
-                new { sequence = 1, activityName = "活動A", contentItem = "項目A", amount = 10000m, note = "備註A" },
-                new { sequence = 2, activityName = "活動B", contentItem = "項目B", amount = 20000m, note = (string?)null },
-            },
-        });
+                items = new[]
+                {
+                    new { sequence = 1, activityName = "活動A", contentItem = "項目A", amount = 10000m, note = "備註A" },
+                    new { sequence = 2, activityName = "活動B", contentItem = "項目B", amount = 20000m, note = (string?)null },
+                },
+            });
 
         resp.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await ReadBodyAsync(resp);
@@ -256,19 +254,20 @@ public class BudgetShareControllerTests(HansOsWebApplicationFactory factory)
     [Fact]
     public async Task PublicSaveItems_ReadOnlyToken_Returns401()
     {
-        var (shareToken, authToken, deptId) = await CreateShareSetupAsync("唯讀公開部門", 2058);
+        var (shareToken, authToken, deptId) = await CreateShareSetupAsync("唯讀公開部門", 2056);
 
         // 設定為唯讀
-        await AuthorizedPutAsync(ShareUrl(2058, deptId), authToken,
+        await AuthorizedPutAsync(ShareUrl(deptId), authToken,
             new { permission = "ReadOnly" });
 
-        var resp = await _client.PutAsJsonAsync($"/public/budget/{shareToken}/items", new
-        {
-            items = new[]
+        var resp = await _client.PutAsJsonAsync(
+            $"/public/department-budget/{shareToken}/years/2056/items", new
             {
-                new { sequence = 1, activityName = "活動X", contentItem = "項目X", amount = 5000m },
-            },
-        });
+                items = new[]
+                {
+                    new { sequence = 1, activityName = "活動X", contentItem = "項目X", amount = 5000m },
+                },
+            });
 
         resp.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
@@ -276,19 +275,20 @@ public class BudgetShareControllerTests(HansOsWebApplicationFactory factory)
     [Fact]
     public async Task PublicSaveItems_StatusLocked_Returns401()
     {
-        var (shareToken, authToken, _) = await CreateShareSetupAsync("狀態鎖定部門", 2057);
+        var (shareToken, authToken, _) = await CreateShareSetupAsync("狀態鎖定部門", 2055);
 
         // 將狀態從 Draft 改為 Submitted
-        await AuthorizedPutAsync($"/annual-budgets/2057/status", authToken,
+        await AuthorizedPutAsync($"/annual-budgets/2055/status", authToken,
             new { status = "Submitted" });
 
-        var resp = await _client.PutAsJsonAsync($"/public/budget/{shareToken}/items", new
-        {
-            items = new[]
+        var resp = await _client.PutAsJsonAsync(
+            $"/public/department-budget/{shareToken}/years/2055/items", new
             {
-                new { sequence = 1, activityName = "活動Y", contentItem = "項目Y", amount = 5000m },
-            },
-        });
+                items = new[]
+                {
+                    new { sequence = 1, activityName = "活動Y", contentItem = "項目Y", amount = 5000m },
+                },
+            });
 
         resp.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
@@ -296,13 +296,14 @@ public class BudgetShareControllerTests(HansOsWebApplicationFactory factory)
     [Fact]
     public async Task PublicSaveItems_InvalidToken_Returns404()
     {
-        var resp = await _client.PutAsJsonAsync("/public/budget/bad-token-xyz/items", new
-        {
-            items = new[]
+        var resp = await _client.PutAsJsonAsync(
+            "/public/department-budget/bad-token-xyz/years/2054/items", new
             {
-                new { sequence = 1, activityName = "活動Z", contentItem = "項目Z", amount = 1000m },
-            },
-        });
+                items = new[]
+                {
+                    new { sequence = 1, activityName = "活動Z", contentItem = "項目Z", amount = 1000m },
+                },
+            });
 
         resp.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
@@ -310,18 +311,19 @@ public class BudgetShareControllerTests(HansOsWebApplicationFactory factory)
     [Fact]
     public async Task PublicSaveItems_InactiveToken_Returns401()
     {
-        var (shareToken, authToken, deptId) = await CreateShareSetupAsync("停用寫入部門", 2056);
+        var (shareToken, authToken, deptId) = await CreateShareSetupAsync("停用寫入部門", 2053);
 
-        await AuthorizedPutAsync(ShareUrl(2056, deptId), authToken,
+        await AuthorizedPutAsync(ShareUrl(deptId), authToken,
             new { isActive = false });
 
-        var resp = await _client.PutAsJsonAsync($"/public/budget/{shareToken}/items", new
-        {
-            items = new[]
+        var resp = await _client.PutAsJsonAsync(
+            $"/public/department-budget/{shareToken}/years/2053/items", new
             {
-                new { sequence = 1, activityName = "活動W", contentItem = "項目W", amount = 1000m },
-            },
-        });
+                items = new[]
+                {
+                    new { sequence = 1, activityName = "活動W", contentItem = "項目W", amount = 1000m },
+                },
+            });
 
         resp.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
@@ -333,13 +335,14 @@ public class BudgetShareControllerTests(HansOsWebApplicationFactory factory)
     [Fact]
     public async Task PublicGetBudget_StatusSubmitted_EffectivePermissionReadOnly()
     {
-        var (shareToken, authToken, _) = await CreateShareSetupAsync("狀態連動部門", 2055);
+        var (shareToken, authToken, _) = await CreateShareSetupAsync("狀態連動部門", 2052);
 
         // 狀態改為 Submitted
-        await AuthorizedPutAsync($"/annual-budgets/2055/status", authToken,
+        await AuthorizedPutAsync($"/annual-budgets/2052/status", authToken,
             new { status = "Submitted" });
 
-        var resp = await _client.GetAsync($"/public/budget/{shareToken}");
+        var resp = await _client.GetAsync(
+            $"/public/department-budget/{shareToken}/years/2052");
         var data = (await ReadBodyAsync(resp)).GetProperty("data");
 
         data.GetProperty("effectivePermission").GetString().Should().Be("ReadOnly");
@@ -349,15 +352,16 @@ public class BudgetShareControllerTests(HansOsWebApplicationFactory factory)
     [Fact]
     public async Task PublicGetBudget_StatusBackToDraft_EffectivePermissionRestored()
     {
-        var (shareToken, authToken, _) = await CreateShareSetupAsync("狀態復原部門", 2054);
+        var (shareToken, authToken, _) = await CreateShareSetupAsync("狀態復原部門", 2051);
 
         // 狀態改為 Submitted，再改回 Draft
-        await AuthorizedPutAsync($"/annual-budgets/2054/status", authToken,
+        await AuthorizedPutAsync($"/annual-budgets/2051/status", authToken,
             new { status = "Submitted" });
-        await AuthorizedPutAsync($"/annual-budgets/2054/status", authToken,
+        await AuthorizedPutAsync($"/annual-budgets/2051/status", authToken,
             new { status = "Draft" });
 
-        var resp = await _client.GetAsync($"/public/budget/{shareToken}");
+        var resp = await _client.GetAsync(
+            $"/public/department-budget/{shareToken}/years/2051");
         var data = (await ReadBodyAsync(resp)).GetProperty("data");
 
         data.GetProperty("effectivePermission").GetString().Should().Be("Editable");
@@ -370,27 +374,29 @@ public class BudgetShareControllerTests(HansOsWebApplicationFactory factory)
     [Fact]
     public async Task PublicSaveItems_UpdateExistingItem_ReturnsUpdated()
     {
-        var (shareToken, _, _) = await CreateShareSetupAsync("更新項目部門", 2053);
+        var (shareToken, _, _) = await CreateShareSetupAsync("更新項目部門", 2050);
 
         // 先新增一筆
-        var resp1 = await _client.PutAsJsonAsync($"/public/budget/{shareToken}/items", new
-        {
-            items = new[]
+        var resp1 = await _client.PutAsJsonAsync(
+            $"/public/department-budget/{shareToken}/years/2050/items", new
             {
-                new { sequence = 1, activityName = "原始活動", contentItem = "原始項目", amount = 5000m },
-            },
-        });
+                items = new[]
+                {
+                    new { sequence = 1, activityName = "原始活動", contentItem = "原始項目", amount = 5000m },
+                },
+            });
         var items1 = (await ReadBodyAsync(resp1)).GetProperty("data");
         var itemId = items1[0].GetProperty("id").GetString();
 
         // 更新既有項目
-        var resp2 = await _client.PutAsJsonAsync($"/public/budget/{shareToken}/items", new
-        {
-            items = new[]
+        var resp2 = await _client.PutAsJsonAsync(
+            $"/public/department-budget/{shareToken}/years/2050/items", new
             {
-                new { id = itemId, sequence = 1, activityName = "更新活動", contentItem = "更新項目", amount = 8000m },
-            },
-        });
+                items = new[]
+                {
+                    new { id = itemId, sequence = 1, activityName = "更新活動", contentItem = "更新項目", amount = 8000m },
+                },
+            });
 
         resp2.StatusCode.Should().Be(HttpStatusCode.OK);
         var items2 = (await ReadBodyAsync(resp2)).GetProperty("data");
@@ -400,33 +406,10 @@ public class BudgetShareControllerTests(HansOsWebApplicationFactory factory)
     }
 
     // ═══════════════════════════════════════════════
-    // Admin — 分享端的 EffectivePermission
-    // ═══════════════════════════════════════════════
-
-    [Fact]
-    public async Task AdminGetShare_StatusSubmitted_EffectivePermissionReadOnly()
-    {
-        var authToken = await LoginAndGetTokenAsync();
-        var deptId = await EnsureDepartmentAsync("管理端狀態部門");
-        await InitializeAnnualBudgetAsync(2052, authToken);
-        await AuthorizedPostAsync(ShareUrl(2052, deptId), authToken, new { });
-
-        // 狀態改為 Submitted
-        await AuthorizedPutAsync($"/annual-budgets/2052/status", authToken,
-            new { status = "Submitted" });
-
-        var resp = await AuthorizedGetAsync(ShareUrl(2052, deptId), authToken);
-        var data = (await ReadBodyAsync(resp)).GetProperty("data");
-        data.GetProperty("effectivePermission").GetString().Should().Be("ReadOnly");
-        data.GetProperty("permission").GetString().Should().Be("Editable");
-    }
-
-    // ═══════════════════════════════════════════════
     // Helpers
     // ═══════════════════════════════════════════════
 
-    /// <summary>建立完整分享設定（建立部門、初始化預算、產生 Token）</summary>
-    /// <returns>(shareToken, authToken, departmentId)</returns>
+    /// <summary>建立完整分享設定（建立部門、初始化預算、取得自動建立的 Token）</summary>
     private async Task<(string ShareToken, string AuthToken, Guid DepartmentId)> CreateShareSetupAsync(
         string departmentName, int year)
     {
@@ -434,15 +417,16 @@ public class BudgetShareControllerTests(HansOsWebApplicationFactory factory)
         var deptId = await EnsureDepartmentAsync(departmentName);
         await InitializeAnnualBudgetAsync(year, authToken);
 
-        var resp = await AuthorizedPostAsync(ShareUrl(year, deptId), authToken, new { });
+        // GetOrCreate 會自動建立 Token
+        var resp = await AuthorizedGetAsync(ShareUrl(deptId), authToken);
         var data = (await ReadBodyAsync(resp)).GetProperty("data");
         var shareToken = data.GetProperty("token").GetString()!;
 
         return (shareToken, authToken, deptId);
     }
 
-    private static string ShareUrl(int year, Guid departmentId)
-        => $"/annual-budgets/{year}/departments/{departmentId}/share";
+    private static string ShareUrl(Guid departmentId)
+        => $"/annual-budgets/departments/{departmentId}/share";
 
     private async Task<Guid> EnsureDepartmentAsync(string name)
     {

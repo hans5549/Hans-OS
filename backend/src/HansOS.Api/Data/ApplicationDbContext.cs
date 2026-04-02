@@ -363,7 +363,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             e.HasIndex(t => new { t.UserId, t.TradeDate });
         });
 
-        // BudgetShareToken — 預算分享連結
+        // BudgetShareToken — 部門預算分享連結（每部門一個永久 Token）
         builder.Entity<BudgetShareToken>(e =>
         {
             e.HasKey(t => t.Id);
@@ -373,12 +373,12 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
              .HasConversion<string>()
              .HasMaxLength(20);
 
-            e.HasOne(t => t.DepartmentBudget)
+            e.HasOne(t => t.Department)
              .WithMany()
-             .HasForeignKey(t => t.DepartmentBudgetId)
+             .HasForeignKey(t => t.DepartmentId)
              .OnDelete(DeleteBehavior.Cascade);
 
-            e.HasIndex(t => t.DepartmentBudgetId).IsUnique();
+            e.HasIndex(t => t.DepartmentId).IsUnique();
         });
     }
 }

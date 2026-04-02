@@ -2,14 +2,26 @@ import { requestClient } from '#/api/request';
 
 // ── Types ─────────────────────────────────────────
 
-/** 分享連結資訊（管理端） */
-export interface BudgetShareInfoResponse {
+/** 部門分享連結資訊（管理端） */
+export interface DepartmentShareInfoResponse {
   id: string;
   token: string;
   permission: string;
   isActive: boolean;
-  effectivePermission: string;
   createdAt: string;
+}
+
+/** 年度預算摘要 */
+export interface BudgetYearSummary {
+  year: number;
+  status: string;
+}
+
+/** 部門分享總覽（公開端） */
+export interface DepartmentShareOverviewResponse {
+  departmentName: string;
+  permission: string;
+  availableYears: BudgetYearSummary[];
 }
 
 /** 公開預算項目 */
@@ -54,47 +66,55 @@ export interface PublicSaveBudgetItemsRequest {
 
 // ── 管理端 API ────────────────────────────────────
 
-/** 建立或重新產生分享 Token */
-export const createBudgetShareApi = (year: number, departmentId: string) =>
-  requestClient.post<BudgetShareInfoResponse>(
-    `/annual-budgets/${year}/departments/${departmentId}/share`,
-  );
-
-/** 取得分享資訊 */
-export const getBudgetShareApi = (year: number, departmentId: string) =>
-  requestClient.get<BudgetShareInfoResponse | null>(
-    `/annual-budgets/${year}/departments/${departmentId}/share`,
+/** 取得或自動建立部門分享 Token */
+export const getOrCreateShareApi = (departmentId: string) =>
+  requestClient.get<DepartmentShareInfoResponse>(
+    `/annual-budgets/departments/${departmentId}/share`,
   );
 
 /** 更新分享設定 */
-export const updateBudgetShareApi = (
-  year: number,
+export const updateShareApi = (
   departmentId: string,
   data: UpdateShareRequest,
 ) =>
-  requestClient.put<BudgetShareInfoResponse>(
-    `/annual-budgets/${year}/departments/${departmentId}/share`,
+  requestClient.put<DepartmentShareInfoResponse>(
+    `/annual-budgets/departments/${departmentId}/share`,
     data,
   );
 
+/** 重新產生 Token */
+export const regenerateShareApi = (departmentId: string) =>
+  requestClient.post<DepartmentShareInfoResponse>(
+    `/annual-budgets/departments/${departmentId}/share/regenerate`,
+  );
+
 /** 撤銷分享 Token */
-export const revokeBudgetShareApi = (year: number, departmentId: string) =>
+export const revokeShareApi = (departmentId: string) =>
   requestClient.delete(
-    `/annual-budgets/${year}/departments/${departmentId}/share`,
+    `/annual-budgets/departments/${departmentId}/share`,
   );
 
 // ── 公開端 API ────────────────────────────────────
 
-/** 透過 Token 取得預算資料 */
-export const getPublicBudgetApi = (token: string) =>
-  requestClient.get<PublicBudgetResponse>(`/public/budget/${token}`);
+/** 透過 Token 取得部門總覽（部門名稱 + 可用年度） */
+export const getPublicDepartmentOverviewApi = (token: string) =>
+  requestClient.get<DepartmentShareOverviewResponse>(
+    `/public/department-budget/${token}`,
+  );
 
-/** 透過 Token 儲存預算項目 */
-export const savePublicBudgetItemsApi = (
+/** 透過 Token 取得特定年度預算資料 */
+export const getPublicDepartmentBudgetApi = (token: string, year: number) =>
+  requestClient.get<PublicBudgetResponse>(
+    `/public/department-budget/${token}/years/${year}`,
+  );
+
+/** 透過 Token 儲存特定年度預算項目 */
+export const savePublicDepartmentBudgetItemsApi = (
   token: string,
+  year: number,
   data: PublicSaveBudgetItemsRequest,
 ) =>
   requestClient.put<PublicBudgetItemResponse[]>(
-    `/public/budget/${token}/items`,
+    `/public/department-budget/${token}/years/${year}/items`,
     data,
   );

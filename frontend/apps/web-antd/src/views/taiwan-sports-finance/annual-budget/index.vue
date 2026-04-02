@@ -252,7 +252,6 @@ onMounted(fetchOverview);
             <SharePopover
               :department-id="(record as unknown as DepartmentBudgetSummaryResponse).departmentId"
               :department-name="(record as unknown as DepartmentBudgetSummaryResponse).departmentName"
-              :year="selectedYear"
             />
           </template>
         </template>

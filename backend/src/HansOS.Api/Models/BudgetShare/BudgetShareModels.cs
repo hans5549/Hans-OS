@@ -4,14 +4,22 @@ namespace HansOS.Api.Models.BudgetShare;
 
 // ── Response ──────────────────────────────────────
 
-/// <summary>分享連結資訊（管理端）</summary>
-public record BudgetShareInfoResponse(
+/// <summary>部門分享連結資訊（管理端）</summary>
+public record DepartmentShareInfoResponse(
     Guid Id,
     string Token,
     string Permission,
     bool IsActive,
-    string EffectivePermission,
     DateTime CreatedAt);
+
+/// <summary>部門分享總覽（公開端 — 含可用年度清單）</summary>
+public record DepartmentShareOverviewResponse(
+    string DepartmentName,
+    string Permission,
+    List<BudgetYearSummary> AvailableYears);
+
+/// <summary>年度預算摘要</summary>
+public record BudgetYearSummary(int Year, string Status);
 
 /// <summary>公開預算資料（公開端）</summary>
 public record PublicBudgetResponse(
