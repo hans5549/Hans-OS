@@ -119,6 +119,7 @@ public class ActivityServiceTests : IDisposable
         var request = new UpdateActivityRequest(
             Name: "已更新活動",
             Description: "新描述",
+            Month: null,
             Groups: null,
             Expenses:
             [
@@ -143,6 +144,7 @@ public class ActivityServiceTests : IDisposable
         var request = new UpdateActivityRequest(
             Name: "不存在",
             Description: null,
+            Month: null,
             Groups: null,
             Expenses: null);
 
