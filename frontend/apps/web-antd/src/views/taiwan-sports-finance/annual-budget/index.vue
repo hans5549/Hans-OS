@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
+import { onMounted, ref, watch } from 'vue';
 
 import { Page } from '@vben/common-ui';
 
@@ -42,24 +42,11 @@ const drawerDeptId = ref('');
 const drawerDeptName = ref('');
 
 const statusMap: Record<string, { color: string; label: string }> = {
-  Approved: { color: 'green', label: '已核准' },
   Draft: { color: 'default', label: '草稿' },
-  Settled: { color: 'purple', label: '已結算' },
   Submitted: { color: 'blue', label: '已提交' },
+  Approved: { color: 'green', label: '已核准' },
+  Settled: { color: 'purple', label: '已結算' },
 };
-
-const allowedTransitions: Record<string, string[]> = {
-  Approved: ['Settled'],
-  Draft: ['Submitted'],
-  Settled: [],
-  Submitted: ['Approved', 'Draft'],
-};
-
-const availableStatusOptions = computed(() => {
-  const current = overview.value?.status;
-  if (!current) return [];
-  return allowedTransitions[current] ?? [];
-});
 
 function formatExecutionRate(actualAmount: number, budgetAmount: number) {
   if (budgetAmount === 0) return '—';
@@ -155,19 +142,19 @@ function handleDrawerClose() {
   drawerOpen.value = false;
 }
 
-async function handleDrawerSaved() {
-  await fetchOverview();
+function handleDrawerSaved() {
+  return fetchOverview();
 }
 
 async function handleStatusChange(value: string) {
+  if (value === overview.value?.status) return;
   try {
     await updateBudgetStatusApi(selectedYear.value, { status: value });
     message.success('狀態已更新');
+  } catch {
+    // 全域攔截器處理 toast，不需要額外處理
+  } finally {
     await fetchOverview();
-  } catch (error: unknown) {
-    const apiError = error as { response?: { data?: { message?: string } } };
-    const msg = apiError?.response?.data?.message ?? '狀態更新失敗';
-    message.error(msg);
   }
 }
 
@@ -200,10 +187,7 @@ onMounted(fetchOverview);
           </Tag>
         </div>
 
-        <div
-          v-if="overview && availableStatusOptions.length > 0"
-          class="flex items-center gap-2"
-        >
+        <div v-if="overview" class="flex items-center gap-2">
           <span class="text-sm text-gray-500">切換狀態：</span>
           <Select
             :value="overview.status"
@@ -211,11 +195,11 @@ onMounted(fetchOverview);
             @change="(v: unknown) => handleStatusChange(String(v))"
           >
             <SelectOption
-              v-for="status in availableStatusOptions"
-              :key="status"
-              :value="status"
+              v-for="(info, key) in statusMap"
+              :key="key"
+              :value="key"
             >
-              {{ statusMap[status]?.label ?? status }}
+              {{ info.label }}
             </SelectOption>
           </Select>
         </div>
@@ -284,10 +268,7 @@ onMounted(fetchOverview);
               {{ overview.totalActual.toLocaleString('zh-TW') }}
             </td>
             <td class="text-right">
-              <template v-if="overview.totalBudget > 0">
-                {{ formatExecutionRate(overview.totalActual, overview.totalBudget) }}
-              </template>
-              <template v-else>—</template>
+              {{ formatExecutionRate(overview.totalActual, overview.totalBudget) }}
             </td>
             <td />
             <td />
