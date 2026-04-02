@@ -290,6 +290,102 @@ public class ActivityControllerTests(HansOsWebApplicationFactory factory)
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
+    [Fact]
+    public async Task Update_WithNewMonth_MovesActivityToTargetMonth()
+    {
+        var token = await LoginAndGetTokenAsync();
+        var deptId = await EnsureDepartmentAsync("月份異動部門");
+
+        // 建立四月活動
+        var createResp = await CreateActivityAsync(token, deptId, 2098, 4, "原月份活動", 100m);
+        var createBody = await ReadBodyAsync(createResp);
+        var activityId = createBody.GetProperty("data").GetProperty("id").GetString()!;
+        createBody.GetProperty("data").GetProperty("month").GetInt32().Should().Be(4);
+
+        // 異動到五月
+        var updatePayload = new
+        {
+            name = "原月份活動",
+            month = 5,
+        };
+
+        var updateResp = await AuthorizedPutAsync($"/activities/{activityId}", token, updatePayload);
+        updateResp.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = await ReadBodyAsync(updateResp);
+        var data = body.GetProperty("data");
+        data.GetProperty("month").GetInt32().Should().Be(5);
+
+        // 確認活動不在四月列表
+        var aprilResp = await AuthorizedGetAsync("/activities?year=2098&month=4", token);
+        var aprilBody = await ReadBodyAsync(aprilResp);
+        aprilBody.GetProperty("data").GetArrayLength().Should().Be(0);
+
+        // 確認活動在五月列表
+        var mayResp = await AuthorizedGetAsync("/activities?year=2098&month=5", token);
+        var mayBody = await ReadBodyAsync(mayResp);
+        mayBody.GetProperty("data").GetArrayLength().Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Update_WithoutMonth_KeepsOriginalMonth()
+    {
+        var token = await LoginAndGetTokenAsync();
+        var deptId = await EnsureDepartmentAsync("不傳月份部門");
+
+        var createResp = await CreateActivityAsync(token, deptId, 2098, 7, "保持月份活動", 100m);
+        var createBody = await ReadBodyAsync(createResp);
+        var activityId = createBody.GetProperty("data").GetProperty("id").GetString()!;
+
+        // 不傳 month 欄位
+        var updatePayload = new { name = "更新名稱但不改月份" };
+
+        var updateResp = await AuthorizedPutAsync($"/activities/{activityId}", token, updatePayload);
+        updateResp.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = await ReadBodyAsync(updateResp);
+        body.GetProperty("data").GetProperty("month").GetInt32().Should().Be(7);
+    }
+
+    [Fact]
+    public async Task Update_WithSameMonth_KeepsMonth()
+    {
+        var token = await LoginAndGetTokenAsync();
+        var deptId = await EnsureDepartmentAsync("同月份部門");
+
+        var createResp = await CreateActivityAsync(token, deptId, 2098, 9, "同月份活動", 100m);
+        var createBody = await ReadBodyAsync(createResp);
+        var activityId = createBody.GetProperty("data").GetProperty("id").GetString()!;
+        var originalSequence = createBody.GetProperty("data").GetProperty("sequence").GetInt32();
+
+        // 傳入相同月份
+        var updatePayload = new { name = "同月份活動", month = 9 };
+
+        var updateResp = await AuthorizedPutAsync($"/activities/{activityId}", token, updatePayload);
+        updateResp.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = await ReadBodyAsync(updateResp);
+        var data = body.GetProperty("data");
+        data.GetProperty("month").GetInt32().Should().Be(9);
+        data.GetProperty("sequence").GetInt32().Should().Be(originalSequence);
+    }
+
+    [Fact]
+    public async Task Update_WithInvalidMonth_Returns400()
+    {
+        var token = await LoginAndGetTokenAsync();
+        var deptId = await EnsureDepartmentAsync("無效月份部門");
+
+        var createResp = await CreateActivityAsync(token, deptId, 2098, 3, "無效月份活動");
+        var createBody = await ReadBodyAsync(createResp);
+        var activityId = createBody.GetProperty("data").GetProperty("id").GetString()!;
+
+        var updatePayload = new { name = "無效月份活動", month = 13 };
+
+        var updateResp = await AuthorizedPutAsync($"/activities/{activityId}", token, updatePayload);
+        updateResp.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
     // ── Delete ───────────────────────────────────────
 
     [Fact]

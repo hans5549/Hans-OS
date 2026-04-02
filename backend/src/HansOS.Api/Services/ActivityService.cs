@@ -150,6 +150,15 @@ public class ActivityService(ApplicationDbContext db) : IActivityService
         activity.Name = request.Name;
         activity.Description = request.Description;
         activity.UpdatedAt = now;
+
+        // 月份異動：重算目標月份的 Sequence
+        if (request.Month.HasValue && request.Month.Value != activity.Month)
+        {
+            activity.Month = request.Month.Value;
+            activity.Sequence = await GetNextSequenceAsync(
+                activity.DepartmentId, activity.Year, activity.Month, ct);
+        }
+
         await db.SaveChangesAsync(ct);
 
         // 建立新的分組/開銷（透過 DbSet 直接新增，避免導航屬性衝突）

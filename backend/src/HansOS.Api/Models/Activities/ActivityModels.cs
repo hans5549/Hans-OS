@@ -72,6 +72,7 @@ public record CreateActivityRequest(
 public record UpdateActivityRequest(
     [Required][StringLength(200)] string Name,
     [StringLength(1000)] string? Description,
+    [Range(1, 12)] int? Month,
     List<ActivityGroupInput>? Groups,
     List<ActivityExpenseInput>? Expenses);
 

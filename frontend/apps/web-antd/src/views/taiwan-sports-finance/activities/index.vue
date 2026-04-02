@@ -137,7 +137,10 @@ async function handleDelete(id: string) {
   }
 }
 
-async function handleSaved() {
+async function handleSaved(newMonth?: number) {
+  if (newMonth !== undefined) {
+    selectedMonth.value = newMonth;
+  }
   await refreshAll();
 }
 

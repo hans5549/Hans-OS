@@ -67,6 +67,7 @@ export interface CreateActivityRequest {
 export interface UpdateActivityRequest {
   name: string;
   description?: string;
+  month?: number;
   groups?: ActivityGroupInput[];
   expenses?: ActivityExpenseInput[];
 }

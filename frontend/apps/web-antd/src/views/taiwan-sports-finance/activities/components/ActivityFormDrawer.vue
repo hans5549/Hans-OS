@@ -47,7 +47,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   close: [];
-  saved: [];
+  saved: [newMonth?: number];
 }>();
 
 const saving = ref(false);
@@ -58,6 +58,7 @@ const budgetItems = ref<BudgetItemResponse[]>([]);
 const name = ref('');
 const description = ref('');
 const departmentId = ref('');
+const selectedMonth = ref(0);
 const groups = ref<GroupRow[]>([]);
 const expenses = ref<ExpenseRow[]>([]);
 
@@ -96,6 +97,7 @@ watch(
       name.value = a.name;
       description.value = a.description ?? '';
       departmentId.value = a.departmentId;
+      selectedMonth.value = a.month;
       useGroups.value = a.groups.length > 0;
 
       groups.value = a.groups.map((g) => ({
@@ -129,6 +131,7 @@ watch(
       name.value = '';
       description.value = '';
       departmentId.value = '';
+      selectedMonth.value = props.month;
       useGroups.value = false;
       groups.value = [];
       expenses.value = [createEmptyExpense(1)];
@@ -267,14 +270,17 @@ async function handleSave() {
   saving.value = true;
   try {
     if (isEditing.value && props.editingActivity) {
+      const monthChanged = selectedMonth.value !== props.editingActivity.month;
       const payload: UpdateActivityRequest = {
         name: name.value.trim(),
         description: description.value.trim() || undefined,
+        month: monthChanged ? selectedMonth.value : undefined,
         groups: groupsPayload,
         expenses: expensesPayload,
       };
       await updateActivityApi(props.editingActivity.id, payload);
       message.success('活動已更新');
+      emit('saved', monthChanged ? selectedMonth.value : undefined);
     } else {
       const payload: CreateActivityRequest = {
         departmentId: departmentId.value,
@@ -287,8 +293,8 @@ async function handleSave() {
       };
       await createActivityApi(payload);
       message.success('活動已新增');
+      emit('saved');
     }
-    emit('saved');
     emit('close');
   } finally {
     saving.value = false;
@@ -364,6 +370,20 @@ const expenseColumns = [
             :value="dept.id"
           >
             {{ dept.name }}
+          </SelectOption>
+        </Select>
+      </div>
+    </div>
+
+    <div v-if="isEditing" class="mb-4 grid grid-cols-2 gap-4">
+      <div>
+        <label class="mb-1 block text-sm font-medium">所屬月份</label>
+        <Select
+          v-model:value="selectedMonth"
+          style="width: 100%"
+        >
+          <SelectOption v-for="m in 12" :key="m" :value="m">
+            {{ m }} 月
           </SelectOption>
         </Select>
       </div>
