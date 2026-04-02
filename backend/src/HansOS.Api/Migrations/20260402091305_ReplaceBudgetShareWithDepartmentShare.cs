@@ -24,6 +24,20 @@ namespace HansOS.Api.Migrations
                 table: "BudgetShareTokens",
                 newName: "IX_BudgetShareTokens_DepartmentId");
 
+            // 將舊的 DepartmentBudget GUID 轉換為對應的 SportsDepartment GUID
+            migrationBuilder.Sql("""
+                UPDATE "BudgetShareTokens" AS bst
+                SET "DepartmentId" = db."DepartmentId"
+                FROM "DepartmentBudgets" AS db
+                WHERE bst."DepartmentId" = db."Id";
+                """);
+
+            // 刪除無法對應到 SportsDepartments 的孤立資料
+            migrationBuilder.Sql("""
+                DELETE FROM "BudgetShareTokens"
+                WHERE "DepartmentId" NOT IN (SELECT "Id" FROM "SportsDepartments");
+                """);
+
             migrationBuilder.AddForeignKey(
                 name: "FK_BudgetShareTokens_SportsDepartments_DepartmentId",
                 table: "BudgetShareTokens",
