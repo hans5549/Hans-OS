@@ -1,3 +1,4 @@
+using System.Text.Json;
 using HansOS.Api.Data;
 using HansOS.Api.Data.Entities;
 using HansOS.Api.Models.Finance;
@@ -62,7 +63,8 @@ public class FinanceTransactionService(
                     .Where(t => t.TransactionType == FinanceTransactionType.Income)
                     .Sum(t => (decimal?)t.Amount) ?? 0m,
                 TotalExpense = g
-                    .Where(t => t.TransactionType == FinanceTransactionType.Expense)
+                    .Where(t => t.TransactionType == FinanceTransactionType.Expense
+                             || t.TransactionType == FinanceTransactionType.Interest)
                     .Sum(t => (decimal?)t.Amount) ?? 0m,
             })
             .FirstOrDefaultAsync(ct);
@@ -76,6 +78,125 @@ public class FinanceTransactionService(
             totalIncome,
             totalExpense,
             totalIncome - totalExpense);
+    }
+
+    /// <inheritdoc />
+    public async Task<TrendResponse> GetTrendAsync(
+        string userId, int startYear, int startMonth,
+        int endYear, int endMonth, CancellationToken ct = default)
+    {
+        ValidateYearMonth(startYear, startMonth);
+        ValidateYearMonth(endYear, endMonth);
+
+        var startDate = new DateOnly(startYear, startMonth, 1);
+        var endDate = new DateOnly(endYear, endMonth, 1).AddMonths(1);
+
+        if (startDate >= endDate)
+        {
+            throw new ArgumentException("起始月份必須早於結束月份");
+        }
+
+        var monthCount = ((endYear - startYear) * 12) + (endMonth - startMonth) + 1;
+        if (monthCount > 12)
+        {
+            throw new ArgumentException("趨勢查詢最多 12 個月");
+        }
+
+        var monthlyData = await db.FinanceTransactions
+            .AsNoTracking()
+            .Where(t => t.UserId == userId
+                && t.TransactionDate >= startDate
+                && t.TransactionDate < endDate)
+            .GroupBy(t => new { t.TransactionDate.Year, t.TransactionDate.Month })
+            .Select(g => new
+            {
+                g.Key.Year,
+                g.Key.Month,
+                TotalIncome = g
+                    .Where(t => t.TransactionType == FinanceTransactionType.Income)
+                    .Sum(t => (decimal?)t.Amount) ?? 0m,
+                TotalExpense = g
+                    .Where(t => t.TransactionType == FinanceTransactionType.Expense
+                             || t.TransactionType == FinanceTransactionType.Interest)
+                    .Sum(t => (decimal?)t.Amount) ?? 0m,
+            })
+            .OrderBy(x => x.Year).ThenBy(x => x.Month)
+            .ToListAsync(ct);
+
+        var months = new List<MonthlyTrendPoint>();
+        var current = startDate;
+
+        while (current < endDate)
+        {
+            var data = monthlyData
+                .FirstOrDefault(d => d.Year == current.Year && d.Month == current.Month);
+
+            var income = data?.TotalIncome ?? 0m;
+            var expense = data?.TotalExpense ?? 0m;
+
+            months.Add(new MonthlyTrendPoint(
+                current.Year,
+                current.Month,
+                income,
+                expense,
+                income - expense));
+
+            current = current.AddMonths(1);
+        }
+
+        return new TrendResponse(months);
+    }
+
+    /// <inheritdoc />
+    public async Task<CategoryBreakdownResponse> GetCategoryBreakdownAsync(
+        string userId, int year, int month, string type, CancellationToken ct = default)
+    {
+        ValidateYearMonth(year, month);
+
+        if (!Enum.TryParse<FinanceTransactionType>(type, ignoreCase: true, out var transactionType)
+            || (transactionType != FinanceTransactionType.Expense
+                && transactionType != FinanceTransactionType.Income))
+        {
+            throw new ArgumentException("類型必須為 Expense 或 Income");
+        }
+
+        var startDate = new DateOnly(year, month, 1);
+        var endDate = startDate.AddMonths(1);
+
+        var matchingTypes = transactionType == FinanceTransactionType.Expense
+            ? new[] { FinanceTransactionType.Expense, FinanceTransactionType.Interest }
+            : new[] { FinanceTransactionType.Income };
+
+        var breakdown = await db.FinanceTransactions
+            .AsNoTracking()
+            .Where(t => t.UserId == userId
+                && t.TransactionDate >= startDate
+                && t.TransactionDate < endDate
+                && matchingTypes.Contains(t.TransactionType)
+                && t.CategoryId != null)
+            .GroupBy(t => new { t.CategoryId, t.Category!.Name, t.Category.Icon })
+            .Select(g => new
+            {
+                CategoryId = g.Key.CategoryId!.Value,
+                g.Key.Name,
+                g.Key.Icon,
+                Amount = g.Sum(t => t.Amount),
+                Count = g.Count(),
+            })
+            .OrderByDescending(x => x.Amount)
+            .ToListAsync(ct);
+
+        var total = breakdown.Sum(x => x.Amount);
+
+        var items = breakdown.Select(x => new CategoryBreakdownItem(
+            x.CategoryId,
+            x.Name,
+            x.Icon,
+            x.Amount,
+            total == 0 ? 0 : Math.Round(x.Amount / total * 100, 1),
+            x.Count)).ToList();
+
+        return new CategoryBreakdownResponse(year, month, type, total, items);
     }
 
     /// <inheritdoc />
@@ -94,6 +215,9 @@ public class FinanceTransactionService(
             Amount = request.Amount,
             TransactionDate = request.TransactionDate,
             Note = request.Note,
+            Currency = request.Currency,
+            Project = request.Project,
+            Tags = request.Tags,
             CategoryId = request.CategoryId,
             AccountId = request.AccountId,
             ToAccountId = request.ToAccountId,
@@ -126,6 +250,9 @@ public class FinanceTransactionService(
         transaction.Amount = request.Amount;
         transaction.TransactionDate = request.TransactionDate;
         transaction.Note = request.Note;
+        transaction.Currency = request.Currency;
+        transaction.Project = request.Project;
+        transaction.Tags = request.Tags;
         transaction.CategoryId = request.CategoryId;
         transaction.AccountId = request.AccountId;
         transaction.ToAccountId = request.ToAccountId;
@@ -165,24 +292,33 @@ public class FinanceTransactionService(
     private static void ValidateTransactionRequest(
         FinanceTransactionType type, Guid? categoryId, Guid accountId, Guid? toAccountId)
     {
-        if (type == FinanceTransactionType.Transfer)
+        switch (type)
         {
-            if (toAccountId is null)
-            {
-                throw new ArgumentException("轉帳交易必須指定目標帳戶");
-            }
+            case FinanceTransactionType.Transfer:
+                if (toAccountId is null)
+                {
+                    throw new ArgumentException("轉帳交易必須指定目標帳戶");
+                }
 
-            if (accountId == toAccountId)
-            {
-                throw new ArgumentException("來源帳戶與目標帳戶不可相同");
-            }
-        }
-        else
-        {
-            if (categoryId is null)
-            {
-                throw new ArgumentException("收入或支出交易必須指定分類");
-            }
+                if (accountId == toAccountId)
+                {
+                    throw new ArgumentException("來源帳戶與目標帳戶不可相同");
+                }
+
+                break;
+
+            case FinanceTransactionType.BalanceAdjustment:
+                break;
+
+            case FinanceTransactionType.Expense:
+            case FinanceTransactionType.Income:
+            case FinanceTransactionType.Interest:
+                if (categoryId is null)
+                {
+                    throw new ArgumentException("此交易類型必須指定分類");
+                }
+
+                break;
         }
     }
 
@@ -215,12 +351,28 @@ public class FinanceTransactionService(
 
     private static TransactionResponse MapToResponse(FinanceTransaction t)
     {
+        List<string>? tags = null;
+        if (!string.IsNullOrEmpty(t.Tags))
+        {
+            try
+            {
+                tags = JsonSerializer.Deserialize<List<string>>(t.Tags);
+            }
+            catch (JsonException)
+            {
+                // 忽略無效 JSON
+            }
+        }
+
         return new TransactionResponse(
             t.Id,
             t.TransactionType.ToString(),
             t.Amount,
             t.TransactionDate,
             t.Note,
+            t.Currency,
+            t.Project,
+            tags,
             t.CategoryId,
             t.Category?.Name,
             t.Category?.Icon,

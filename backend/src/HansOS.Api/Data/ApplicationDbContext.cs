@@ -269,6 +269,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
              .HasConversion<string>()
              .HasMaxLength(20);
             e.Property(a => a.InitialBalance).HasPrecision(18, 2);
+            e.Property(a => a.Currency).HasMaxLength(3).HasDefaultValue("TWD");
             e.Property(a => a.Icon).HasMaxLength(200);
 
             e.HasOne(a => a.User)
@@ -312,6 +313,9 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
              .HasConversion<string>()
              .HasMaxLength(20);
             e.Property(t => t.Amount).HasPrecision(18, 2);
+            e.Property(t => t.Currency).HasMaxLength(3).HasDefaultValue("TWD");
+            e.Property(t => t.Project).HasMaxLength(100);
+            e.Property(t => t.Tags).HasMaxLength(500);
             e.Property(t => t.Note).HasMaxLength(500);
 
             e.HasOne(t => t.User)

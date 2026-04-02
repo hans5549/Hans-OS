@@ -23,6 +23,7 @@ public class FinanceAccountService(
                 a.Id,
                 a.Name,
                 a.AccountType.ToString(),
+                a.Currency,
                 a.InitialBalance,
                 a.Icon,
                 a.SortOrder,
@@ -54,6 +55,7 @@ public class FinanceAccountService(
             UserId = userId,
             Name = request.Name,
             AccountType = accountType,
+            Currency = request.Currency,
             InitialBalance = request.InitialBalance,
             Icon = request.Icon,
             SortOrder = request.SortOrder,
@@ -71,6 +73,7 @@ public class FinanceAccountService(
             account.Id,
             account.Name,
             account.AccountType.ToString(),
+            account.Currency,
             account.InitialBalance,
             account.Icon,
             account.SortOrder,
@@ -100,6 +103,7 @@ public class FinanceAccountService(
 
         account.Name = request.Name;
         account.AccountType = accountType;
+        account.Currency = request.Currency;
         account.InitialBalance = request.InitialBalance;
         account.Icon = request.Icon;
         account.SortOrder = request.SortOrder;
@@ -114,6 +118,7 @@ public class FinanceAccountService(
             account.Id,
             account.Name,
             account.AccountType.ToString(),
+            account.Currency,
             account.InitialBalance,
             account.Icon,
             account.SortOrder,
@@ -191,12 +196,21 @@ public class FinanceAccountService(
                         currentBalance -= t.Amount;
                     }
                 }
+                else if (t.TransactionType == FinanceTransactionType.BalanceAdjustment && t.AccountId == a.Id)
+                {
+                    currentBalance += t.Amount;
+                }
+                else if (t.TransactionType == FinanceTransactionType.Interest && t.AccountId == a.Id)
+                {
+                    currentBalance -= t.Amount;
+                }
             }
 
             return new AccountBalanceResponse(
                 a.Id,
                 a.Name,
                 a.AccountType.ToString(),
+                a.Currency,
                 a.InitialBalance,
                 currentBalance,
                 a.Icon,

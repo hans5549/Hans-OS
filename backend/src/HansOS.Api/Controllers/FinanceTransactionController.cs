@@ -29,6 +29,23 @@ public class FinanceTransactionController(IFinanceTransactionService transaction
         => ApiEnvelope<MonthlySummaryResponse>.Success(
             await transactionService.GetMonthlySummaryAsync(CurrentUserId, year, month, ct));
 
+    /// <summary>取得跨月收支趨勢（最多 12 個月）</summary>
+    [HttpGet("trends")]
+    public async Task<ApiEnvelope<TrendResponse>> GetTrends(
+        [FromQuery] int startYear, [FromQuery] int startMonth,
+        [FromQuery] int endYear, [FromQuery] int endMonth,
+        CancellationToken ct)
+        => ApiEnvelope<TrendResponse>.Success(
+            await transactionService.GetTrendAsync(CurrentUserId, startYear, startMonth, endYear, endMonth, ct));
+
+    /// <summary>取得月度分類佔比</summary>
+    [HttpGet("category-breakdown")]
+    public async Task<ApiEnvelope<CategoryBreakdownResponse>> GetCategoryBreakdown(
+        [FromQuery] int year, [FromQuery] int month, [FromQuery] string type,
+        CancellationToken ct)
+        => ApiEnvelope<CategoryBreakdownResponse>.Success(
+            await transactionService.GetCategoryBreakdownAsync(CurrentUserId, year, month, type, ct));
+
     /// <summary>新增交易</summary>
     [HttpPost]
     public async Task<ApiEnvelope<TransactionResponse>> CreateTransaction(
