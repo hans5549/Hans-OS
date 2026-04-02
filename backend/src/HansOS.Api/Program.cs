@@ -82,6 +82,10 @@ builder.Services.AddScoped<IAnnualBudgetService, AnnualBudgetService>();
 builder.Services.AddScoped<IBudgetImportService, BudgetImportService>();
 builder.Services.AddScoped<IActivityService, ActivityService>();
 builder.Services.AddScoped<IPendingRemittanceService, PendingRemittanceService>();
+builder.Services.AddScoped<IFinanceAccountService, FinanceAccountService>();
+builder.Services.AddScoped<ITransactionCategoryService, TransactionCategoryService>();
+builder.Services.AddScoped<IFinanceTransactionService, FinanceTransactionService>();
+builder.Services.AddScoped<IStockTransactionService, StockTransactionService>();
 
 // ── Controllers + Swagger ────────────────────────
 builder.Services.AddControllers();

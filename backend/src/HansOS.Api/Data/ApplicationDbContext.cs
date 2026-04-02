@@ -21,6 +21,10 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<ActivityGroup> ActivityGroups => Set<ActivityGroup>();
     public DbSet<ActivityExpense> ActivityExpenses => Set<ActivityExpense>();
     public DbSet<PendingRemittance> PendingRemittances => Set<PendingRemittance>();
+    public DbSet<FinanceAccount> FinanceAccounts => Set<FinanceAccount>();
+    public DbSet<TransactionCategory> TransactionCategories => Set<TransactionCategory>();
+    public DbSet<FinanceTransaction> FinanceTransactions => Set<FinanceTransaction>();
+    public DbSet<StockTransaction> StockTransactions => Set<StockTransaction>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -252,6 +256,110 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             e.HasIndex(x => x.ActivityId);
             e.HasIndex(x => x.ActivityGroupId);
             e.HasIndex(x => x.BudgetItemId);
+        });
+
+        // FinanceAccount — 個人記帳帳戶
+        builder.Entity<FinanceAccount>(e =>
+        {
+            e.HasKey(a => a.Id);
+            e.Property(a => a.UserId).IsRequired();
+            e.Property(a => a.Name).HasMaxLength(100).IsRequired();
+            e.Property(a => a.AccountType)
+             .HasConversion<string>()
+             .HasMaxLength(20);
+            e.Property(a => a.InitialBalance).HasPrecision(18, 2);
+            e.Property(a => a.Icon).HasMaxLength(200);
+
+            e.HasOne(a => a.User)
+             .WithMany()
+             .HasForeignKey(a => a.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasIndex(a => new { a.UserId, a.Name }).IsUnique();
+        });
+
+        // TransactionCategory — 交易分類（兩層自我參照）
+        builder.Entity<TransactionCategory>(e =>
+        {
+            e.HasKey(c => c.Id);
+            e.Property(c => c.Name).HasMaxLength(100).IsRequired();
+            e.Property(c => c.Icon).HasMaxLength(200);
+            e.Property(c => c.CategoryType)
+             .HasConversion<string>()
+             .HasMaxLength(20);
+
+            e.HasOne(c => c.User)
+             .WithMany()
+             .HasForeignKey(c => c.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne(c => c.Parent)
+             .WithMany(c => c.Children)
+             .HasForeignKey(c => c.ParentId)
+             .OnDelete(DeleteBehavior.Restrict);
+
+            e.HasIndex(c => new { c.UserId, c.ParentId, c.Name }).IsUnique();
+            e.HasIndex(c => c.ParentId);
+        });
+
+        // FinanceTransaction — 個人記帳交易記錄
+        builder.Entity<FinanceTransaction>(e =>
+        {
+            e.HasKey(t => t.Id);
+            e.Property(t => t.UserId).IsRequired();
+            e.Property(t => t.TransactionType)
+             .HasConversion<string>()
+             .HasMaxLength(20);
+            e.Property(t => t.Amount).HasPrecision(18, 2);
+            e.Property(t => t.Note).HasMaxLength(500);
+
+            e.HasOne(t => t.User)
+             .WithMany()
+             .HasForeignKey(t => t.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne(t => t.Category)
+             .WithMany()
+             .HasForeignKey(t => t.CategoryId)
+             .OnDelete(DeleteBehavior.Restrict);
+
+            e.HasOne(t => t.Account)
+             .WithMany()
+             .HasForeignKey(t => t.AccountId)
+             .OnDelete(DeleteBehavior.Restrict);
+
+            e.HasOne(t => t.ToAccount)
+             .WithMany()
+             .HasForeignKey(t => t.ToAccountId)
+             .OnDelete(DeleteBehavior.Restrict);
+
+            e.HasIndex(t => new { t.UserId, t.TransactionDate });
+            e.HasIndex(t => new { t.UserId, t.CategoryId });
+            e.HasIndex(t => new { t.UserId, t.AccountId });
+        });
+
+        // StockTransaction — 股票交易記錄
+        builder.Entity<StockTransaction>(e =>
+        {
+            e.HasKey(t => t.Id);
+            e.Property(t => t.UserId).IsRequired();
+            e.Property(t => t.StockSymbol).HasMaxLength(20).IsRequired();
+            e.Property(t => t.StockName).HasMaxLength(100).IsRequired();
+            e.Property(t => t.TradeType)
+             .HasConversion<string>()
+             .HasMaxLength(10);
+            e.Property(t => t.PricePerShare).HasPrecision(18, 4);
+            e.Property(t => t.Commission).HasPrecision(18, 2);
+            e.Property(t => t.Tax).HasPrecision(18, 2);
+            e.Property(t => t.Note).HasMaxLength(500);
+
+            e.HasOne(t => t.User)
+             .WithMany()
+             .HasForeignKey(t => t.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasIndex(t => new { t.UserId, t.StockSymbol });
+            e.HasIndex(t => new { t.UserId, t.TradeDate });
         });
     }
 }
