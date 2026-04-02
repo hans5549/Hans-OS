@@ -89,6 +89,13 @@ public class AnnualBudgetService(
         return CreateOverviewResponse(budget, departments);
     }
 
+    public Task<byte[]> ExportAnnualBudgetAsync(int year, CancellationToken ct = default)
+    {
+        ValidateYear(year);
+        // TODO: 實際 Excel 格式待使用者提供後實作
+        throw new NotImplementedException("匯出格式尚未定義，待後續實作");
+    }
+
     /// <summary>確保年度預算存在，並自動為所有部門建立 DepartmentBudget</summary>
     private async Task<AnnualBudget> EnsureBudgetAsync(int year, CancellationToken ct)
     {

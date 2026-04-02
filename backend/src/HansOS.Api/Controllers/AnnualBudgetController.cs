@@ -1,5 +1,6 @@
 using HansOS.Api.Common;
 using HansOS.Api.Models.AnnualBudget;
+using HansOS.Api.Models.BudgetShare;
 using HansOS.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -11,7 +12,8 @@ namespace HansOS.Api.Controllers;
 [Authorize]
 public class AnnualBudgetController(
     IAnnualBudgetService budgetService,
-    IBudgetImportService importService) : ControllerBase
+    IBudgetImportService importService,
+    IBudgetShareService shareService) : ControllerBase
 {
     /// <summary>取得年度預算總覽（自動初始化）</summary>
     [HttpGet("{year:int}")]
@@ -63,4 +65,45 @@ public class AnnualBudgetController(
         int year, [FromBody] BudgetImportRequest request, CancellationToken ct)
         => ApiEnvelope<BudgetImportPreviewResponse>.Success(
             await importService.PreviewAsync(year, request, ct));
+
+    // ── 分享管理 ─────────────────────────────────
+
+    /// <summary>匯出全年度預算</summary>
+    [HttpGet("{year:int}/export")]
+    public async Task<IActionResult> Export(int year, CancellationToken ct)
+    {
+        var bytes = await budgetService.ExportAnnualBudgetAsync(year, ct);
+        var fileName = $"{year}年度預算.xlsx";
+        return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+    }
+
+    /// <summary>建立或重新產生部門分享 Token</summary>
+    [HttpPost("{year:int}/departments/{departmentId:guid}/share")]
+    public async Task<ApiEnvelope<BudgetShareInfoResponse>> CreateShare(
+        int year, Guid departmentId, CancellationToken ct)
+        => ApiEnvelope<BudgetShareInfoResponse>.Success(
+            await shareService.CreateShareTokenAsync(year, departmentId, ct));
+
+    /// <summary>取得部門分享資訊</summary>
+    [HttpGet("{year:int}/departments/{departmentId:guid}/share")]
+    public async Task<ApiEnvelope<BudgetShareInfoResponse?>> GetShare(
+        int year, Guid departmentId, CancellationToken ct)
+        => ApiEnvelope<BudgetShareInfoResponse?>.Success(
+            await shareService.GetShareInfoAsync(year, departmentId, ct));
+
+    /// <summary>更新部門分享設定</summary>
+    [HttpPut("{year:int}/departments/{departmentId:guid}/share")]
+    public async Task<ApiEnvelope<BudgetShareInfoResponse>> UpdateShare(
+        int year, Guid departmentId, [FromBody] UpdateShareRequest request, CancellationToken ct)
+        => ApiEnvelope<BudgetShareInfoResponse>.Success(
+            await shareService.UpdateShareAsync(year, departmentId, request, ct));
+
+    /// <summary>撤銷部門分享 Token</summary>
+    [HttpDelete("{year:int}/departments/{departmentId:guid}/share")]
+    public async Task<ApiEnvelope<object?>> RevokeShare(
+        int year, Guid departmentId, CancellationToken ct)
+    {
+        await shareService.RevokeShareAsync(year, departmentId, ct);
+        return ApiEnvelope<object?>.Success(null);
+    }
 }

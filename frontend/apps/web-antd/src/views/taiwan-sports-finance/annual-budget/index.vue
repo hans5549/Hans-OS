@@ -26,6 +26,7 @@ import {
 } from '#/api';
 
 import DepartmentBudgetDrawer from './components/DepartmentBudgetDrawer.vue';
+import SharePopover from './components/SharePopover.vue';
 
 defineOptions({ name: 'TsfAnnualBudgetPage' });
 
@@ -100,7 +101,7 @@ const columns = [
     fixed: 'right' as const,
     key: 'action',
     title: '操作',
-    width: 80,
+    width: 120,
   },
 ];
 
@@ -248,6 +249,11 @@ onMounted(fetchOverview);
             >
               編輯
             </Button>
+            <SharePopover
+              :department-id="(record as unknown as DepartmentBudgetSummaryResponse).departmentId"
+              :department-name="(record as unknown as DepartmentBudgetSummaryResponse).departmentName"
+              :year="selectedYear"
+            />
           </template>
         </template>
 

@@ -21,4 +21,7 @@ public interface IAnnualBudgetService
     /// <summary>更新核定總預算並重算各部門核定預算</summary>
     Task<AnnualBudgetOverviewResponse> UpdateGrantedBudgetAsync(
         int year, decimal grantedBudget, CancellationToken ct = default);
+
+    /// <summary>匯出全年度預算（所有部門），格式待定</summary>
+    Task<byte[]> ExportAnnualBudgetAsync(int year, CancellationToken ct = default);
 }

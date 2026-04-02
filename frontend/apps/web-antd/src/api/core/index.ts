@@ -2,6 +2,7 @@ export * from './activities';
 export * from './annual-budget';
 export * from './auth';
 export * from './bank-transactions';
+export * from './budget-share';
 export * from './menu';
 export * from './pending-remittances';
 export * from './tsf-settings';

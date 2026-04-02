@@ -25,6 +25,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<TransactionCategory> TransactionCategories => Set<TransactionCategory>();
     public DbSet<FinanceTransaction> FinanceTransactions => Set<FinanceTransaction>();
     public DbSet<StockTransaction> StockTransactions => Set<StockTransaction>();
+    public DbSet<BudgetShareToken> BudgetShareTokens => Set<BudgetShareToken>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -360,6 +361,24 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 
             e.HasIndex(t => new { t.UserId, t.StockSymbol });
             e.HasIndex(t => new { t.UserId, t.TradeDate });
+        });
+
+        // BudgetShareToken — 預算分享連結
+        builder.Entity<BudgetShareToken>(e =>
+        {
+            e.HasKey(t => t.Id);
+            e.Property(t => t.Token).HasMaxLength(100).IsRequired();
+            e.HasIndex(t => t.Token).IsUnique();
+            e.Property(t => t.Permission)
+             .HasConversion<string>()
+             .HasMaxLength(20);
+
+            e.HasOne(t => t.DepartmentBudget)
+             .WithMany()
+             .HasForeignKey(t => t.DepartmentBudgetId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasIndex(t => t.DepartmentBudgetId).IsUnique();
         });
     }
 }

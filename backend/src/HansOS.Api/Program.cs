@@ -80,6 +80,7 @@ builder.Services.AddScoped<IBankTransactionService, BankTransactionService>();
 builder.Services.AddScoped<IBankTransactionImportService, BankTransactionImportService>();
 builder.Services.AddScoped<IAnnualBudgetService, AnnualBudgetService>();
 builder.Services.AddScoped<IBudgetImportService, BudgetImportService>();
+builder.Services.AddScoped<IBudgetShareService, BudgetShareService>();
 builder.Services.AddScoped<IActivityService, ActivityService>();
 builder.Services.AddScoped<IPendingRemittanceService, PendingRemittanceService>();
 builder.Services.AddScoped<IFinanceAccountService, FinanceAccountService>();

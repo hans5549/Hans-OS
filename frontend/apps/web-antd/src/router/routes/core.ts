@@ -22,6 +22,18 @@ const fallbackNotFoundRoute: RouteRecordRaw = {
 
 /** 基本路由，这些路由是必须存在的 */
 const coreRoutes: RouteRecordRaw[] = [
+  // 公開預算頁面（不需登入）
+  {
+    component: () => import('#/views/public/budget/index.vue'),
+    meta: {
+      hideInMenu: true,
+      hideInTab: true,
+      ignoreAccess: true,
+      title: '預算填寫',
+    },
+    name: 'PublicBudget',
+    path: '/public/budget/:token',
+  },
   /**
    * 根路由
    * 使用基础布局，作为所有页面的父级容器，子级就不必配置BasicLayout。
