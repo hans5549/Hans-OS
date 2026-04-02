@@ -118,8 +118,8 @@ public class AnnualBudgetServiceTests : IDisposable
         await _sut.GetOverviewAsync(2025); // auto-initialize budget + department budgets
 
         var initialItems = new SaveBudgetItemsRequest([
-            new BudgetItemInput(null, 1, "活動A", "項目A", 1000, null, null, null),
-            new BudgetItemInput(null, 2, "活動B", "項目B", 2000, null, null, null),
+            new BudgetItemInput(null, 1, "活動A", "項目A", 1000, null),
+            new BudgetItemInput(null, 2, "活動B", "項目B", 2000, null),
         ]);
 
         var firstResult = await _sut.SaveDepartmentItemsAsync(2025, deptId, initialItems);
@@ -127,8 +127,8 @@ public class AnnualBudgetServiceTests : IDisposable
 
         // Act — update item 1, add item 3
         var updatedItems = new SaveBudgetItemsRequest([
-            new BudgetItemInput(existingItemId, 1, "活動A-更新", "項目A-更新", 1500, null, null, null),
-            new BudgetItemInput(null, 3, "活動C", "項目C", 3000, null, null, null),
+            new BudgetItemInput(existingItemId, 1, "活動A-更新", "項目A-更新", 1500, null),
+            new BudgetItemInput(null, 3, "活動C", "項目C", 3000, null),
         ]);
 
         var result = await _sut.SaveDepartmentItemsAsync(2025, deptId, updatedItems);
@@ -152,10 +152,10 @@ public class AnnualBudgetServiceTests : IDisposable
         await _sut.GetOverviewAsync(2025); // auto-init
 
         await _sut.SaveDepartmentItemsAsync(2025, dept1Id, new SaveBudgetItemsRequest([
-            new BudgetItemInput(null, 1, "活動A", "項目A", 60000, null, null, null),
+            new BudgetItemInput(null, 1, "活動A", "項目A", 60000, null),
         ]));
         await _sut.SaveDepartmentItemsAsync(2025, dept2Id, new SaveBudgetItemsRequest([
-            new BudgetItemInput(null, 1, "活動B", "項目B", 40000, null, null, null),
+            new BudgetItemInput(null, 1, "活動B", "項目B", 40000, null),
         ]));
 
         // Act — grant 80k

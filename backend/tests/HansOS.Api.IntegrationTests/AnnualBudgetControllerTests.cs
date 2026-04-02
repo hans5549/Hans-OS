@@ -239,16 +239,14 @@ public class AnnualBudgetControllerTests(HansOsWebApplicationFactory factory)
                 "已更新活動",
                 "已更新項目",
                 2000m,
-                id: itemId,
-                actualAmount: 1800m,
-                actualNote: "實際支出"));
+                id: itemId));
 
         updateResp.StatusCode.Should().Be(HttpStatusCode.OK);
         var updateBody = await ReadBodyAsync(updateResp);
         var updated = updateBody.GetProperty("data")[0];
         updated.GetProperty("activityName").GetString().Should().Be("已更新活動");
         updated.GetProperty("amount").GetDecimal().Should().Be(2000m);
-        updated.GetProperty("actualAmount").GetDecimal().Should().Be(1800m);
+        updated.GetProperty("actualAmount").GetDecimal().Should().Be(0m);
     }
 
     [Fact]
@@ -1311,6 +1309,83 @@ public class AnnualBudgetControllerTests(HansOsWebApplicationFactory factory)
         hasImport.Should().BeTrue("should contain the budget import endpoint");
     }
 
+    // ── ActualAmount 自動計算 ──────────────────────────
+
+    [Fact]
+    public async Task GetDepartmentItems_WithLinkedExpenses_ReturnsComputedActualAmount()
+    {
+        // Arrange
+        var token = await LoginAndGetTokenAsync();
+        var deptId = await EnsureDepartmentAsync("自動核銷部門");
+        await InitializeAnnualBudgetAsync(2070, token);
+
+        var saveResp = await SaveDepartmentItemsAsync(
+            2070, deptId, token,
+            BudgetItemPayload(1, "春季活動", "場地租借", 5000m));
+        var body = await ReadBodyAsync(saveResp);
+        var budgetItemId = Guid.Parse(body.GetProperty("data")[0].GetProperty("id").GetString()!);
+
+        // 建立活動並連結開銷到該預算項目
+        await CreateActivityWithLinkedExpensesAsync(deptId, 2070, budgetItemId, token, 1200m, 800m);
+
+        // Act — 重新取得預算項目
+        var resp = await AuthorizedGetAsync(DepartmentItemsUrl(2070, deptId), token);
+
+        // Assert
+        resp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var items = (await ReadBodyAsync(resp)).GetProperty("data");
+        items[0].GetProperty("actualAmount").GetDecimal().Should().Be(2000m);
+    }
+
+    [Fact]
+    public async Task GetOverview_WithLinkedExpenses_SumsActualAmountPerDepartment()
+    {
+        // Arrange
+        var token = await LoginAndGetTokenAsync();
+        var deptId = await EnsureDepartmentAsync("總覽核銷部門");
+        await InitializeAnnualBudgetAsync(2071, token);
+
+        var saveResp = await SaveDepartmentItemsAsync(
+            2071, deptId, token,
+            BudgetItemPayload(1, "夏季活動", "器材費", 3000m));
+        var body = await ReadBodyAsync(saveResp);
+        var budgetItemId = Guid.Parse(body.GetProperty("data")[0].GetProperty("id").GetString()!);
+
+        await CreateActivityWithLinkedExpensesAsync(deptId, 2071, budgetItemId, token, 500m, 700m, 300m);
+
+        // Act — 取得年度總覽
+        var resp = await AuthorizedGetAsync("/annual-budgets/2071", token);
+
+        // Assert
+        resp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var overview = (await ReadBodyAsync(resp)).GetProperty("data");
+        var dept = overview.GetProperty("departments").EnumerateArray()
+            .First(d => d.GetProperty("departmentId").GetString() == deptId.ToString());
+        dept.GetProperty("actualAmount").GetDecimal().Should().Be(1500m);
+        overview.GetProperty("totalActual").GetDecimal().Should().BeGreaterThanOrEqualTo(1500m);
+    }
+
+    [Fact]
+    public async Task GetDepartmentItems_NoLinkedExpenses_ReturnsZeroActualAmount()
+    {
+        // Arrange
+        var token = await LoginAndGetTokenAsync();
+        var deptId = await EnsureDepartmentAsync("零核銷部門");
+        await InitializeAnnualBudgetAsync(2072, token);
+
+        await SaveDepartmentItemsAsync(
+            2072, deptId, token,
+            BudgetItemPayload(1, "無連結活動", "測試項目", 1000m));
+
+        // Act
+        var resp = await AuthorizedGetAsync(DepartmentItemsUrl(2072, deptId), token);
+
+        // Assert
+        resp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var items = (await ReadBodyAsync(resp)).GetProperty("data");
+        items[0].GetProperty("actualAmount").GetDecimal().Should().Be(0m);
+    }
+
     // ── Helpers ──────────────────────────────────────
 
     private async Task<Guid> EnsureDepartmentAsync(string name)
@@ -1374,8 +1449,6 @@ public class AnnualBudgetControllerTests(HansOsWebApplicationFactory factory)
         string contentItem,
         decimal amount,
         string? note = null,
-        decimal? actualAmount = null,
-        string? actualNote = null,
         string? id = null)
         => new
         {
@@ -1385,8 +1458,6 @@ public class AnnualBudgetControllerTests(HansOsWebApplicationFactory factory)
             contentItem,
             amount,
             note,
-            actualAmount,
-            actualNote,
         };
 
     private static HttpRequestMessage AuthGet(string url, string token)
@@ -1407,5 +1478,30 @@ public class AnnualBudgetControllerTests(HansOsWebApplicationFactory factory)
         var req = new HttpRequestMessage(method, url) { Content = content };
         req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         return req;
+    }
+
+    private async Task CreateActivityWithLinkedExpensesAsync(
+        Guid departmentId, int year, Guid budgetItemId, string token, params decimal[] amounts)
+    {
+        var expenses = amounts.Select((a, i) => new
+        {
+            description = $"開銷項目{i + 1}",
+            amount = a,
+            sequence = i + 1,
+            budgetItemId = budgetItemId.ToString(),
+        }).ToList();
+
+        var payload = new
+        {
+            name = $"測試活動-{Guid.NewGuid():N}",
+            departmentId = departmentId.ToString(),
+            year,
+            month = 6,
+            groups = Array.Empty<object>(),
+            expenses,
+        };
+
+        var resp = await _client.SendAsync(AuthPost("/activities", token, payload));
+        resp.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 }

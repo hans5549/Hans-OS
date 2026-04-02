@@ -30,8 +30,7 @@ export interface BudgetItemResponse {
   contentItem: string;
   amount: number;
   note: string | null;
-  actualAmount: number | null;
-  actualNote: string | null;
+  actualAmount: number;
 }
 
 export interface BudgetItemInput {
@@ -41,8 +40,6 @@ export interface BudgetItemInput {
   contentItem: string;
   amount: number;
   note?: string;
-  actualAmount?: number;
-  actualNote?: string;
 }
 
 export interface SaveBudgetItemsRequest {

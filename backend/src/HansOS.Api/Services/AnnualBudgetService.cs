@@ -240,7 +240,7 @@ public class AnnualBudgetService(
             .OrderBy(i => i.Sequence)
             .Select(i => new BudgetItemResponse(
                 i.Id, i.Sequence, i.ActivityName, i.ContentItem,
-                i.Amount, i.Note, i.ActualAmount, i.ActualNote))
+                i.Amount, i.Note, i.LinkedExpenses.Sum(e => e.Amount)))
             .ToListAsync(ct);
 
     private void RemoveDeletedItems(IEnumerable<BudgetItem> existingItems, IEnumerable<BudgetItemInput> items)
@@ -283,8 +283,6 @@ public class AnnualBudgetService(
         existingItem.ContentItem = item.ContentItem;
         existingItem.Amount = item.Amount;
         existingItem.Note = item.Note;
-        existingItem.ActualAmount = item.ActualAmount;
-        existingItem.ActualNote = item.ActualNote;
         existingItem.UpdatedAt = now;
     }
 
@@ -308,8 +306,6 @@ public class AnnualBudgetService(
             ContentItem = item.ContentItem,
             Amount = item.Amount,
             Note = item.Note,
-            ActualAmount = item.ActualAmount,
-            ActualNote = item.ActualNote,
             CreatedAt = now,
             UpdatedAt = now,
         };
@@ -326,7 +322,7 @@ public class AnnualBudgetService(
                 d.DepartmentId,
                 d.Department.Name,
                 d.Items.Sum(i => i.Amount),
-                d.Items.Sum(i => i.ActualAmount ?? 0m),
+                d.Items.Sum(i => i.LinkedExpenses.Sum(e => e.Amount)),
                 d.AllocatedAmount,
                 d.Items.Count))
             .ToListAsync(ct);

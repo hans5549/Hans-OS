@@ -16,4 +16,7 @@ public class BudgetItem
     public DateTime UpdatedAt { get; set; }
 
     public DepartmentBudget DepartmentBudget { get; set; } = null!;
+
+    /// <summary>連結到此預算項目的活動開銷</summary>
+    public ICollection<ActivityExpense> LinkedExpenses { get; set; } = [];
 }

@@ -20,6 +20,8 @@ import {
 
 interface BudgetItemRow extends BudgetItemInput {
   _key: string;
+  /** 從 API 回傳的自動計算值（唯讀顯示） */
+  actualAmount?: number;
 }
 
 const props = defineProps<{
@@ -88,8 +90,7 @@ function toInput(item: BudgetItemResponse): BudgetItemRow {
     contentItem: item.contentItem,
     amount: item.amount,
     note: item.note ?? undefined,
-    actualAmount: item.actualAmount ?? undefined,
-    actualNote: item.actualNote ?? undefined,
+    actualAmount: item.actualAmount,
   };
 }
 
@@ -140,8 +141,6 @@ function createEmptyRow(sequence: number): BudgetItemRow {
     contentItem: '',
     amount: 0,
     note: undefined,
-    actualAmount: undefined,
-    actualNote: undefined,
   };
 }
 
@@ -155,7 +154,7 @@ const hasInvalidItems = () =>
   items.value.some((item) => !item.activityName.trim() || !item.contentItem.trim());
 
 const saveItems = () => {
-  const payload = items.value.map(({ _key, ...rest }) => rest);
+  const payload = items.value.map(({ _key, actualAmount: _, ...rest }) => rest);
   return saveDepartmentBudgetItemsApi(props.year, props.departmentId, { items: payload });
 };
 </script>
@@ -236,15 +235,10 @@ const saveItems = () => {
         </template>
 
         <template v-else-if="column.dataIndex === 'actualAmount'">
-          <InputNumber
-            v-model:value="items[index]!.actualAmount"
-            :formatter="formatNumericInput"
-            :min="0"
-            :parser="(v: string) => v.replace(/,/g, '')"
-            placeholder="—"
-            size="small"
-            style="width: 100%"
-          />
+          <span v-if="items[index]!.actualAmount" class="tabular-nums">
+            {{ formatCurrency(items[index]!.actualAmount!) }}
+          </span>
+          <span v-else class="text-gray-400">—</span>
         </template>
 
         <template v-else-if="column.key === 'action'">

@@ -250,7 +250,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
              .OnDelete(DeleteBehavior.Cascade);
 
             e.HasOne(x => x.BudgetItem)
-             .WithMany()
+             .WithMany(b => b.LinkedExpenses)
              .HasForeignKey(x => x.BudgetItemId)
              .OnDelete(DeleteBehavior.SetNull);
 

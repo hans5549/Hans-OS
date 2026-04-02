@@ -33,8 +33,7 @@ public record BudgetItemResponse(
     string ContentItem,
     decimal Amount,
     string? Note,
-    decimal? ActualAmount,
-    string? ActualNote);
+    decimal ActualAmount);
 
 // ── Request ───────────────────────────────────────
 
@@ -49,9 +48,7 @@ public record BudgetItemInput(
     [Required][StringLength(200)] string ActivityName,
     [Required][StringLength(200)] string ContentItem,
     [Range(0, (double)decimal.MaxValue)] decimal Amount,
-    [StringLength(1000)] string? Note,
-    [Range(0, (double)decimal.MaxValue)] decimal? ActualAmount,
-    [StringLength(1000)] string? ActualNote);
+    [StringLength(1000)] string? Note);
 
 /// <summary>更新預算狀態</summary>
 public record UpdateBudgetStatusRequest(
