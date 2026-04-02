@@ -32,6 +32,16 @@ public class FinanceAccountControllerTests(HansOsWebApplicationFactory factory)
     public async Task GetAccounts_Empty_ReturnsEmptyList()
     {
         var token = await LoginAndGetTokenAsync();
+
+        // 清除所有現有帳戶，確保初始狀態為空
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            db.FinanceTransactions.RemoveRange(db.FinanceTransactions);
+            db.FinanceAccounts.RemoveRange(db.FinanceAccounts);
+            await db.SaveChangesAsync();
+        }
+
         var response = await AuthorizedGetAsync("/finance/accounts", token);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);

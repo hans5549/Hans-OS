@@ -232,30 +232,29 @@ public class FinanceTransactionControllerTests(HansOsWebApplicationFactory facto
         var incomeCategory = await CreateCategoryAndGetIdAsync(token, "摘要收入", "Income");
         var expenseCategory = await CreateCategoryAndGetIdAsync(token, "摘要支出", "Expense");
 
-        // Create income 5000
+        // Use a unique month (June 2025) to avoid data pollution from other tests
         await AuthorizedPostAsync("/finance/transactions", token, new
         {
             transactionType = "Income", amount = 5000,
-            transactionDate = "2025-04-01", categoryId = incomeCategory, accountId,
+            transactionDate = "2025-06-01", categoryId = incomeCategory, accountId,
         });
 
-        // Create expense 3000
         await AuthorizedPostAsync("/finance/transactions", token, new
         {
             transactionType = "Expense", amount = 3000,
-            transactionDate = "2025-04-02", categoryId = expenseCategory, accountId,
+            transactionDate = "2025-06-02", categoryId = expenseCategory, accountId,
         });
 
-        var response = await AuthorizedGetAsync("/finance/transactions/summary?year=2025&month=4", token);
+        var response = await AuthorizedGetAsync("/finance/transactions/summary?year=2025&month=6", token);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await ReadBodyAsync(response);
         body.GetProperty("code").GetInt32().Should().Be(0);
 
         var data = body.GetProperty("data");
-        data.GetProperty("totalIncome").GetDecimal().Should().BeGreaterThanOrEqualTo(5000);
-        data.GetProperty("totalExpense").GetDecimal().Should().BeGreaterThanOrEqualTo(3000);
-        data.GetProperty("balance").GetDecimal().Should().BeGreaterThanOrEqualTo(2000);
+        data.GetProperty("totalIncome").GetDecimal().Should().Be(5000);
+        data.GetProperty("totalExpense").GetDecimal().Should().Be(3000);
+        data.GetProperty("balance").GetDecimal().Should().Be(2000);
     }
 
     // ── PUT /finance/transactions/{id} ──────────────
@@ -336,9 +335,10 @@ public class FinanceTransactionControllerTests(HansOsWebApplicationFactory facto
 
     private async Task<string> CreateAccountAndGetIdAsync(string token, string name = "測試帳戶")
     {
+        var uniqueName = $"{name}_{Guid.NewGuid():N}";
         var resp = await AuthorizedPostAsync("/finance/accounts", token, new
         {
-            name,
+            name = uniqueName,
             accountType = "Cash",
             initialBalance = 10000,
         });
@@ -348,9 +348,10 @@ public class FinanceTransactionControllerTests(HansOsWebApplicationFactory facto
 
     private async Task<string> CreateCategoryAndGetIdAsync(string token, string name = "測試分類", string type = "Expense")
     {
+        var uniqueName = $"{name}_{Guid.NewGuid():N}";
         var resp = await AuthorizedPostAsync("/finance/categories", token, new
         {
-            name,
+            name = uniqueName,
             categoryType = type,
         });
         var body = await ReadBodyAsync(resp);
