@@ -133,15 +133,15 @@ public class AnnualBudgetControllerTests(HansOsWebApplicationFactory factory)
     }
 
     [Fact]
-    public async Task UpdateStatus_InvalidTransition_Returns400()
+    public async Task UpdateStatus_DraftToApproved_Returns200()
     {
         var token = await LoginAndGetTokenAsync();
         await InitializeAnnualBudgetAsync(2085, token);
 
-        // Draft → Approved 不允許（必須先 Submitted）
+        // Draft → Approved 自由切換
         var response = await AuthorizedPutAsync("/annual-budgets/2085/status", token, new { status = "Approved" });
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Fact]
@@ -549,7 +549,7 @@ public class AnnualBudgetControllerTests(HansOsWebApplicationFactory factory)
     }
 
     [Fact]
-    public async Task UpdateStatus_SettledToAny_Returns400()
+    public async Task UpdateStatus_SettledToAny_Returns200()
     {
         var token = await LoginAndGetTokenAsync();
         await InitializeAnnualBudgetAsync(2033, token);
@@ -559,20 +559,20 @@ public class AnnualBudgetControllerTests(HansOsWebApplicationFactory factory)
         await AuthorizedPutAsync("/annual-budgets/2033/status", token, new { status = "Approved" });
         await AuthorizedPutAsync("/annual-budgets/2033/status", token, new { status = "Settled" });
 
-        // Settled 為終態，無法轉換
+        // Settled → Draft 自由切換
         var response = await AuthorizedPutAsync("/annual-budgets/2033/status", token, new { status = "Draft" });
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Fact]
-    public async Task UpdateStatus_DraftToDraft_Returns400()
+    public async Task UpdateStatus_DraftToDraft_Returns200_NoOp()
     {
         var token = await LoginAndGetTokenAsync();
         await InitializeAnnualBudgetAsync(2034, token);
 
-        // Draft → Draft 不在允許轉換清單中
+        // Draft → Draft 同狀態，回傳成功但不更新
         var response = await AuthorizedPutAsync("/annual-budgets/2034/status", token, new { status = "Draft" });
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Fact]

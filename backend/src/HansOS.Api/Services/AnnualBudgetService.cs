@@ -13,14 +13,6 @@ public class AnnualBudgetService(
     private const int MinYear = 2020;
     private const int MaxYear = 2100;
 
-    private static readonly Dictionary<BudgetStatus, BudgetStatus[]> AllowedTransitions = new()
-    {
-        [BudgetStatus.Draft] = [BudgetStatus.Submitted],
-        [BudgetStatus.Submitted] = [BudgetStatus.Approved, BudgetStatus.Draft],
-        [BudgetStatus.Approved] = [BudgetStatus.Settled],
-        [BudgetStatus.Settled] = [],
-    };
-
     public async Task<AnnualBudgetOverviewResponse> GetOverviewAsync(
         int year, CancellationToken ct = default)
     {
@@ -40,7 +32,8 @@ public class AnnualBudgetService(
         var budget = await db.AnnualBudgets.FirstOrDefaultAsync(b => b.Year == year, ct)
             ?? throw new KeyNotFoundException($"{year} 年度預算不存在");
 
-        ValidateStatusTransition(budget.Status, newStatus);
+        if (budget.Status == newStatus)
+            return;
 
         logger.LogInformation(
             "預算狀態變更: Year={Year}, {OldStatus} → {NewStatus}",
@@ -348,11 +341,5 @@ public class AnnualBudgetService(
     {
         if (year < MinYear || year > MaxYear)
             throw new ArgumentException($"年度必須在 {MinYear} 至 {MaxYear} 之間");
-    }
-
-    private static void ValidateStatusTransition(BudgetStatus current, BudgetStatus target)
-    {
-        if (!AllowedTransitions.TryGetValue(current, out var allowed) || !allowed.Contains(target))
-            throw new ArgumentException($"無法從「{current}」轉換為「{target}」");
     }
 }

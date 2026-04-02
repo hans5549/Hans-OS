@@ -71,16 +71,33 @@ public class AnnualBudgetServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task UpdateStatus_InvalidTransition_ThrowsArgumentException()
+    public async Task UpdateStatus_AnyTransition_UpdatesStatus()
     {
         // Arrange
         await SeedBudgetAsync(2025, BudgetStatus.Draft);
 
-        // Act
-        var act = () => _sut.UpdateStatusAsync(2025, "Approved");
+        // Act — Draft → Approved（自由切換）
+        await _sut.UpdateStatusAsync(2025, "Approved");
 
         // Assert
-        await act.Should().ThrowAsync<ArgumentException>();
+        var budget = await _db.AnnualBudgets.FirstAsync(b => b.Year == 2025);
+        budget.Status.Should().Be(BudgetStatus.Approved);
+    }
+
+    [Fact]
+    public async Task UpdateStatus_SameStatus_NoOp()
+    {
+        // Arrange
+        await SeedBudgetAsync(2025, BudgetStatus.Draft);
+        var before = (await _db.AnnualBudgets.FirstAsync(b => b.Year == 2025)).UpdatedAt;
+
+        // Act — 同狀態不應更新
+        await _sut.UpdateStatusAsync(2025, "Draft");
+
+        // Assert
+        var budget = await _db.AnnualBudgets.FirstAsync(b => b.Year == 2025);
+        budget.Status.Should().Be(BudgetStatus.Draft);
+        budget.UpdatedAt.Should().Be(before);
     }
 
     [Fact]
