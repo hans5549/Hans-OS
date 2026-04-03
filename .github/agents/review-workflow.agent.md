@@ -23,6 +23,7 @@ tools: ["read", "search", "agent"]
 
 呼叫 `@code-review` agent（model: `gpt-5.4`）
 - 含結構性審查：SQL safety、race conditions、trust boundary、shared DbContext、async patterns
+- 可自動修復明顯問題（dead code、missing AsNoTracking、style fixes），使用 [ASK] 呈報需人類判斷的問題
 - 與 Step 3 同時派遣
 
 ## Step 3: Security Review（與 Step 2 **平行**派遣）

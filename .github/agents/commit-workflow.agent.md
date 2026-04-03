@@ -31,7 +31,7 @@ tools: ["read", "search", "edit", "execute", "agent"]
 ## Step 2: Code Review（與 Step 3 **平行**派遣）
 
 呼叫 `@code-review` agent（model: `gpt-5.4`）：
-- 提示：「Review these modified files: [list files]. Changes summary: [summary]. Check: code quality, architecture compliance, naming conventions, error handling, potential bugs. ALSO check structural issues: SQL safety, race conditions, trust boundary, shared DbContext, async anti-patterns.」
+- 提示：「Review these modified files: [list files]. Changes summary: [summary]. Check: code quality, architecture compliance, naming conventions, error handling, potential bugs. ALSO check structural issues: SQL safety, race conditions, trust boundary, shared DbContext, async anti-patterns. Auto-fix obvious mechanical issues (dead code, missing AsNoTracking, style fixes). Use [ASK] for anything requiring human judgment. Use [ARCH] for architecture-level issues.」
 - **必須**呼叫 agent
 - 與 Step 3 同時派遣（一條訊息，兩個 agent 呼叫）
 
