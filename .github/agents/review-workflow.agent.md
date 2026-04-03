@@ -21,18 +21,18 @@ tools: ["read", "search", "agent"]
 
 ## Step 2: Code Review（與 Step 3 **平行**派遣）
 
-呼叫 `@code-review` agent（model: `claude-opus-4.6`）
+呼叫 `@code-review` agent（model: `gpt-5.4`）
 - 含結構性審查：SQL safety、race conditions、trust boundary、shared DbContext、async patterns
 - 與 Step 3 同時派遣
 
 ## Step 3: Security Review（與 Step 2 **平行**派遣）
 
-呼叫 `@security-scanner` agent（model: `claude-opus-4.6`）
+呼叫 `@security-scanner` agent（model: `gpt-5.4`）
 - 與 Step 2 同時派遣
 
 ## Step 4: Linus Review（等 Step 2+3 完成後）
 
-呼叫 `@linus-reviewer` agent（model: `claude-opus-4.6`）
+呼叫 `@linus-reviewer` agent（model: `gpt-5.4`）
 - 等待 Step 2 和 Step 3 都完成後才派遣
 
 ## Step 5: Build Verification

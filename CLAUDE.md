@@ -148,7 +148,7 @@ Claude Code's built-in plan mode. System prevents code edits. Plan review agents
 |------|-------|-------|
 | CEO Review | `plan-ceo-reviewer` | `claude-opus-4.6` |
 | Eng Review | `plan-eng-reviewer` | `claude-opus-4.6` |
-| Plan Linus Review | `plan-linus-reviewer` | `claude-opus-4.6` |
+| Plan Linus Review | `plan-linus-reviewer` | `gpt-5.4` |
 
 Dispatch all 3 **in parallel** (one message, multiple Agent tool calls).
 `pre-exit-plan-check` hook blocks ExitPlanMode until all 3 complete.
@@ -158,15 +158,15 @@ Dispatch all 3 **in parallel** (one message, multiple Agent tool calls).
 ### Phase 3: Coding Phase (hooks enforced)
 
 ```
-Simplifier (gpt-5.4) → [Code Review + Security] parallel (claude-opus-4.6) → Linus (claude-opus-4.6) → Build → Commit
+Simplifier (gpt-5.4) → [Code Review + Security] parallel (gpt-5.4) → Linus (gpt-5.4) → Build → Commit
 ```
 
 | Step | Agent | Model | Completion Signal |
 |------|-------|-------|-------------------|
 | Code Simplifier | `code-simplifier:code-simplifier` | `gpt-5.4` | auto-completed by hook |
-| Code Review | `code-review-specialist` | `claude-opus-4.6` | auto-completed by hook |
-| Security Review | `security-vuln-scanner` | `claude-opus-4.6` | auto-completed by hook |
-| Linus Review | `linus-reviewer` | `claude-opus-4.6` | after CR + Security |
+| Code Review | `code-review-specialist` | `gpt-5.4` | auto-completed by hook |
+| Security Review | `security-vuln-scanner` | `gpt-5.4` | auto-completed by hook |
+| Linus Review | `linus-reviewer` | `gpt-5.4` | after CR + Security |
 | Build | Auto-verified on commit | — | Automatic |
 
 **Dispatch pattern**: After simplifier completes, dispatch Code Review + Security **in parallel** (one message, multiple Agent tool calls). After both complete, dispatch Linus Review. Do not dispatch sequentially.

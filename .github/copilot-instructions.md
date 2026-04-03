@@ -142,20 +142,20 @@ Output: Design spec document.
 
 Invoke: `@planning-reviewer`
 Three-perspective review: CEO (scope), Engineering (execution), Linus (simplicity).
-All agents use model: `claude-opus-4.6`.
+CEO + Eng use model: `claude-opus-4.6`. Linus uses model: `gpt-5.4`.
 
 ### Phase 3: Coding Phase (hooks enforced)
 
 ```
-Simplifier (gpt-5.4) → [Code Review + Security] parallel (claude-opus-4.6) → Linus (claude-opus-4.6) → Build & Commit
+Simplifier (gpt-5.4) → [Code Review + Security] parallel (gpt-5.4) → Linus (gpt-5.4) → Build & Commit
 ```
 
 | Step | Agent | Model | Purpose |
 |------|-------|-------|---------|
 | 1 | `@code-simplifier` | `gpt-5.4` | Simplify code (primary constructors, guard clauses, etc.) |
-| 2 | `@code-review` | `claude-opus-4.6` | Code quality, architecture, naming + SQL safety, race conditions, trust boundary |
-| 3 | `@security-scanner` | `claude-opus-4.6` | OWASP Top 10, injection, auth bypass |
-| 4 | `@linus-reviewer` | `claude-opus-4.6` | Good Taste, backward compatibility, simplicity |
+| 2 | `@code-review` | `gpt-5.4` | Code quality, architecture, naming + SQL safety, race conditions, trust boundary |
+| 3 | `@security-scanner` | `gpt-5.4` | OWASP Top 10, injection, auth bypass |
+| 4 | `@linus-reviewer` | `gpt-5.4` | Good Taste, backward compatibility, simplicity |
 | 5 | Build & Commit | — | `dotnet build` + `pnpm check:type` + `dotnet test` + git commit |
 
 **Dispatch**: Step 2+3 平行 → Step 4 等 2+3 完成後才執行

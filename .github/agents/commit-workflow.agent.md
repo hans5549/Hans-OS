@@ -30,21 +30,21 @@ tools: ["read", "search", "edit", "execute", "agent"]
 
 ## Step 2: Code Review（與 Step 3 **平行**派遣）
 
-呼叫 `@code-review` agent（model: `claude-opus-4.6`）：
+呼叫 `@code-review` agent（model: `gpt-5.4`）：
 - 提示：「Review these modified files: [list files]. Changes summary: [summary]. Check: code quality, architecture compliance, naming conventions, error handling, potential bugs. ALSO check structural issues: SQL safety, race conditions, trust boundary, shared DbContext, async anti-patterns.」
 - **必須**呼叫 agent
 - 與 Step 3 同時派遣（一條訊息，兩個 agent 呼叫）
 
 ## Step 3: Security Review（與 Step 2 **平行**派遣）
 
-呼叫 `@security-scanner` agent（model: `claude-opus-4.6`）：
+呼叫 `@security-scanner` agent（model: `gpt-5.4`）：
 - 提示：「Scan these modified files for security vulnerabilities: [list files]. Check: OWASP Top 10, injection, XSS, auth bypass, sensitive data exposure.」
 - **必須**呼叫 agent
 - 與 Step 2 同時派遣
 
 ## Step 4: Linus Review（等 Step 2+3 完成後）
 
-呼叫 `@linus-reviewer` agent（model: `claude-opus-4.6`）：
+呼叫 `@linus-reviewer` agent（model: `gpt-5.4`）：
 - 提示：「Review these modified files applying Linus Torvalds criteria: [list files]. Check: Good Taste, Never Break Userspace, Pragmatism, Simplicity.」
 - **必須**呼叫 agent
 - 等待 Step 2 和 Step 3 都完成後才派遣
