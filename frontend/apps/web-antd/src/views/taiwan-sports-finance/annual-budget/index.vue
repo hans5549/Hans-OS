@@ -49,10 +49,24 @@ const statusMap: Record<string, { color: string; label: string }> = {
   Settled: { color: 'purple', label: '已結算' },
 };
 
-function formatExecutionRate(actualAmount: number, budgetAmount: number) {
-  if (budgetAmount === 0) return '—';
-  return `${((actualAmount / budgetAmount) * 100).toFixed(1)}%`;
-}
+const formatExecutionRate = (
+  actualAmount: number,
+  allocatedAmount: number | null,
+) =>
+  allocatedAmount == null || allocatedAmount === 0
+    ? '—'
+    : `${((actualAmount / allocatedAmount) * 100).toFixed(1)}%`;
+
+const formatBudgetAmount = (amount: number | null | undefined) =>
+  amount != null ? amount.toLocaleString('zh-TW') : '—';
+
+const formatBudgetInput = (value: string | number | undefined) =>
+  value != null ? `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : '';
+
+const parseBudgetInput = (value: string | undefined) =>
+  value?.replace(/,/g, '') ?? '';
+
+const handleStatusSelect = (value: unknown) => handleStatusChange(String(value));
 
 const columns = [
   { dataIndex: 'departmentName', title: '部門名稱', width: 180 },
@@ -67,9 +81,7 @@ const columns = [
   {
     align: 'right' as const,
     customRender: ({ record }: { record: DepartmentBudgetSummaryResponse }) =>
-      record.allocatedAmount != null
-        ? record.allocatedAmount.toLocaleString('zh-TW')
-        : '—',
+      formatBudgetAmount(record.allocatedAmount),
     dataIndex: 'allocatedAmount',
     title: '核定預算',
     width: 140,
@@ -85,7 +97,7 @@ const columns = [
   {
     align: 'right' as const,
     customRender: ({ record }: { record: DepartmentBudgetSummaryResponse }) =>
-      formatExecutionRate(record.actualAmount, record.budgetAmount),
+      formatExecutionRate(record.actualAmount, record.allocatedAmount),
     key: 'executionRate',
     title: '執行率',
     width: 100,
@@ -108,8 +120,11 @@ const columns = [
 async function fetchOverview() {
   loading.value = true;
   try {
-    overview.value = await getAnnualBudgetOverviewApi(selectedYear.value);
-    grantedBudgetInput.value = overview.value.grantedBudget ?? undefined;
+    const annualBudgetOverview = await getAnnualBudgetOverviewApi(
+      selectedYear.value,
+    );
+    overview.value = annualBudgetOverview;
+    grantedBudgetInput.value = annualBudgetOverview.grantedBudget ?? undefined;
   } finally {
     loading.value = false;
   }
@@ -133,9 +148,12 @@ async function saveGrantedBudget() {
   }
 }
 
-function openDrawer(dept: DepartmentBudgetSummaryResponse) {
-  drawerDeptId.value = dept.departmentId;
-  drawerDeptName.value = dept.departmentName;
+function openDrawer({
+  departmentId,
+  departmentName,
+}: DepartmentBudgetSummaryResponse) {
+  drawerDeptId.value = departmentId;
+  drawerDeptName.value = departmentName;
   drawerOpen.value = true;
 }
 
@@ -143,9 +161,7 @@ function handleDrawerClose() {
   drawerOpen.value = false;
 }
 
-function handleDrawerSaved() {
-  return fetchOverview();
-}
+const handleDrawerSaved = () => fetchOverview();
 
 async function handleStatusChange(value: string) {
   if (value === overview.value?.status) return;
@@ -193,7 +209,7 @@ onMounted(fetchOverview);
           <Select
             :value="overview.status"
             style="width: 120px"
-            @change="(v: unknown) => handleStatusChange(String(v))"
+            @change="handleStatusSelect"
           >
             <SelectOption
               v-for="(info, key) in statusMap"
@@ -211,12 +227,9 @@ onMounted(fetchOverview);
         <span class="text-sm text-gray-500">核定總預算：</span>
         <InputNumber
           v-model:value="grantedBudgetInput"
-          :formatter="
-            (v: string | number | undefined) =>
-              v != null ? `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : ''
-          "
+          :formatter="formatBudgetInput"
           :min="0"
-          :parser="(v: string | undefined) => v?.replace(/,/g, '') ?? ''"
+          :parser="parseBudgetInput"
           placeholder="請輸入核定總預算"
           style="width: 200px"
         />
@@ -263,17 +276,13 @@ onMounted(fetchOverview);
               {{ overview.totalBudget.toLocaleString('zh-TW') }}
             </td>
             <td class="text-right">
-              {{
-                overview.grantedBudget != null
-                  ? overview.grantedBudget.toLocaleString('zh-TW')
-                  : '—'
-              }}
+              {{ formatBudgetAmount(overview.grantedBudget) }}
             </td>
             <td class="text-right">
               {{ overview.totalActual.toLocaleString('zh-TW') }}
             </td>
             <td class="text-right">
-              {{ formatExecutionRate(overview.totalActual, overview.totalBudget) }}
+              {{ formatExecutionRate(overview.totalActual, overview.grantedBudget) }}
             </td>
             <td />
             <td />
