@@ -48,6 +48,23 @@ export interface UpdateBankTransactionRequest {
   receiptMailed?: boolean;
 }
 
+export interface BatchUpdateDepartmentRequest {
+  ids: string[];
+  departmentId?: null | string;
+}
+
+function buildPeriodParams(year: number, month?: number) {
+  const params = new URLSearchParams({ year: String(year) });
+  if (month !== undefined) {
+    params.set('month', String(month));
+  }
+  return params;
+}
+
+function buildPeriodUrl(path: string, year: number, month?: number) {
+  return `${path}?${buildPeriodParams(year, month)}`;
+}
+
 // ── API 函式 ──────────────────────────────────────
 
 /** 取得銀行交易清單（含逐筆餘額） */
@@ -56,12 +73,8 @@ export async function getBankTransactionsApi(
   year: number,
   month?: number,
 ) {
-  const params = new URLSearchParams({ year: String(year) });
-  if (month !== undefined) {
-    params.set('month', String(month));
-  }
   return requestClient.get<BankTransactionResponse[]>(
-    `/bank-transactions/${encodeURIComponent(bankName)}?${params}`,
+    buildPeriodUrl(`/bank-transactions/${encodeURIComponent(bankName)}`, year, month),
   );
 }
 
@@ -71,12 +84,12 @@ export async function getBankTransactionSummaryApi(
   year: number,
   month?: number,
 ) {
-  const params = new URLSearchParams({ year: String(year) });
-  if (month !== undefined) {
-    params.set('month', String(month));
-  }
   return requestClient.get<BankTransactionSummaryResponse>(
-    `/bank-transactions/${encodeURIComponent(bankName)}/summary?${params}`,
+    buildPeriodUrl(
+      `/bank-transactions/${encodeURIComponent(bankName)}/summary`,
+      year,
+      month,
+    ),
   );
 }
 
@@ -104,17 +117,24 @@ export async function deleteBankTransactionApi(id: string) {
   return requestClient.delete(`/bank-transactions/${id}`);
 }
 
+/** 批次更新歸屬部門 */
+export async function batchUpdateDepartmentApi(
+  data: BatchUpdateDepartmentRequest,
+) {
+  return requestClient.post('/bank-transactions/batch-department', data);
+}
+
 /** 匯出 Excel（觸發瀏覽器下載） */
 export async function exportBankTransactionsApi(
   bankName: string,
   year: number,
   month?: number,
 ): Promise<void> {
-  const params = new URLSearchParams({ year: String(year) });
-  if (month !== undefined) {
-    params.set('month', String(month));
-  }
-  const url = `/bank-transactions/${encodeURIComponent(bankName)}/export?${params}`;
+  const url = buildPeriodUrl(
+    `/bank-transactions/${encodeURIComponent(bankName)}/export`,
+    year,
+    month,
+  );
   const blob = await requestClient.download<Blob>(url);
   const downloadUrl = window.URL.createObjectURL(blob);
   const link = document.createElement('a');
@@ -171,11 +191,7 @@ export async function getReceiptTrackingApi(
   year: number,
   month?: number,
 ) {
-  const params = new URLSearchParams({ year: String(year) });
-  if (month !== undefined) {
-    params.set('month', String(month));
-  }
   return requestClient.get<ReceiptTrackingSummaryResponse>(
-    `/bank-transactions/receipt-tracking?${params}`,
+    buildPeriodUrl('/bank-transactions/receipt-tracking', year, month),
   );
 }

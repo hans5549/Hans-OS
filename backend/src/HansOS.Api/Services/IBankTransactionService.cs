@@ -23,4 +23,7 @@ public interface IBankTransactionService
 
     Task<ReceiptTrackingSummaryResponse> GetReceiptTrackingAsync(
         int year, int? month = null, CancellationToken ct = default);
+
+    Task BatchUpdateDepartmentAsync(
+        BatchUpdateDepartmentRequest request, CancellationToken ct = default);
 }

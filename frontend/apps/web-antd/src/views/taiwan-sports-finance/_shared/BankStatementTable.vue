@@ -1,4 +1,4 @@
-<script lang="ts" setup>
+<script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
 
 import { Page } from '@vben/common-ui';
@@ -39,6 +39,7 @@ import type {
 } from '#/api';
 
 import {
+  batchUpdateDepartmentApi,
   createBankTransactionApi,
   deleteBankTransactionApi,
   exportBankTransactionsApi,
@@ -56,15 +57,20 @@ const props = defineProps<{
 
 const currentYear = ref(dayjs().year());
 const currentMonth = ref<number | undefined>(dayjs().month() + 1);
+const defaultFormState = (): CreateBankTransactionRequest => ({
+  transactionType: 0 as TransactionType,
+  transactionDate: dayjs().format('YYYY-MM-DD'),
+  description: '',
+  amount: 0,
+  fee: 0,
+  receiptCollected: false,
+  receiptMailed: false,
+});
 
 const yearOptions = computed(() => {
   const startYear = 2019;
   const endYear = dayjs().year() + 1;
-  const years: number[] = [];
-  for (let y = startYear; y <= endYear; y++) {
-    years.push(y);
-  }
-  return years;
+  return Array.from({ length: endYear - startYear + 1 }, (_, index) => startYear + index);
 });
 
 const monthOptions = computed(() => {
@@ -151,12 +157,11 @@ const totalFee = computed(() =>
 
 // ── 金額格式化 ──────────────────────────────────
 
-function formatCurrency(val: number): string {
-  return val.toLocaleString('zh-TW', {
+const formatCurrency = (val: number): string =>
+  val.toLocaleString('zh-TW', {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   });
-}
 
 // ── Modal ───────────────────────────────────────
 
@@ -166,27 +171,13 @@ const editingId = ref<null | string>(null);
 const submitting = ref(false);
 
 const formState = ref<CreateBankTransactionRequest>({
-  transactionType: 0 as TransactionType,
-  transactionDate: dayjs().format('YYYY-MM-DD'),
-  description: '',
-  amount: 0,
-  fee: 0,
-  receiptCollected: false,
-  receiptMailed: false,
+  ...defaultFormState(),
 });
 
 function openCreateModal() {
   editingId.value = null;
   modalTitle.value = '新增交易';
-  formState.value = {
-    transactionType: 0,
-    transactionDate: dayjs().format('YYYY-MM-DD'),
-    description: '',
-    amount: 0,
-    fee: 0,
-    receiptCollected: false,
-    receiptMailed: false,
-  };
+  formState.value = defaultFormState();
   modalVisible.value = true;
 }
 
@@ -207,28 +198,29 @@ function openEditModal(record: BankTransactionResponse) {
 }
 
 async function handleSubmit() {
-  if (!formState.value.description.trim()) {
+  const description = formState.value.description.trim();
+  if (!description) {
     message.warning('請輸入摘要');
     return;
   }
+
   if (!formState.value.amount || formState.value.amount <= 0) {
     message.warning('請輸入有效金額');
     return;
   }
 
+  const payload = {
+    ...formState.value,
+    description,
+  };
+
   submitting.value = true;
   try {
     if (editingId.value) {
-      await updateBankTransactionApi(editingId.value, {
-        ...formState.value,
-        description: formState.value.description.trim(),
-      });
+      await updateBankTransactionApi(editingId.value, payload);
       message.success('交易已更新');
     } else {
-      await createBankTransactionApi(props.bankName, {
-        ...formState.value,
-        description: formState.value.description.trim(),
-      });
+      await createBankTransactionApi(props.bankName, payload);
       message.success('交易已新增');
     }
     modalVisible.value = false;
@@ -267,6 +259,45 @@ async function handleExport() {
     message.error('匯出失敗');
   } finally {
     exporting.value = false;
+  }
+}
+
+// ── 批次更新部門 ────────────────────────────────
+
+const selectedRowKeys = ref<string[]>([]);
+const batchDepartmentId = ref<string | undefined>(undefined);
+const batchSubmitting = ref(false);
+
+const rowSelection = computed(() => ({
+  selectedRowKeys: selectedRowKeys.value,
+  onChange: (keys: (number | string)[]) => {
+    selectedRowKeys.value = keys as string[];
+  },
+}));
+
+function clearBatchSelection() {
+  selectedRowKeys.value = [];
+  batchDepartmentId.value = undefined;
+}
+
+async function handleBatchUpdateDepartment() {
+  if (selectedRowKeys.value.length === 0) {
+    return;
+  }
+
+  batchSubmitting.value = true;
+  try {
+    await batchUpdateDepartmentApi({
+      ids: selectedRowKeys.value,
+      departmentId: batchDepartmentId.value ?? null,
+    });
+    message.success(`已更新 ${selectedRowKeys.value.length} 筆交易的歸屬部門`);
+    clearBatchSelection();
+    await fetchData();
+  } catch (error: any) {
+    message.error(error?.response?.data?.error ?? '批次更新失敗');
+  } finally {
+    batchSubmitting.value = false;
   }
 }
 </script>
@@ -354,8 +385,42 @@ async function handleExport() {
           </Col>
         </Row>
 
-        <!-- 新增按鈕 -->
-        <div class="mb-3 flex justify-end">
+        <!-- 操作列 -->
+        <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <!-- 批次操作 -->
+          <div
+            v-if="selectedRowKeys.length > 0"
+            class="flex items-center gap-2"
+          >
+            <Tag color="blue">已選取 {{ selectedRowKeys.length }} 筆</Tag>
+            <Select
+              v-model:value="batchDepartmentId"
+              allow-clear
+              placeholder="選擇部門"
+              style="width: 160px"
+            >
+              <SelectOption
+                v-for="dept in departments"
+                :key="dept.id"
+                :value="dept.id"
+              >
+                {{ dept.name }}
+              </SelectOption>
+            </Select>
+            <Popconfirm
+              :title="`確定要將 ${selectedRowKeys.length} 筆交易${batchDepartmentId ? '指定' : '清除'}歸屬部門？`"
+              ok-text="確認"
+              cancel-text="取消"
+              @confirm="handleBatchUpdateDepartment"
+            >
+              <Button :loading="batchSubmitting" type="primary">
+                套用
+              </Button>
+            </Popconfirm>
+            <Button @click="clearBatchSelection">取消選取</Button>
+          </div>
+          <div v-else />
+
           <Button type="primary" @click="openCreateModal">
             <template #icon><span class="i-lucide-plus" /></template>
             新增交易
@@ -369,6 +434,7 @@ async function handleExport() {
           :loading="loading"
           :pagination="{ pageSize: 50, showTotal: (total: number) => `共 ${total} 筆` }"
           row-key="id"
+          :row-selection="rowSelection"
           :scroll="{ x: 1100 }"
           size="middle"
         >

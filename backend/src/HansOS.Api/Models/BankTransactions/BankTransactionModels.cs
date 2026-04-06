@@ -25,6 +25,11 @@ public record UpdateBankTransactionRequest(
     bool ReceiptCollected = false,
     bool ReceiptMailed = false);
 
+/// <summary>批次更新歸屬部門</summary>
+public record BatchUpdateDepartmentRequest(
+    [Required][MinLength(1)][MaxLength(200)] List<Guid> Ids,
+    Guid? DepartmentId);
+
 // Response DTOs
 public record BankTransactionResponse(
     Guid Id,
