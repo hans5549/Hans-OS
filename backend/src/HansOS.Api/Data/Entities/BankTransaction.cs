@@ -21,5 +21,10 @@ public class BankTransaction
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 
+    public Guid? ActivityId { get; set; }
+    public Guid? PendingRemittanceId { get; set; }
+
     public SportsDepartment? Department { get; set; }
+    public Activity? Activity { get; set; }
+    public PendingRemittance? PendingRemittance { get; set; }
 }

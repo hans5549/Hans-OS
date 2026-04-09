@@ -31,6 +31,7 @@ import {
 import dayjs from 'dayjs';
 
 import type {
+  ActivitySummaryResponse,
   BankTransactionResponse,
   BankTransactionSummaryResponse,
   CreateBankTransactionRequest,
@@ -43,6 +44,7 @@ import {
   createBankTransactionApi,
   deleteBankTransactionApi,
   exportBankTransactionsApi,
+  getActivitiesApi,
   getBankTransactionsApi,
   getBankTransactionSummaryApi,
   getDepartmentsApi,
@@ -103,18 +105,21 @@ const summary = ref<BankTransactionSummaryResponse>({
   closingBalance: 0,
 });
 const departments = ref<DepartmentResponse[]>([]);
+const activities = ref<ActivitySummaryResponse[]>([]);
 
 async function fetchData() {
   loading.value = true;
   try {
-    const [txList, txSummary, deptList] = await Promise.all([
+    const [txList, txSummary, deptList, actList] = await Promise.all([
       getBankTransactionsApi(props.bankName, currentYear.value, currentMonth.value),
       getBankTransactionSummaryApi(props.bankName, currentYear.value, currentMonth.value),
       getDepartmentsApi(),
+      getActivitiesApi(currentYear.value),
     ]);
     transactions.value = txList;
     summary.value = txSummary;
     departments.value = deptList;
+    activities.value = actList;
   } finally {
     loading.value = false;
   }
@@ -127,8 +132,9 @@ onMounted(fetchData);
 
 const columns = [
   { dataIndex: 'transactionDate', title: '日期', width: 110 },
-  { dataIndex: 'description', title: '摘要', ellipsis: true, minWidth: 400 },
+  { dataIndex: 'description', title: '摘要', ellipsis: true, minWidth: 350 },
   { dataIndex: 'departmentName', title: '歸屬部門', width: 120 },
+  { key: 'activitySource', title: '來源活動', width: 130 },
   { key: 'income', title: '收入', width: 120, align: 'right' as const },
   { key: 'expense', title: '支出', width: 120, align: 'right' as const },
   { dataIndex: 'fee', title: '手續費', width: 100, align: 'right' as const },
@@ -170,7 +176,7 @@ const modalTitle = ref('新增交易');
 const editingId = ref<null | string>(null);
 const submitting = ref(false);
 
-const formState = ref<CreateBankTransactionRequest>({
+const formState = ref<CreateBankTransactionRequest & { activityId?: string }>({
   ...defaultFormState(),
 });
 
@@ -193,6 +199,7 @@ function openEditModal(record: BankTransactionResponse) {
     fee: record.fee,
     receiptCollected: record.receiptCollected,
     receiptMailed: record.receiptMailed,
+    activityId: record.activityId ?? undefined,
   };
   modalVisible.value = true;
 }
@@ -485,6 +492,18 @@ async function handleBatchUpdateDepartment() {
               </Tag>
             </template>
 
+            <!-- 來源活動（支出才顯示） -->
+            <template v-if="column.key === 'activitySource'">
+              <Tag
+                v-if="(record as BankTransactionResponse).transactionType === 1 && (record as BankTransactionResponse).activityName"
+                color="purple"
+                class="max-w-[120px] truncate"
+              >
+                {{ (record as BankTransactionResponse).activityName }}
+              </Tag>
+              <span v-else class="text-gray-300">—</span>
+            </template>
+
             <!-- 收據狀態（支出才顯示） -->
             <template v-if="column.key === 'receiptStatus'">
               <div v-if="(record as BankTransactionResponse).transactionType === 1" class="flex items-center justify-center gap-2">
@@ -637,6 +656,22 @@ async function handleBatchUpdateDepartment() {
             </FormItem>
           </Col>
         </Row>
+
+        <FormItem v-if="editingId && formState.transactionType === 1" label="來源活動">
+          <Select
+            v-model:value="formState.activityId"
+            allow-clear
+            placeholder="選擇來源活動（選填）"
+          >
+            <SelectOption
+              v-for="act in activities"
+              :key="act.id"
+              :value="act.id"
+            >
+              {{ act.name }}
+            </SelectOption>
+          </Select>
+        </FormItem>
 
         <FormItem v-if="formState.transactionType === 1">
           <div class="flex gap-6">

@@ -176,6 +176,16 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
              .HasForeignKey(t => t.DepartmentId)
              .OnDelete(DeleteBehavior.SetNull);
 
+            e.HasOne(t => t.Activity)
+             .WithMany()
+             .HasForeignKey(t => t.ActivityId)
+             .OnDelete(DeleteBehavior.SetNull);
+
+            e.HasOne(t => t.PendingRemittance)
+             .WithMany()
+             .HasForeignKey(t => t.PendingRemittanceId)
+             .OnDelete(DeleteBehavior.SetNull);
+
             e.HasIndex(t => new { t.BankName, t.TransactionDate });
         });
 
@@ -198,8 +208,14 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
              .HasForeignKey(r => r.DepartmentId)
              .OnDelete(DeleteBehavior.SetNull);
 
+            e.HasOne(r => r.ActivityExpense)
+             .WithMany()
+             .HasForeignKey(r => r.ActivityExpenseId)
+             .OnDelete(DeleteBehavior.SetNull);
+
             e.HasIndex(r => r.Status);
             e.HasIndex(r => r.DepartmentId);
+            e.HasIndex(r => r.ActivityExpenseId);
         });
 
         // Activity

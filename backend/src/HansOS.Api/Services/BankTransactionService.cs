@@ -16,6 +16,7 @@ public class BankTransactionService(ApplicationDbContext db) : IBankTransactionS
         var (startDate, endDate) = GetPeriodRange(year, month);
         var transactions = await GetTransactionsQuery(bankName, startDate, endDate)
             .Include(t => t.Department)
+            .Include(t => t.Activity)
             .OrderBy(t => t.TransactionDate)
             .ThenBy(t => t.CreatedAt)
             .ToListAsync(ct);
@@ -62,7 +63,10 @@ public class BankTransactionService(ApplicationDbContext db) : IBankTransactionS
             entity.Fee,
             entity.ReceiptCollected,
             entity.ReceiptMailed,
-            0);
+            0,
+            entity.ActivityId,
+            null,
+            entity.PendingRemittanceId);
     }
 
     public async Task UpdateTransactionAsync(
@@ -129,6 +133,26 @@ public class BankTransactionService(ApplicationDbContext db) : IBankTransactionS
         await db.SaveChangesAsync(ct);
     }
 
+    public async Task PatchReceiptStatusAsync(
+        Guid id, PatchReceiptStatusRequest request, CancellationToken ct = default)
+    {
+        var entity = await db.BankTransactions.FindAsync([id], ct)
+            ?? throw new KeyNotFoundException("交易記錄不存在");
+
+        if (request.ReceiptCollected.HasValue)
+        {
+            entity.ReceiptCollected = request.ReceiptCollected.Value;
+        }
+
+        if (request.ReceiptMailed.HasValue)
+        {
+            entity.ReceiptMailed = request.ReceiptMailed.Value;
+        }
+
+        entity.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync(ct);
+    }
+
     private IQueryable<BankTransaction> GetTransactionsQuery(string bankName, DateOnly startDate, DateOnly endDate) =>
         db.BankTransactions
             .AsNoTracking()
@@ -164,7 +188,10 @@ public class BankTransactionService(ApplicationDbContext db) : IBankTransactionS
             transaction.Fee,
             transaction.ReceiptCollected,
             transaction.ReceiptMailed,
-            runningBalance);
+            runningBalance,
+            transaction.ActivityId,
+            transaction.Activity?.Name,
+            transaction.PendingRemittanceId);
 
     private static decimal GetNetAmount(BankTransaction transaction) =>
         (transaction.TransactionType == TransactionType.Income ? transaction.Amount : -transaction.Amount) - transaction.Fee;
@@ -245,6 +272,7 @@ public class BankTransactionService(ApplicationDbContext db) : IBankTransactionS
         entity.Fee = request.Fee;
         entity.ReceiptCollected = isExpense && request.ReceiptCollected;
         entity.ReceiptMailed = isExpense && request.ReceiptMailed;
+        entity.ActivityId = request.ActivityId;
     }
 
     private async Task<List<BankTransaction>> GetBatchUpdateEntitiesAsync(

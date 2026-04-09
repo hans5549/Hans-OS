@@ -46,6 +46,8 @@ export interface ActivityExpenseResponse {
   sequence: number;
   budgetItemId: string | null;
   budgetItemName: string | null;
+  pendingRemittanceId: string | null;
+  pendingRemittanceStatus: 0 | 1 | null; // 0=Pending, 1=Completed
 }
 
 export interface MonthSummaryResponse {

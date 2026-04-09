@@ -1186,25 +1186,114 @@ public class BankTransactionControllerTests(HansOsWebApplicationFactory factory)
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
+    private static HttpRequestMessage AuthPatch(string url, string token, object data)
+    {
+        var req = new HttpRequestMessage(HttpMethod.Patch, url)
+        {
+            Content = JsonContent.Create(data),
+        };
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        return req;
+    }
+
+    // ── PATCH Receipt Status ──────────────────────────────────
+
+    /// <summary>未登入呼叫 PATCH receipt-status 應回傳 401</summary>
     [Fact]
-    public async Task BatchUpdateDepartment_NonExistentDepartment_Returns400()
+    public async Task PatchReceiptStatus_Unauthorized_Returns401()
+    {
+        var req = new HttpRequestMessage(HttpMethod.Patch, $"/bank-transactions/{Guid.NewGuid()}/receipt-status")
+        {
+            Content = JsonContent.Create(new { receiptCollected = true }),
+        };
+        var response = await _client.SendAsync(req);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    /// <summary>對不存在的交易 PATCH receipt-status 應回傳 404</summary>
+    [Fact]
+    public async Task PatchReceiptStatus_NotFound_Returns404()
     {
         var token = await LoginAndGetTokenAsync();
-        var txId = await CreateTransactionAsync(token, "合作金庫", new
+        var response = await _client.SendAsync(AuthPatch(
+            $"/bank-transactions/{Guid.NewGuid()}/receipt-status",
+            token,
+            new { receiptCollected = true }));
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    /// <summary>PATCH receiptCollected=true 後，GET 應回傳更新後的值</summary>
+    [Fact]
+    public async Task PatchReceiptStatus_SetCollected_UpdatesField()
+    {
+        var token = await LoginAndGetTokenAsync();
+
+        // 建立支出交易
+        var createResp = await _client.SendAsync(AuthPost("/bank-transactions/上海銀行", token, new
         {
-            transactionType = 0,
-            transactionDate = "2030-03-10",
-            description = "不存在部門測試",
-            amount = 100,
-        });
+            transactionType = 1,
+            transactionDate = "2031-01-10",
+            description = "收據狀態 PATCH 測試",
+            amount = 5000,
+            receiptCollected = false,
+            receiptMailed = false,
+        }));
+        var id = GetData(await ReadBodyAsync(createResp)).GetProperty("id").GetString()!;
 
-        var response = await _client.SendAsync(
-            AuthPost("/bank-transactions/batch-department", token, new
-            {
-                ids = new[] { txId },
-                departmentId = Guid.NewGuid(),
-            }));
+        // PATCH — 標記已回收
+        var patchResp = await _client.SendAsync(AuthPatch(
+            $"/bank-transactions/{id}/receipt-status",
+            token,
+            new { receiptCollected = true }));
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        patchResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await ReadBodyAsync(patchResp);
+        body.GetProperty("code").GetInt32().Should().Be(0);
+
+        // 驗證 GET 反映更新
+        var listResp = await _client.SendAsync(
+            AuthGet("/bank-transactions/上海銀行?year=2031&month=1", token));
+        var tx = GetData(await ReadBodyAsync(listResp)).EnumerateArray()
+            .First(t => t.GetProperty("id").GetString() == id);
+
+        tx.GetProperty("receiptCollected").GetBoolean().Should().BeTrue();
+        tx.GetProperty("receiptMailed").GetBoolean().Should().BeFalse();
+    }
+
+    /// <summary>PATCH 只更新指定欄位，未傳入的欄位保持不變</summary>
+    [Fact]
+    public async Task PatchReceiptStatus_PartialUpdate_OnlyChangesSpecifiedField()
+    {
+        var token = await LoginAndGetTokenAsync();
+
+        // 建立已回收、未寄送的支出交易
+        var createResp = await _client.SendAsync(AuthPost("/bank-transactions/上海銀行", token, new
+        {
+            transactionType = 1,
+            transactionDate = "2031-02-10",
+            description = "收據狀態部分更新測試",
+            amount = 3000,
+            receiptCollected = true,
+            receiptMailed = false,
+        }));
+        var id = GetData(await ReadBodyAsync(createResp)).GetProperty("id").GetString()!;
+
+        // PATCH — 只標記已寄送（不傳 receiptCollected）
+        var patchResp = await _client.SendAsync(AuthPatch(
+            $"/bank-transactions/{id}/receipt-status",
+            token,
+            new { receiptMailed = true }));
+
+        patchResp.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        // 驗證兩個欄位都正確
+        var listResp = await _client.SendAsync(
+            AuthGet("/bank-transactions/上海銀行?year=2031&month=2", token));
+        var tx = GetData(await ReadBodyAsync(listResp)).EnumerateArray()
+            .First(t => t.GetProperty("id").GetString() == id);
+
+        tx.GetProperty("receiptCollected").GetBoolean().Should().BeTrue(because: "未傳入的欄位應保持原值");
+        tx.GetProperty("receiptMailed").GetBoolean().Should().BeTrue(because: "應更新為 true");
     }
 }

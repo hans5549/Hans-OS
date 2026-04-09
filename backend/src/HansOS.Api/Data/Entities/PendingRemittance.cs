@@ -24,5 +24,8 @@ public class PendingRemittance
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 
+    public Guid? ActivityExpenseId { get; set; }
+
     public SportsDepartment? Department { get; set; }
+    public ActivityExpense? ActivityExpense { get; set; }
 }

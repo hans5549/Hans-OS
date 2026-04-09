@@ -84,7 +84,17 @@ public class ActivityService(ApplicationDbContext db) : IActivityService
             .FirstOrDefaultAsync(a => a.Id == id, ct)
             ?? throw new KeyNotFoundException("活動不存在");
 
-        return MapToDetailResponse(activity);
+        var expenseIds = activity.Expenses
+            .Concat(activity.Groups.SelectMany(g => g.Expenses))
+            .Select(e => e.Id)
+            .ToList();
+
+        var remittanceMap = await db.PendingRemittances
+            .AsNoTracking()
+            .Where(r => r.ActivityExpenseId.HasValue && expenseIds.Contains(r.ActivityExpenseId.Value))
+            .ToDictionaryAsync(r => r.ActivityExpenseId!.Value, ct);
+
+        return MapToDetailResponse(activity, remittanceMap);
     }
 
     public async Task<ActivityDetailResponse> CreateAsync(
@@ -283,7 +293,8 @@ public class ActivityService(ApplicationDbContext db) : IActivityService
             UpdatedAt = now,
         };
 
-    private static ActivityDetailResponse MapToDetailResponse(Activity activity)
+    private static ActivityDetailResponse MapToDetailResponse(
+        Activity activity, Dictionary<Guid, PendingRemittance> remittanceMap)
     {
         var groupedExpenseIds = activity.Groups
             .SelectMany(g => g.Expenses)
@@ -293,7 +304,7 @@ public class ActivityService(ApplicationDbContext db) : IActivityService
         var ungroupedExpenses = activity.Expenses
             .Where(e => e.ActivityGroupId is null && !groupedExpenseIds.Contains(e.Id))
             .OrderBy(e => e.Sequence)
-            .Select(MapExpenseResponse)
+            .Select(e => MapExpenseResponse(e, remittanceMap))
             .ToList();
 
         var groups = activity.Groups
@@ -303,7 +314,7 @@ public class ActivityService(ApplicationDbContext db) : IActivityService
                 g.Name,
                 g.Sequence,
                 g.Expenses.Sum(e => e.Amount),
-                g.Expenses.OrderBy(e => e.Sequence).Select(MapExpenseResponse).ToList()))
+                g.Expenses.OrderBy(e => e.Sequence).Select(e => MapExpenseResponse(e, remittanceMap)).ToList()))
             .ToList();
 
         var totalAmount = activity.Expenses.Sum(e => e.Amount);
@@ -322,13 +333,19 @@ public class ActivityService(ApplicationDbContext db) : IActivityService
             ungroupedExpenses);
     }
 
-    private static ActivityExpenseResponse MapExpenseResponse(ActivityExpense e)
-        => new(
+    private static ActivityExpenseResponse MapExpenseResponse(
+        ActivityExpense e, Dictionary<Guid, PendingRemittance> remittanceMap)
+    {
+        remittanceMap.TryGetValue(e.Id, out var remittance);
+        return new(
             e.Id,
             e.Description,
             e.Amount,
             e.Note,
             e.Sequence,
             e.BudgetItemId,
-            e.BudgetItem?.ActivityName);
+            e.BudgetItem?.ActivityName,
+            remittance?.Id,
+            remittance?.Status);
+    }
 }

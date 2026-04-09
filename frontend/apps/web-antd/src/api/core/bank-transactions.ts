@@ -17,6 +17,9 @@ export interface BankTransactionResponse {
   receiptCollected: boolean;
   receiptMailed: boolean;
   runningBalance: number;
+  activityId: string | null;
+  activityName: string | null;
+  pendingRemittanceId: string | null;
 }
 
 export interface BankTransactionSummaryResponse {
@@ -44,6 +47,12 @@ export interface UpdateBankTransactionRequest {
   departmentId?: string;
   amount: number;
   fee?: number;
+  receiptCollected?: boolean;
+  receiptMailed?: boolean;
+  activityId?: string;
+}
+
+export interface PatchReceiptStatusRequest {
   receiptCollected?: boolean;
   receiptMailed?: boolean;
 }
@@ -184,6 +193,17 @@ export interface ReceiptTrackingSummaryResponse {
   notCollectedCount: number;
   notMailedCount: number;
   items: ReceiptTrackingResponse[];
+}
+
+/** 更新收據狀態（inline 勾選） */
+export async function patchReceiptStatusApi(
+  id: string,
+  data: PatchReceiptStatusRequest,
+) {
+  return requestClient.request(`/bank-transactions/${id}/receipt-status`, {
+    data,
+    method: 'PATCH',
+  });
 }
 
 /** 取得需關注的收據清單（跨銀行） */

@@ -13,7 +13,8 @@ public record CreatePendingRemittanceRequest(
     Guid? DepartmentId,
     [StringLength(100)] string? RecipientName,
     DateOnly? ExpectedDate,
-    [StringLength(1000)] string? Note);
+    [StringLength(1000)] string? Note,
+    Guid? ActivityExpenseId);
 
 /// <summary>更新待匯款請求</summary>
 public record UpdatePendingRemittanceRequest(
@@ -24,7 +25,13 @@ public record UpdatePendingRemittanceRequest(
     Guid? DepartmentId,
     [StringLength(100)] string? RecipientName,
     DateOnly? ExpectedDate,
-    [StringLength(1000)] string? Note);
+    [StringLength(1000)] string? Note,
+    Guid? ActivityExpenseId);
+
+/// <summary>完成待匯款請求</summary>
+public record CompletePendingRemittanceRequest(
+    [Required][StringLength(100)] string BankName,
+    [Required] DateOnly TransactionDate);
 
 /// <summary>待匯款回應</summary>
 public record PendingRemittanceResponse(
@@ -40,4 +47,6 @@ public record PendingRemittanceResponse(
     string? Note,
     PendingRemittanceStatus Status,
     DateTime? CompletedAt,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    Guid? ActivityExpenseId,
+    string? ActivityExpenseDescription);

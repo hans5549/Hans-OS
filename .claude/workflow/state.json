@@ -93,13 +93,13 @@
     "codeReviewer": false,
     "securityReviewer": false,
     "linusGreen": false,
-    "ceoReview": false,
-    "engReview": false,
-    "planLinusReview": false
+    "ceoReview": true,
+    "engReview": true,
+    "planLinusReview": true
   },
-  "lastModified": "2026-04-02T03:30:33.036Z",
+  "lastModified": "2026-04-02T05:15:39.828Z",
   "buildRetryCount": 0,
-  "currentPlanFile": "",
+  "currentPlanFile": "C:/Users/hansh/.claude/plans/zazzy-floating-moon.md",
   "lineChangeSinceReview": 0,
   "mergeBackPending": false
 }

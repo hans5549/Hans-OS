@@ -71,6 +71,14 @@ public class BankTransactionController(
         ApiEnvelope<ReceiptTrackingSummaryResponse>.Success(
             await transactionService.GetReceiptTrackingAsync(year, month, ct));
 
+    [HttpPatch("{id:guid}/receipt-status")]
+    public async Task<ApiEnvelope<object?>> PatchReceiptStatus(
+        Guid id, [FromBody] PatchReceiptStatusRequest request, CancellationToken ct)
+    {
+        await transactionService.PatchReceiptStatusAsync(id, request, ct);
+        return ApiEnvelope<object?>.Success(null);
+    }
+
     [HttpPost("import")]
     public async Task<ApiEnvelope<ImportResultResponse>> ImportHistoricalData(CancellationToken ct)
     {

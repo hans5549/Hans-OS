@@ -53,9 +53,10 @@ public class PendingRemittanceController(IPendingRemittanceService service) : Co
     }
 
     [HttpPut("{id:guid}/complete")]
-    public async Task<ApiEnvelope<object?>> Complete(Guid id, CancellationToken ct)
+    public async Task<ApiEnvelope<object?>> Complete(
+        Guid id, [FromBody] CompletePendingRemittanceRequest request, CancellationToken ct)
     {
-        await service.CompleteAsync(id, ct);
+        await service.CompleteAsync(id, request, ct);
         return ApiEnvelope<object?>.Success(null);
     }
 }

@@ -1,5 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 
+using HansOS.Api.Data.Entities;
+
 namespace HansOS.Api.Models.Activities;
 
 // ── Response ──────────────────────────────────────
@@ -48,7 +50,9 @@ public record ActivityExpenseResponse(
     string? Note,
     int Sequence,
     Guid? BudgetItemId,
-    string? BudgetItemName);
+    string? BudgetItemName,
+    Guid? PendingRemittanceId,
+    PendingRemittanceStatus? PendingRemittanceStatus);
 
 /// <summary>各月活動統計</summary>
 public record MonthSummaryResponse(

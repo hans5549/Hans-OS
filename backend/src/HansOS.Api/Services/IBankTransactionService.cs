@@ -26,4 +26,7 @@ public interface IBankTransactionService
 
     Task BatchUpdateDepartmentAsync(
         BatchUpdateDepartmentRequest request, CancellationToken ct = default);
+
+    Task PatchReceiptStatusAsync(
+        Guid id, PatchReceiptStatusRequest request, CancellationToken ct = default);
 }

@@ -284,4 +284,5 @@ Full guide: `~/.claude/rules/csharp-coding-style.md` (auto-loaded)
 
 ## Communication Style
 
-See `.claude/rules/communication-style.md`
+- **回覆語言**：一律使用繁體中文 (zh-TW)
+- See `.claude/rules/communication-style.md`

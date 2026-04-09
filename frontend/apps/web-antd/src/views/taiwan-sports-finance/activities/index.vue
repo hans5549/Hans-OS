@@ -243,6 +243,7 @@ onMounted(async () => {
               :activity="activity"
               @delete="handleDelete"
               @edit="handleEdit"
+              @remittanceCreated="fetchActivities"
             />
           </template>
           <Card v-else>
