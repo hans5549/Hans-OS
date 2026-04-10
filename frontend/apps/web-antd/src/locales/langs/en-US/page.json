@@ -11,5 +11,22 @@
     "title": "Dashboard",
     "analytics": "Analytics",
     "workspace": "Workspace"
+  },
+  "systemDesign": {
+    "title": "Modern System Design Practice",
+    "qrCodeGenerator": "QR Code Generator",
+    "earthquakeNotification": "Earthquake Notification System",
+    "polymarket": "Prediction Market Platform",
+    "amazonPriceTracking": "Amazon Price Tracking",
+    "teslaRoboTaxi": "Tesla RoboTaxi App",
+    "spotifyTrendingSongs": "Spotify Trending Songs",
+    "messenger": "Messenger",
+    "webhookPlatform": "Webhook Platform",
+    "googleDocs": "Google Docs",
+    "youtube": "YouTube",
+    "chatgptTasks": "ChatGPT Tasks",
+    "airbnbBooking": "Airbnb Booking Platform",
+    "agodaAiSupport": "Agoda AI Support Agent",
+    "llmInferenceApi": "LLM Inference API Service"
   }
 }

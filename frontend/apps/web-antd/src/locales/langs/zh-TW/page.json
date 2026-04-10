@@ -11,5 +11,22 @@
     "title": "概覽",
     "analytics": "分析頁",
     "workspace": "工作台"
+  },
+  "systemDesign": {
+    "title": "現代系統設計實作練習",
+    "qrCodeGenerator": "QR Code 生成器",
+    "earthquakeNotification": "地震預警系統",
+    "polymarket": "預測市場平台",
+    "amazonPriceTracking": "電商價格追蹤",
+    "teslaRoboTaxi": "自動駕駛叫車系統",
+    "spotifyTrendingSongs": "音樂排行榜系統",
+    "messenger": "即時通訊系統",
+    "webhookPlatform": "Webhook 平台",
+    "googleDocs": "協作文檔編輯",
+    "youtube": "影音平台架構",
+    "chatgptTasks": "AI 任務系統",
+    "airbnbBooking": "短租平台架構",
+    "agodaAiSupport": "旅遊平台客服",
+    "llmInferenceApi": "LLM 推論服務"
   }
 }

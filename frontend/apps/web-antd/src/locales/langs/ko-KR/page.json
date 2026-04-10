@@ -11,5 +11,22 @@
     "title": "대시보드",
     "analytics": "분석",
     "workspace": "워크스페이스"
+  },
+  "systemDesign": {
+    "title": "현대 시스템 설계 실습",
+    "qrCodeGenerator": "QR 코드 생성기",
+    "earthquakeNotification": "지진 알림 시스템",
+    "polymarket": "예측 시장 플랫폼",
+    "amazonPriceTracking": "아마존 가격 추적",
+    "teslaRoboTaxi": "테슬라 로보택시 앱",
+    "spotifyTrendingSongs": "스포티파이 인기 음악",
+    "messenger": "메신저",
+    "webhookPlatform": "웹훅 플랫폼",
+    "googleDocs": "구글 독스",
+    "youtube": "유튜브",
+    "chatgptTasks": "ChatGPT 태스크",
+    "airbnbBooking": "에어비앤비 예약 플랫폼",
+    "agodaAiSupport": "아고다 AI 지원 에이전트",
+    "llmInferenceApi": "LLM 추론 API 서비스"
   }
 }
