@@ -19,6 +19,7 @@ const routes: RouteRecordRaw[] = [
         meta: {
           affixTab: true,
           icon: 'lucide:area-chart',
+          order: 1,
           title: $t('page.dashboard.analytics'),
         },
       },
@@ -28,7 +29,18 @@ const routes: RouteRecordRaw[] = [
         component: () => import('#/views/dashboard/workspace/index.vue'),
         meta: {
           icon: 'carbon:workspace',
+          order: 2,
           title: $t('page.dashboard.workspace'),
+        },
+      },
+      {
+        name: 'Todo',
+        path: '/todo',
+        component: () => import('#/views/dashboard/todo/index.vue'),
+        meta: {
+          authority: ['admin'],
+          order: 3,
+          title: $t('page.dashboard.todo'),
         },
       },
     ],

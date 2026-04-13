@@ -10,7 +10,27 @@
   "dashboard": {
     "title": "概覽",
     "analytics": "分析頁",
-    "workspace": "工作台"
+    "workspace": "工作台",
+    "todo": "待辦事項",
+    "todoDemo": "Demo",
+    "todoDescription": "這個頁面目前為 read-only 示意頁，內容僅用來建立側邊欄入口與資訊架構，重新整理後不會保留任何互動狀態。",
+    "todoDeploymentHint": "建議部署順序：先前端，後後端",
+    "todoListTitle": "目前待辦清單",
+    "todoDueAt": "到期日：",
+    "todoStatusPending": "待開始",
+    "todoStatusInProgress": "進行中",
+    "todoStatusDone": "已完成",
+    "todoPriorityHigh": "高優先",
+    "todoPriorityMedium": "中優先",
+    "todoPriorityLow": "低優先",
+    "todoTitleContract": "完成待辦頁籤規格確認",
+    "todoSummaryContract": "整理側邊欄待辦頁籤需求，確認 menu path、component 與部署順序。",
+    "todoTitleData": "整理首頁與待辦頁的示例資料",
+    "todoSummaryData": "盤點 workspace 既有示例資料，決定是否抽成單一常數來源。",
+    "todoTitleSmoke": "完成待辦頁 smoke check",
+    "todoSummarySmoke": "補齊 menu tree 驗證與前端型別檢查，避免側邊欄顯示但頁面打不開。",
+    "todoTitleScope": "鎖定最小實作範圍",
+    "todoSummaryScope": "確認這一版只做 read-only demo 頁，不擴充 Todo API 與資料庫。"
   },
   "systemDesign": {
     "title": "現代系統設計實作練習",

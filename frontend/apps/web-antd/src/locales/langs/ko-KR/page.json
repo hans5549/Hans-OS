@@ -10,7 +10,27 @@
   "dashboard": {
     "title": "대시보드",
     "analytics": "분석",
-    "workspace": "워크스페이스"
+    "workspace": "워크스페이스",
+    "todo": "할 일",
+    "todoDemo": "Demo",
+    "todoDescription": "이 페이지는 현재 사이드바 진입점과 정보 구조를 잡기 위한 읽기 전용 데모입니다. 새로고침하면 모든 상호작용 상태가 초기화됩니다.",
+    "todoDeploymentHint": "권장 배포 순서: 프론트엔드 먼저, 백엔드 나중",
+    "todoListTitle": "현재 할 일 목록",
+    "todoDueAt": "마감일: ",
+    "todoStatusPending": "대기 중",
+    "todoStatusInProgress": "진행 중",
+    "todoStatusDone": "완료",
+    "todoPriorityHigh": "높음",
+    "todoPriorityMedium": "보통",
+    "todoPriorityLow": "낮음",
+    "todoTitleContract": "할 일 탭 계약 마무리",
+    "todoSummaryContract": "사이드바 할 일 탭 요구사항, 메뉴 경로, 컴포넌트 매핑, 배포 순서를 확인합니다.",
+    "todoTitleData": "홈/할 일 페이지 샘플 데이터 정리",
+    "todoSummaryData": "기존 워크스페이스 샘플 항목을 검토하고 단일 상수 소스로 공유할지 결정합니다.",
+    "todoTitleSmoke": "할 일 페이지 스모크 체크 완료",
+    "todoSummarySmoke": "사이드바 진입점이 없는 페이지를 가리키지 않도록 메뉴 트리 검증과 프론트엔드 타입 체크를 보강합니다.",
+    "todoTitleScope": "MVP 범위 확정",
+    "todoSummaryScope": "이번 릴리스는 Todo API나 데이터베이스 모델 없이 읽기 전용 데모 페이지로 유지합니다."
   },
   "systemDesign": {
     "title": "현대 시스템 설계 실습",
