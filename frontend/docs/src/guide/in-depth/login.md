@@ -152,7 +152,7 @@ export default defineConfig(async () => {
             changeOrigin: true,
             rewrite: (path) => path.replace(/^\/api/, ''),
             // 这里改为你的真实接口地址
-            target: 'http://localhost:5320/api',
+            target: 'http://localhost:5180',
             ws: true,
           },
         },

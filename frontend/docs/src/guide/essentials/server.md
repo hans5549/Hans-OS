@@ -4,7 +4,7 @@
 
 本文档介绍如何在开发环境下使用 Mock 数据和与服务端进行交互，涉及到的技术有：
 
-- [Nitro](https://nitro.unjs.io/) 轻量级后端服务器，可部署在任何地方，项目用作于 Mock 服务器。
+- [Nitro](https://nitro.unjs.io/) 轻量级后端服务器，可部署在任何地方，你也可以将其作为仓库外部的 Mock 服务。
 - [axios](https://axios-http.com/docs/intro) 用于发送 HTTP 请求与服务端进行交互。
 
 :::
@@ -45,8 +45,8 @@ export default defineConfig(async () => {
           '/api': {
             changeOrigin: true,
             rewrite: (path) => path.replace(/^\/api/, ''),
-            // mock代理目标地址
-            target: 'http://localhost:5320/api',
+            // 后端 API 服务器
+            target: 'http://localhost:5180',
             ws: true,
           },
         },
@@ -68,7 +68,7 @@ axios.get('/api/user').then((res) => {
 });
 ```
 
-此时，请求会被代理到 `http://localhost:5320/api/user`。
+此时，请求会被代理到 `http://localhost:5180/user`。
 
 ::: warning 注意
 
@@ -367,21 +367,15 @@ async function doRefreshToken() {
 
 :::
 
-Mock 数据是前端开发过程中必不可少的一环，是分离前后端开发的关键链路。通过预先跟服务器端约定好的接口，模拟请求数据甚至逻辑，能够让前端开发独立自主，不会被服务端的开发进程所阻塞。
+Mock 数据仍然是前端开发中很重要的一环，但当前仓库已经不再内置 Nitro mock 应用。
 
-项目使用 [Nitro](https://nitro.unjs.io/) 来进行本地 mock 数据处理。其原理是本地额外启动一个后端服务，是一个真实的后端服务，可以处理请求，返回数据。
+## 当前推荐方式
 
-### Nitro 使用
-
-Mock 服务代码位于`apps/backend-mock`目录下，无需手动启动，已经集成在项目中，只需要在项目根目录下运行`pnpm dev`即可，运行成功之后，控制台会打印 `http://localhost:5320/api`, 访问该地址即可查看 mock 服务。
-
-[Nitro](https://nitro.unjs.io/) 语法简单，可以根据自己的需求进行配置及开发，具体配置可以查看 [Nitro 文档](https://nitro.unjs.io/)。
-
-## 关闭 Mock 服务
-
-mock的本质是一个真实的后端服务，如果不需要 mock 服务，可以在项目根目录下的 `.env.development` 文件中配置 `VITE_NITRO_MOCK=false` 即可关闭 mock 服务。
+本地开发时，请在应用的 `.env.development` 中通过 `VITE_GLOB_API_URL` 直接连接现有后端，或接到你自己的外部 mock 服务。
 
 ```bash
 # .env.development
-VITE_NITRO_MOCK=false
+VITE_GLOB_API_URL=http://localhost:5180
 ```
+
+如果你仍想使用 [Nitro](https://nitro.unjs.io/) 或其他 mock 方案，可以在仓库外部自行维护，不需要把旧的 mock app 放回当前项目。
