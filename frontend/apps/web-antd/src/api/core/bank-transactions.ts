@@ -38,6 +38,7 @@ export interface CreateBankTransactionRequest {
   fee?: number;
   receiptCollected?: boolean;
   receiptMailed?: boolean;
+  activityId?: string;
 }
 
 export interface UpdateBankTransactionRequest {
@@ -58,8 +59,11 @@ export interface PatchReceiptStatusRequest {
 }
 
 export interface BatchUpdateDepartmentRequest {
+  bankName: string;
   ids: string[];
+  month?: number;
   departmentId?: null | string;
+  year: number;
 }
 
 function buildPeriodParams(year: number, month?: number) {

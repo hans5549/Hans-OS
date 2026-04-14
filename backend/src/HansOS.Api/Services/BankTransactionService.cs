@@ -45,6 +45,12 @@ public class BankTransactionService(ApplicationDbContext db) : IBankTransactionS
         string bankName, CreateBankTransactionRequest request, CancellationToken ct = default)
     {
         await ValidateDepartmentExistsAsync(request.DepartmentId, ct);
+        await ValidateActivitySelectionAsync(
+            request.TransactionType,
+            request.DepartmentId,
+            request.ActivityId,
+            request.TransactionDate.Year,
+            ct);
         var now = DateTime.UtcNow;
         var entity = CreateEntity(bankName, request, now);
 
@@ -65,7 +71,7 @@ public class BankTransactionService(ApplicationDbContext db) : IBankTransactionS
             entity.ReceiptMailed,
             0,
             entity.ActivityId,
-            null,
+            await GetActivityNameAsync(entity.ActivityId, ct),
             entity.PendingRemittanceId);
     }
 
@@ -76,6 +82,12 @@ public class BankTransactionService(ApplicationDbContext db) : IBankTransactionS
             ?? throw new KeyNotFoundException("交易記錄不存在");
 
         await ValidateDepartmentExistsAsync(request.DepartmentId, ct);
+        await ValidateActivitySelectionAsync(
+            request.TransactionType,
+            request.DepartmentId,
+            request.ActivityId,
+            request.TransactionDate.Year,
+            ct);
         ApplyTransactionUpdate(entity, request);
         entity.UpdatedAt = DateTime.UtcNow;
 
@@ -127,7 +139,7 @@ public class BankTransactionService(ApplicationDbContext db) : IBankTransactionS
         BatchUpdateDepartmentRequest request, CancellationToken ct = default)
     {
         await ValidateDepartmentExistsAsync(request.DepartmentId, ct);
-        var entities = await GetBatchUpdateEntitiesAsync(request.Ids, ct);
+        var entities = await GetBatchUpdateEntitiesAsync(request, ct);
         var now = DateTime.UtcNow;
         ApplyDepartmentUpdate(entities, request.DepartmentId, now);
         await db.SaveChangesAsync(ct);
@@ -256,6 +268,7 @@ public class BankTransactionService(ApplicationDbContext db) : IBankTransactionS
             Fee = request.Fee,
             ReceiptCollected = isExpense && request.ReceiptCollected,
             ReceiptMailed = isExpense && request.ReceiptMailed,
+            ActivityId = request.ActivityId,
             CreatedAt = now,
             UpdatedAt = now,
         };
@@ -276,13 +289,21 @@ public class BankTransactionService(ApplicationDbContext db) : IBankTransactionS
     }
 
     private async Task<List<BankTransaction>> GetBatchUpdateEntitiesAsync(
-        List<Guid> ids, CancellationToken ct)
+        BatchUpdateDepartmentRequest request, CancellationToken ct)
     {
-        var uniqueIds = ids.Distinct().ToList();
+        var uniqueIds = request.Ids.Distinct().ToList();
         var entities = await db.BankTransactions.Where(t => uniqueIds.Contains(t.Id)).ToListAsync(ct);
         if (entities.Count != uniqueIds.Count)
         {
             throw new KeyNotFoundException("部分交易記錄不存在");
+        }
+
+        var (startDate, endDate) = GetPeriodRange(request.Year, request.Month);
+        if (entities.Any(t => t.BankName != request.BankName
+                              || t.TransactionDate < startDate
+                              || t.TransactionDate > endDate))
+        {
+            throw new ArgumentException("部分交易記錄不在目前查詢範圍內");
         }
 
         return entities;
@@ -293,6 +314,11 @@ public class BankTransactionService(ApplicationDbContext db) : IBankTransactionS
     {
         foreach (var entity in entities)
         {
+            if (entity.DepartmentId != departmentId)
+            {
+                entity.ActivityId = null;
+            }
+
             entity.DepartmentId = departmentId;
             entity.UpdatedAt = now;
         }
@@ -310,6 +336,68 @@ public class BankTransactionService(ApplicationDbContext db) : IBankTransactionS
             .Where(d => d.Id == departmentId.Value)
             .Select(d => d.Name)
             .FirstOrDefaultAsync(ct);
+    }
+
+    private async Task<string?> GetActivityNameAsync(Guid? activityId, CancellationToken ct)
+    {
+        if (!activityId.HasValue)
+        {
+            return null;
+        }
+
+        return await db.Activities
+            .AsNoTracking()
+            .Where(a => a.Id == activityId.Value)
+            .Select(a => a.Name)
+            .FirstOrDefaultAsync(ct);
+    }
+
+    private async Task ValidateActivitySelectionAsync(
+        TransactionType transactionType,
+        Guid? departmentId,
+        Guid? activityId,
+        int transactionYear,
+        CancellationToken ct)
+    {
+        if (!activityId.HasValue)
+        {
+            return;
+        }
+
+        if (transactionType != TransactionType.Expense)
+        {
+            throw new ArgumentException("只有支出交易可以指定來源活動");
+        }
+
+        if (!departmentId.HasValue)
+        {
+            throw new ArgumentException("選擇來源活動時必須同時指定歸屬部門");
+        }
+
+        var activity = await db.Activities
+            .AsNoTracking()
+            .Where(a => a.Id == activityId.Value)
+            .Select(a => new
+            {
+                a.DepartmentId,
+                a.Year,
+            })
+            .FirstOrDefaultAsync(ct);
+
+        if (activity is null)
+        {
+            throw new ArgumentException("指定的來源活動不存在");
+        }
+
+        if (activity.DepartmentId != departmentId.Value)
+        {
+            throw new ArgumentException("來源活動與歸屬部門不一致");
+        }
+
+        if (activity.Year != transactionYear)
+        {
+            throw new ArgumentException("來源活動年度必須與交易日期年份一致");
+        }
     }
 
     private static string[] GetExportHeaders() =>

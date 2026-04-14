@@ -4,7 +4,7 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { Page } from '@vben/common-ui';
 
 import {
-  Button,
+ Button,
   Card,
   Checkbox,
   Col,
@@ -29,6 +29,7 @@ import {
   Tooltip,
 } from 'ant-design-vue';
 import dayjs from 'dayjs';
+import customParseFormat from 'dayjs/plugin/customParseFormat';
 
 import type {
   ActivitySummaryResponse,
@@ -51,6 +52,10 @@ import {
   updateBankTransactionApi,
 } from '#/api';
 
+import ActivityQuickCreateModal from './ActivityQuickCreateModal.vue';
+
+dayjs.extend(customParseFormat);
+
 const props = defineProps<{
   bankName: string;
 }>();
@@ -59,9 +64,24 @@ const props = defineProps<{
 
 const currentYear = ref(dayjs().year());
 const currentMonth = ref<number | undefined>(dayjs().month() + 1);
+function parseTransactionDate(value: string) {
+  const parsed = dayjs(value, 'YYYY-MM-DD', true);
+  return parsed.isValid() ? parsed : null;
+}
+
+function getDefaultTransactionDate() {
+  const today = dayjs();
+  const targetMonth = currentMonth.value ?? (currentYear.value === today.year() ? today.month() + 1 : 1);
+  const targetDay = currentYear.value === today.year() && targetMonth === today.month() + 1
+    ? today.date()
+    : 1;
+
+  return dayjs(new Date(currentYear.value, targetMonth - 1, targetDay)).format('YYYY-MM-DD');
+}
+
 const defaultFormState = (): CreateBankTransactionRequest => ({
   transactionType: 0 as TransactionType,
-  transactionDate: dayjs().format('YYYY-MM-DD'),
+  transactionDate: getDefaultTransactionDate(),
   description: '',
   amount: 0,
   fee: 0,
@@ -105,27 +125,32 @@ const summary = ref<BankTransactionSummaryResponse>({
   closingBalance: 0,
 });
 const departments = ref<DepartmentResponse[]>([]);
-const activities = ref<ActivitySummaryResponse[]>([]);
+const availableActivities = ref<ActivitySummaryResponse[]>([]);
+const activityOptionsLoading = ref(false);
 
 async function fetchData() {
   loading.value = true;
   try {
-    const [txList, txSummary, deptList, actList] = await Promise.all([
+    const [txList, txSummary, deptList] = await Promise.all([
       getBankTransactionsApi(props.bankName, currentYear.value, currentMonth.value),
       getBankTransactionSummaryApi(props.bankName, currentYear.value, currentMonth.value),
       getDepartmentsApi(),
-      getActivitiesApi(currentYear.value),
     ]);
     transactions.value = txList;
     summary.value = txSummary;
     departments.value = deptList;
-    activities.value = actList;
+    selectedRowKeys.value = selectedRowKeys.value.filter((id) =>
+      txList.some((transaction) => transaction.id === id),
+    );
   } finally {
     loading.value = false;
   }
 }
 
-watch([currentYear, currentMonth], () => fetchData());
+watch([() => props.bankName, currentYear, currentMonth], () => {
+  clearBatchSelection();
+  void fetchData();
+});
 onMounted(fetchData);
 
 // ── 表格欄位 ────────────────────────────────────
@@ -175,10 +200,85 @@ const modalVisible = ref(false);
 const modalTitle = ref('新增交易');
 const editingId = ref<null | string>(null);
 const submitting = ref(false);
+const activityQuickCreateVisible = ref(false);
+const activityQuickCreateContext = ref<null | { departmentId: string; year: number }>(null);
+let activityRequestId = 0;
 
 const formState = ref<CreateBankTransactionRequest & { activityId?: string }>({
   ...defaultFormState(),
 });
+
+const selectedDepartment = computed(() =>
+  departments.value.find((dept) => dept.id === formState.value.departmentId),
+);
+
+const transactionYear = computed(() => {
+  const parsed = parseTransactionDate(formState.value.transactionDate);
+  return parsed ? parsed.year() : currentYear.value;
+});
+
+const canSelectActivity = computed(
+  () => formState.value.transactionType === 1 && !!formState.value.departmentId,
+);
+
+async function loadAvailableActivities() {
+  if (!modalVisible.value || !canSelectActivity.value || !formState.value.departmentId) {
+    availableActivities.value = [];
+    return;
+  }
+
+  const requestId = ++activityRequestId;
+  const departmentId = formState.value.departmentId;
+  const year = transactionYear.value;
+
+  activityOptionsLoading.value = true;
+  try {
+    const activities = await getActivitiesApi(
+      year,
+      undefined,
+      departmentId,
+    );
+
+    if (
+      requestId !== activityRequestId
+      || !modalVisible.value
+      || !canSelectActivity.value
+      || formState.value.departmentId !== departmentId
+      || transactionYear.value !== year
+    ) {
+      return;
+    }
+
+    availableActivities.value = activities;
+
+    if (
+      formState.value.activityId
+      && !activities.some((activity) => activity.id === formState.value.activityId)
+    ) {
+      formState.value.activityId = undefined;
+    }
+  } catch {
+    if (requestId !== activityRequestId) {
+      return;
+    }
+
+    availableActivities.value = [];
+    message.error('載入來源活動失敗');
+  } finally {
+    if (requestId === activityRequestId) {
+      activityOptionsLoading.value = false;
+    }
+  }
+}
+
+function resetActivitySelection() {
+  formState.value.activityId = undefined;
+}
+
+function invalidateActivityRequests() {
+  activityRequestId += 1;
+  activityOptionsLoading.value = false;
+}
 
 function openCreateModal() {
   editingId.value = null;
@@ -199,13 +299,52 @@ function openEditModal(record: BankTransactionResponse) {
     fee: record.fee,
     receiptCollected: record.receiptCollected,
     receiptMailed: record.receiptMailed,
-    activityId: record.activityId ?? undefined,
+    activityId: record.transactionType === 1 ? record.activityId ?? undefined : undefined,
   };
   modalVisible.value = true;
 }
 
+function closeQuickCreateActivity() {
+  activityQuickCreateVisible.value = false;
+  activityQuickCreateContext.value = null;
+}
+
+function openQuickCreateActivity() {
+  if (!formState.value.departmentId) {
+    message.warning('請先選擇歸屬部門');
+    return;
+  }
+
+  activityQuickCreateContext.value = {
+    departmentId: formState.value.departmentId,
+    year: transactionYear.value,
+  };
+  activityQuickCreateVisible.value = true;
+}
+
+async function handleActivityCreated(activityId: string) {
+  const context = activityQuickCreateContext.value;
+  await loadAvailableActivities();
+
+  if (
+    context
+    && formState.value.departmentId === context.departmentId
+    && transactionYear.value === context.year
+  ) {
+    formState.value.activityId = activityId;
+  }
+
+  activityQuickCreateContext.value = null;
+}
+
 async function handleSubmit() {
+  const parsedDate = parseTransactionDate(formState.value.transactionDate);
   const description = formState.value.description.trim();
+  if (!parsedDate) {
+    message.warning('請選擇日期');
+    return;
+  }
+
   if (!description) {
     message.warning('請輸入摘要');
     return;
@@ -219,6 +358,7 @@ async function handleSubmit() {
   const payload = {
     ...formState.value,
     description,
+    activityId: formState.value.transactionType === 1 ? formState.value.activityId : undefined,
   };
 
   submitting.value = true;
@@ -236,6 +376,66 @@ async function handleSubmit() {
     submitting.value = false;
   }
 }
+
+watch(
+  () => modalVisible.value,
+  (open) => {
+    if (!open) {
+      invalidateActivityRequests();
+      availableActivities.value = [];
+      closeQuickCreateActivity();
+      return;
+    }
+
+    void loadAvailableActivities();
+  },
+);
+
+watch(
+  () => formState.value.transactionType,
+  (transactionType) => {
+    if (transactionType !== 1) {
+      invalidateActivityRequests();
+      availableActivities.value = [];
+      resetActivitySelection();
+      return;
+    }
+
+    void loadAvailableActivities();
+  },
+);
+
+watch(
+  () => formState.value.departmentId,
+  (departmentId, previousDepartmentId) => {
+    if (departmentId !== previousDepartmentId) {
+      resetActivitySelection();
+    }
+
+    if (!departmentId) {
+      invalidateActivityRequests();
+      availableActivities.value = [];
+      return;
+    }
+
+    void loadAvailableActivities();
+  },
+);
+
+watch(
+  () => formState.value.transactionDate,
+  (nextDate, previousDate) => {
+    const nextYear = parseTransactionDate(nextDate)?.year();
+    const previousYear = parseTransactionDate(previousDate)?.year();
+
+    if (nextYear === previousYear) {
+      return;
+    }
+
+    resetActivitySelection();
+    void loadAvailableActivities();
+  },
+);
 
 // ── 刪除 ────────────────────────────────────────
 
@@ -295,8 +495,11 @@ async function handleBatchUpdateDepartment() {
   batchSubmitting.value = true;
   try {
     await batchUpdateDepartmentApi({
+      bankName: props.bankName,
       ids: selectedRowKeys.value,
+      month: currentMonth.value,
       departmentId: batchDepartmentId.value ?? null,
+      year: currentYear.value,
     });
     message.success(`已更新 ${selectedRowKeys.value.length} 筆交易的歸屬部門`);
     clearBatchSelection();
@@ -596,11 +799,11 @@ async function handleBatchUpdateDepartment() {
 
         <FormItem label="日期" required>
           <DatePicker
-            :value="formState.transactionDate ? dayjs(formState.transactionDate) : undefined"
+            v-model:value="formState.transactionDate"
             class="w-full"
             format="YYYY/MM/DD"
             placeholder="選擇日期"
-            @change="(_: unknown, dateStr: string | string[]) => { formState.transactionDate = typeof dateStr === 'string' ? dateStr : dateStr[0] ?? ''; }"
+            value-format="YYYY-MM-DD"
           />
         </FormItem>
 
@@ -657,20 +860,46 @@ async function handleBatchUpdateDepartment() {
           </Col>
         </Row>
 
-        <FormItem v-if="editingId && formState.transactionType === 1" label="來源活動">
-          <Select
-            v-model:value="formState.activityId"
-            allow-clear
-            placeholder="選擇來源活動（選填）"
-          >
-            <SelectOption
-              v-for="act in activities"
-              :key="act.id"
-              :value="act.id"
+        <FormItem v-if="formState.transactionType === 1" label="來源活動">
+          <div class="flex items-start gap-2">
+            <Select
+              v-model:value="formState.activityId"
+              allow-clear
+              class="flex-1"
+              :disabled="!canSelectActivity"
+              :loading="activityOptionsLoading"
+              :placeholder="canSelectActivity ? '選擇來源活動（選填）' : '請先選擇歸屬部門'"
             >
-              {{ act.name }}
-            </SelectOption>
-          </Select>
+              <SelectOption
+                v-for="act in availableActivities"
+                :key="act.id"
+                :value="act.id"
+              >
+                {{ act.name }}
+              </SelectOption>
+            </Select>
+            <Button
+              :disabled="!formState.departmentId"
+              @click="openQuickCreateActivity"
+            >
+              新增活動
+            </Button>
+          </div>
+          <div
+            v-if="formState.departmentId"
+            class="mt-2 text-xs text-gray-400"
+          >
+            依 {{ transactionYear }} 年 / {{ selectedDepartment?.name }} 載入活動
+          </div>
+          <div
+            v-if="formState.departmentId && !activityOptionsLoading && availableActivities.length === 0"
+            class="mt-2 flex items-center justify-between rounded border border-dashed border-gray-300 px-3 py-2 text-xs text-gray-500"
+          >
+            <span>此部門在 {{ transactionYear }} 年尚無活動，可直接快速建立。</span>
+            <Button size="small" type="link" @click="openQuickCreateActivity">
+              快速建立
+            </Button>
+          </div>
         </FormItem>
 
         <FormItem v-if="formState.transactionType === 1">
@@ -681,5 +910,14 @@ async function handleBatchUpdateDepartment() {
         </FormItem>
       </Form>
     </Modal>
+
+    <ActivityQuickCreateModal
+      :department-id="formState.departmentId"
+      :department-name="selectedDepartment?.name"
+      :open="activityQuickCreateVisible"
+      :transaction-date="formState.transactionDate"
+      @close="closeQuickCreateActivity"
+      @created="handleActivityCreated"
+    />
   </Page>
 </template>
