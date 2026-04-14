@@ -223,6 +223,26 @@ public class FinanceTransactionControllerTests(HansOsWebApplicationFactory facto
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
+    [Fact]
+    public async Task CreateExpense_ForeignCategory_Returns404()
+    {
+        var token = await LoginAndGetTokenAsync();
+        var otherToken = await CreateUserAndGetTokenAsync();
+        var accountId = await CreateAccountAndGetIdAsync(token, "本人帳戶");
+        var foreignCategoryId = await CreateCategoryAndGetIdAsync(otherToken, "外部分類", "Expense");
+
+        var response = await AuthorizedPostAsync("/finance/transactions", token, new
+        {
+            transactionType = "Expense",
+            amount = 500,
+            transactionDate = "2025-04-01",
+            categoryId = foreignCategoryId,
+            accountId,
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
     // ── GET /finance/transactions (month filter) ────
 
     [Fact]
@@ -355,6 +375,67 @@ public class FinanceTransactionControllerTests(HansOsWebApplicationFactory facto
             transactionDate = "2025-04-01",
             categoryId = foreignCategoryId,
             accountId,
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task UpdateTransaction_ForeignAccount_Returns404()
+    {
+        var token = await LoginAndGetTokenAsync();
+        var otherToken = await CreateUserAndGetTokenAsync();
+        var accountId = await CreateAccountAndGetIdAsync(token, "更新本人帳戶");
+        var categoryId = await CreateCategoryAndGetIdAsync(token, "更新本人分類", "Expense");
+        var foreignAccountId = await CreateAccountAndGetIdAsync(otherToken, "外部帳戶");
+
+        var createResp = await AuthorizedPostAsync("/finance/transactions", token, new
+        {
+            transactionType = "Expense", amount = 500,
+            transactionDate = "2025-04-01", categoryId, accountId,
+        });
+        var createBody = await ReadBodyAsync(createResp);
+        var id = createBody.GetProperty("data").GetProperty("id").GetString()!;
+
+        var response = await AuthorizedPutAsync($"/finance/transactions/{id}", token, new
+        {
+            transactionType = "Expense",
+            amount = 800,
+            transactionDate = "2025-04-01",
+            categoryId,
+            accountId = foreignAccountId,
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task UpdateTransfer_ForeignToAccount_Returns404()
+    {
+        var token = await LoginAndGetTokenAsync();
+        var otherToken = await CreateUserAndGetTokenAsync();
+        var accountId = await CreateAccountAndGetIdAsync(token, "更新本人來源帳戶");
+        var ownToAccountId = await CreateAccountAndGetIdAsync(token, "更新本人目標帳戶");
+        var foreignToAccountId = await CreateAccountAndGetIdAsync(otherToken, "更新外部目標帳戶");
+
+        var createResp = await AuthorizedPostAsync("/finance/transactions", token, new
+        {
+            transactionType = "Transfer",
+            amount = 500,
+            transactionDate = "2025-04-01",
+            accountId,
+            toAccountId = ownToAccountId,
+        });
+        var createBody = await ReadBodyAsync(createResp);
+        var id = createBody.GetProperty("data").GetProperty("id").GetString()!;
+
+        var response = await AuthorizedPutAsync($"/finance/transactions/{id}", token, new
+        {
+            transactionType = "Transfer",
+            amount = 800,
+            transactionDate = "2025-04-01",
+            accountId,
+            toAccountId = foreignToAccountId,
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
