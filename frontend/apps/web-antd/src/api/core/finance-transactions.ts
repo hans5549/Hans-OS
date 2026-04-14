@@ -9,6 +9,9 @@ export interface CreateTransactionRequest {
   categoryId?: string;
   accountId: string;
   toAccountId?: string;
+  currency?: string;
+  project?: string;
+  tags?: string;
   note?: string;
 }
 
@@ -20,6 +23,9 @@ export interface TransactionResponse {
   amount: number;
   transactionDate: string;
   note: string | null;
+  currency: string;
+  project: string | null;
+  tags: string[] | null;
   categoryId: string | null;
   categoryName: string | null;
   categoryIcon: string | null;
@@ -44,6 +50,35 @@ export interface MonthlySummaryResponse {
   balance: number;
 }
 
+export interface MonthlyTrendPoint {
+  year: number;
+  month: number;
+  totalIncome: number;
+  totalExpense: number;
+  balance: number;
+}
+
+export interface TrendResponse {
+  months: MonthlyTrendPoint[];
+}
+
+export interface CategoryBreakdownItem {
+  categoryId: string;
+  categoryName: string;
+  categoryIcon: string | null;
+  amount: number;
+  percentage: number;
+  transactionCount: number;
+}
+
+export interface CategoryBreakdownResponse {
+  year: number;
+  month: number;
+  type: string;
+  total: number;
+  items: CategoryBreakdownItem[];
+}
+
 // ── API ───────────────────────────────────────────
 
 /** 取得月份交易記錄 */
@@ -57,6 +92,28 @@ export const getMonthlySummaryApi = (year: number, month: number) =>
   requestClient.get<MonthlySummaryResponse>('/finance/transactions/summary', {
     params: { year, month },
   });
+
+/** 取得跨月收支趨勢 */
+export const getTrendsApi = (
+  startYear: number,
+  startMonth: number,
+  endYear: number,
+  endMonth: number,
+) =>
+  requestClient.get<TrendResponse>('/finance/transactions/trends', {
+    params: { startYear, startMonth, endYear, endMonth },
+  });
+
+/** 取得月度分類佔比 */
+export const getCategoryBreakdownApi = (
+  year: number,
+  month: number,
+  type: string,
+) =>
+  requestClient.get<CategoryBreakdownResponse>(
+    '/finance/transactions/category-breakdown',
+    { params: { year, month, type } },
+  );
 
 /** 新增交易 */
 export const createTransactionApi = (data: CreateTransactionRequest) =>

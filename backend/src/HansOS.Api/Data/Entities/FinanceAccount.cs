@@ -27,6 +27,10 @@ public class FinanceAccount
     public string Name { get; set; } = string.Empty;
     public FinanceAccountType AccountType { get; set; }
     public decimal InitialBalance { get; set; }
+
+    /// <summary>帳戶幣別（ISO 4217），預設 TWD</summary>
+    public string Currency { get; set; } = "TWD";
+
     public string? Icon { get; set; }
     public int SortOrder { get; set; }
     public bool IsArchived { get; set; }

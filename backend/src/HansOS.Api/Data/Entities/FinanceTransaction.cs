@@ -11,6 +11,12 @@ public enum FinanceTransactionType
 
     /// <summary>轉帳（帳戶間轉移）</summary>
     Transfer = 3,
+
+    /// <summary>餘額調整（對帳、股票市值同步等）</summary>
+    BalanceAdjustment = 4,
+
+    /// <summary>利息（房貸利息、存款利息等）</summary>
+    Interest = 5,
 }
 
 /// <summary>個人記帳交易記錄</summary>
@@ -23,7 +29,16 @@ public class FinanceTransaction
     public DateOnly TransactionDate { get; set; }
     public string? Note { get; set; }
 
-    /// <summary>分類 ID；轉帳時為 null</summary>
+    /// <summary>幣別（ISO 4217），預設 TWD</summary>
+    public string Currency { get; set; } = "TWD";
+
+    /// <summary>專案標記（如：飲食、交通費、訂閱）</summary>
+    public string? Project { get; set; }
+
+    /// <summary>標籤（JSON 陣列，如 ["日常","必要"]）</summary>
+    public string? Tags { get; set; }
+
+    /// <summary>分類 ID；轉帳及餘額調整時為 null</summary>
     public Guid? CategoryId { get; set; }
 
     /// <summary>來源帳戶（支出/轉帳的扣款帳戶，收入的入帳帳戶）</summary>

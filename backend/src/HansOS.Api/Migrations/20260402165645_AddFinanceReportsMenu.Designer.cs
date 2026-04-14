@@ -3,6 +3,7 @@ using System;
 using HansOS.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace HansOS.Api.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260402165645_AddFinanceReportsMenu")]
+    partial class AddFinanceReportsMenu
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -260,133 +263,6 @@ namespace HansOS.Api.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
-            modelBuilder.Entity("HansOS.Api.Data.Entities.ArticleBookmark", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("CoverImageUrl")
-                        .HasMaxLength(2048)
-                        .HasColumnType("character varying(2048)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("CustomTitle")
-                        .HasMaxLength(300)
-                        .HasColumnType("character varying(300)");
-
-                    b.Property<string>("Domain")
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<string>("ExcerptSnapshot")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<Guid?>("GroupId")
-                        .HasColumnType("uuid");
-
-                    b.Property<bool>("IsPinned")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsRead")
-                        .HasColumnType("boolean");
-
-                    b.Property<DateTime?>("LastOpenedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Note")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<string>("SourceId")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<string>("SourceType")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("character varying(30)");
-
-                    b.PrimitiveCollection<string[]>("Tags")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("text[]")
-                        .HasDefaultValueSql("ARRAY[]::text[]");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasMaxLength(300)
-                        .HasColumnType("character varying(300)");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Url")
-                        .HasMaxLength(2048)
-                        .HasColumnType("character varying(2048)");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("GroupId");
-
-                    b.HasIndex("UserId", "CreatedAt");
-
-                    b.HasIndex("UserId", "GroupId");
-
-                    b.HasIndex("UserId", "SourceId")
-                        .IsUnique()
-                        .HasFilter("\"SourceType\" = 'InternalArticle' AND \"SourceId\" IS NOT NULL");
-
-                    b.HasIndex("UserId", "SourceType");
-
-                    b.HasIndex("UserId", "Url")
-                        .IsUnique()
-                        .HasFilter("\"SourceType\" = 'ExternalUrl' AND \"Url\" IS NOT NULL");
-
-                    b.ToTable("ArticleBookmarks");
-                });
-
-            modelBuilder.Entity("HansOS.Api.Data.Entities.ArticleBookmarkGroup", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<int>("SortOrder")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId", "Name")
-                        .IsUnique();
-
-                    b.HasIndex("UserId", "SortOrder");
-
-                    b.ToTable("ArticleBookmarkGroups");
-                });
-
             modelBuilder.Entity("HansOS.Api.Data.Entities.BankInitialBalance", b =>
                 {
                     b.Property<Guid>("Id")
@@ -422,9 +298,6 @@ namespace HansOS.Api.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("ActivityId")
-                        .HasColumnType("uuid");
-
                     b.Property<decimal>("Amount")
                         .HasPrecision(18)
                         .HasColumnType("numeric(18,0)");
@@ -449,9 +322,6 @@ namespace HansOS.Api.Migrations
                         .HasPrecision(18)
                         .HasColumnType("numeric(18,0)");
 
-                    b.Property<Guid?>("PendingRemittanceId")
-                        .HasColumnType("uuid");
-
                     b.Property<bool>("ReceiptCollected")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
@@ -473,11 +343,7 @@ namespace HansOS.Api.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ActivityId");
-
                     b.HasIndex("DepartmentId");
-
-                    b.HasIndex("PendingRemittanceId");
 
                     b.HasIndex("BankName", "TransactionDate");
 
@@ -847,9 +713,6 @@ namespace HansOS.Api.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("ActivityExpenseId")
-                        .HasColumnType("uuid");
-
                     b.Property<decimal>("Amount")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
@@ -898,8 +761,6 @@ namespace HansOS.Api.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("ActivityExpenseId");
 
                     b.HasIndex("DepartmentId");
 
@@ -1270,57 +1131,14 @@ namespace HansOS.Api.Migrations
                     b.Navigation("Activity");
                 });
 
-            modelBuilder.Entity("HansOS.Api.Data.Entities.ArticleBookmark", b =>
-                {
-                    b.HasOne("HansOS.Api.Data.Entities.ArticleBookmarkGroup", "Group")
-                        .WithMany()
-                        .HasForeignKey("GroupId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("HansOS.Api.Data.Entities.ApplicationUser", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Group");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("HansOS.Api.Data.Entities.ArticleBookmarkGroup", b =>
-                {
-                    b.HasOne("HansOS.Api.Data.Entities.ApplicationUser", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("HansOS.Api.Data.Entities.BankTransaction", b =>
                 {
-                    b.HasOne("HansOS.Api.Data.Entities.Activity", "Activity")
-                        .WithMany()
-                        .HasForeignKey("ActivityId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
                     b.HasOne("HansOS.Api.Data.Entities.SportsDepartment", "Department")
                         .WithMany()
                         .HasForeignKey("DepartmentId")
                         .OnDelete(DeleteBehavior.SetNull);
 
-                    b.HasOne("HansOS.Api.Data.Entities.PendingRemittance", "PendingRemittance")
-                        .WithMany()
-                        .HasForeignKey("PendingRemittanceId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("Activity");
-
                     b.Navigation("Department");
-
-                    b.Navigation("PendingRemittance");
                 });
 
             modelBuilder.Entity("HansOS.Api.Data.Entities.BudgetItem", b =>
@@ -1420,17 +1238,10 @@ namespace HansOS.Api.Migrations
 
             modelBuilder.Entity("HansOS.Api.Data.Entities.PendingRemittance", b =>
                 {
-                    b.HasOne("HansOS.Api.Data.Entities.ActivityExpense", "ActivityExpense")
-                        .WithMany()
-                        .HasForeignKey("ActivityExpenseId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
                     b.HasOne("HansOS.Api.Data.Entities.SportsDepartment", "Department")
                         .WithMany()
                         .HasForeignKey("DepartmentId")
                         .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("ActivityExpense");
 
                     b.Navigation("Department");
                 });

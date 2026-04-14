@@ -331,6 +331,263 @@ public class FinanceTransactionControllerTests(HansOsWebApplicationFactory facto
         found.Should().BeFalse("deleted transaction should not appear in listing");
     }
 
+    // ── POST /finance/transactions (BalanceAdjustment) ──
+
+    [Fact]
+    public async Task CreateBalanceAdjustment_WithoutCategory_ReturnsSuccess()
+    {
+        var token = await LoginAndGetTokenAsync();
+        var accountId = await CreateAccountAndGetIdAsync(token, "調整帳戶");
+
+        var response = await AuthorizedPostAsync("/finance/transactions", token, new
+        {
+            transactionType = "BalanceAdjustment",
+            amount = 1500,
+            transactionDate = "2025-05-01",
+            accountId,
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await ReadBodyAsync(response);
+        body.GetProperty("code").GetInt32().Should().Be(0);
+
+        var data = body.GetProperty("data");
+        data.GetProperty("transactionType").GetString().Should().Be("BalanceAdjustment");
+        data.GetProperty("amount").GetDecimal().Should().Be(1500);
+    }
+
+    // ── POST /finance/transactions (Interest) ────────
+
+    [Fact]
+    public async Task CreateInterest_WithCategory_ReturnsSuccess()
+    {
+        var token = await LoginAndGetTokenAsync();
+        var accountId = await CreateAccountAndGetIdAsync(token, "利息帳戶");
+        var categoryId = await CreateCategoryAndGetIdAsync(token, "房貸利息", "Expense");
+
+        var response = await AuthorizedPostAsync("/finance/transactions", token, new
+        {
+            transactionType = "Interest",
+            amount = 8000,
+            transactionDate = "2025-05-01",
+            categoryId,
+            accountId,
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await ReadBodyAsync(response);
+        body.GetProperty("code").GetInt32().Should().Be(0);
+
+        var data = body.GetProperty("data");
+        data.GetProperty("transactionType").GetString().Should().Be("Interest");
+    }
+
+    [Fact]
+    public async Task CreateInterest_WithoutCategory_Returns400()
+    {
+        var token = await LoginAndGetTokenAsync();
+        var accountId = await CreateAccountAndGetIdAsync(token, "無分類利息帳戶");
+
+        var response = await AuthorizedPostAsync("/finance/transactions", token, new
+        {
+            transactionType = "Interest",
+            amount = 500,
+            transactionDate = "2025-05-01",
+            accountId,
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    // ── New Fields: Currency, Project, Tags ──────────
+
+    [Fact]
+    public async Task CreateExpense_WithCurrency_ReturnsCorrectCurrency()
+    {
+        var token = await LoginAndGetTokenAsync();
+        var accountId = await CreateAccountAndGetIdAsync(token, "外幣帳戶");
+        var categoryId = await CreateCategoryAndGetIdAsync(token, "外幣消費", "Expense");
+
+        var response = await AuthorizedPostAsync("/finance/transactions", token, new
+        {
+            transactionType = "Expense",
+            amount = 29.99,
+            transactionDate = "2025-05-01",
+            categoryId,
+            accountId,
+            currency = "USD",
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await ReadBodyAsync(response);
+        body.GetProperty("data").GetProperty("currency").GetString().Should().Be("USD");
+    }
+
+    [Fact]
+    public async Task CreateExpense_DefaultCurrency_ReturnsTWD()
+    {
+        var token = await LoginAndGetTokenAsync();
+        var accountId = await CreateAccountAndGetIdAsync(token, "預設幣帳戶");
+        var categoryId = await CreateCategoryAndGetIdAsync(token, "預設幣分類", "Expense");
+
+        var response = await AuthorizedPostAsync("/finance/transactions", token, new
+        {
+            transactionType = "Expense",
+            amount = 100,
+            transactionDate = "2025-05-01",
+            categoryId,
+            accountId,
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await ReadBodyAsync(response);
+        body.GetProperty("data").GetProperty("currency").GetString().Should().Be("TWD");
+    }
+
+    [Fact]
+    public async Task CreateExpense_WithProject_ReturnsCorrectProject()
+    {
+        var token = await LoginAndGetTokenAsync();
+        var accountId = await CreateAccountAndGetIdAsync(token, "專案帳戶");
+        var categoryId = await CreateCategoryAndGetIdAsync(token, "專案分類", "Expense");
+
+        var response = await AuthorizedPostAsync("/finance/transactions", token, new
+        {
+            transactionType = "Expense",
+            amount = 250,
+            transactionDate = "2025-05-01",
+            categoryId,
+            accountId,
+            project = "飲食",
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await ReadBodyAsync(response);
+        body.GetProperty("data").GetProperty("project").GetString().Should().Be("飲食");
+    }
+
+    [Fact]
+    public async Task CreateExpense_WithTags_ReturnsCorrectTags()
+    {
+        var token = await LoginAndGetTokenAsync();
+        var accountId = await CreateAccountAndGetIdAsync(token, "標籤帳戶");
+        var categoryId = await CreateCategoryAndGetIdAsync(token, "標籤分類", "Expense");
+
+        var response = await AuthorizedPostAsync("/finance/transactions", token, new
+        {
+            transactionType = "Expense",
+            amount = 300,
+            transactionDate = "2025-05-01",
+            categoryId,
+            accountId,
+            tags = "[\"日常\",\"必要\"]",
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await ReadBodyAsync(response);
+        var tags = body.GetProperty("data").GetProperty("tags");
+        tags.GetArrayLength().Should().Be(2);
+        tags[0].GetString().Should().Be("日常");
+        tags[1].GetString().Should().Be("必要");
+    }
+
+    // ── GET /finance/transactions/trends ─────────────
+
+    [Fact]
+    public async Task GetTrends_Unauthorized_Returns401()
+    {
+        var response = await _client.GetAsync(
+            "/finance/transactions/trends?startYear=2025&startMonth=1&endYear=2025&endMonth=6");
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task GetTrends_ValidDateRange_ReturnsTrendData()
+    {
+        var token = await LoginAndGetTokenAsync();
+        var accountId = await CreateAccountAndGetIdAsync(token, "趨勢帳戶");
+        var categoryId = await CreateCategoryAndGetIdAsync(token, "趨勢分類", "Expense");
+
+        await AuthorizedPostAsync("/finance/transactions", token, new
+        {
+            transactionType = "Expense",
+            amount = 1000,
+            transactionDate = "2025-07-15",
+            categoryId,
+            accountId,
+        });
+
+        var response = await AuthorizedGetAsync(
+            "/finance/transactions/trends?startYear=2025&startMonth=7&endYear=2025&endMonth=7",
+            token);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await ReadBodyAsync(response);
+        body.GetProperty("code").GetInt32().Should().Be(0);
+
+        var data = body.GetProperty("data");
+        var months = data.GetProperty("months");
+        months.GetArrayLength().Should().BeGreaterThanOrEqualTo(1);
+
+        var firstMonth = months[0];
+        firstMonth.GetProperty("year").GetInt32().Should().Be(2025);
+        firstMonth.GetProperty("month").GetInt32().Should().Be(7);
+    }
+
+    // ── GET /finance/transactions/category-breakdown ──
+
+    [Fact]
+    public async Task GetCategoryBreakdown_Unauthorized_Returns401()
+    {
+        var response = await _client.GetAsync(
+            "/finance/transactions/category-breakdown?year=2025&month=5&type=Expense");
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task GetCategoryBreakdown_Expense_ReturnsCategorySummary()
+    {
+        var token = await LoginAndGetTokenAsync();
+        var accountId = await CreateAccountAndGetIdAsync(token, "佔比帳戶");
+        var catA = await CreateCategoryAndGetIdAsync(token, "佔比分類A", "Expense");
+        var catB = await CreateCategoryAndGetIdAsync(token, "佔比分類B", "Expense");
+
+        await AuthorizedPostAsync("/finance/transactions", token, new
+        {
+            transactionType = "Expense", amount = 700,
+            transactionDate = "2025-08-10", categoryId = catA, accountId,
+        });
+        await AuthorizedPostAsync("/finance/transactions", token, new
+        {
+            transactionType = "Expense", amount = 300,
+            transactionDate = "2025-08-15", categoryId = catB, accountId,
+        });
+
+        var response = await AuthorizedGetAsync(
+            "/finance/transactions/category-breakdown?year=2025&month=8&type=Expense",
+            token);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await ReadBodyAsync(response);
+        body.GetProperty("code").GetInt32().Should().Be(0);
+
+        var data = body.GetProperty("data");
+        data.GetProperty("total").GetDecimal().Should().BeGreaterThan(0);
+        data.GetProperty("items").GetArrayLength().Should().BeGreaterThanOrEqualTo(2);
+    }
+
+    [Fact]
+    public async Task GetCategoryBreakdown_InvalidType_Returns400()
+    {
+        var token = await LoginAndGetTokenAsync();
+
+        var response = await AuthorizedGetAsync(
+            "/finance/transactions/category-breakdown?year=2025&month=8&type=InvalidType",
+            token);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
     // ── Helpers ─────────────────────────────────────
 
     private async Task<string> CreateAccountAndGetIdAsync(string token, string name = "測試帳戶")

@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue';
 
 import { Page } from '@vben/common-ui';
 import {
+  AutoComplete,
   Button,
   Card,
   DatePicker,
@@ -18,6 +19,7 @@ import {
   Spin,
   Tabs,
   TabPane,
+  Tag,
 } from 'ant-design-vue';
 import dayjs from 'dayjs';
 
@@ -42,6 +44,15 @@ import {
 
 defineOptions({ name: 'FinanceTransactionsPage' });
 
+// ── Types ────────────────────────────────────────
+
+type TransactionType =
+  | 'BalanceAdjustment'
+  | 'Expense'
+  | 'Income'
+  | 'Interest'
+  | 'Transfer';
+
 // ── State ────────────────────────────────────────
 
 const currentMonth = ref(dayjs());
@@ -53,17 +64,24 @@ const dailyGroups = ref<DailyTransactionGroup[]>([]);
 const drawerOpen = ref(false);
 const saving = ref(false);
 const editingId = ref<string | null>(null);
-const formType = ref<'Expense' | 'Income' | 'Transfer'>('Expense');
+const formType = ref<TransactionType>('Expense');
 const formAmount = ref<number | undefined>(undefined);
 const formCategoryId = ref<string | undefined>(undefined);
 const formAccountId = ref<string | undefined>(undefined);
 const formToAccountId = ref<string | undefined>(undefined);
 const formDate = ref(dayjs());
 const formNote = ref('');
+const formCurrency = ref('TWD');
+const formProject = ref('');
+const formTags = ref<string[]>([]);
 
 // Lookup data
 const accounts = ref<AccountResponse[]>([]);
 const categories = ref<CategoryResponse[]>([]);
+
+// ── Constants ────────────────────────────────────
+
+const CURRENCY_OPTIONS = ['TWD', 'USD', 'JPY', 'EUR', 'CNY'];
 
 // ── Computed ──────────────────────────────────────
 
@@ -72,7 +90,9 @@ const displayMonth = computed(() => currentMonth.value.month() + 1);
 
 const filteredCategories = computed(() =>
   categories.value.filter((c) => {
-    if (formType.value === 'Expense') return c.categoryType === 'Expense';
+    if (formType.value === 'Expense' || formType.value === 'Interest') {
+      return c.categoryType === 'Expense';
+    }
     if (formType.value === 'Income') return c.categoryType === 'Income';
     return false;
   }),
@@ -92,8 +112,27 @@ const flatCategories = computed(() => {
   return result;
 });
 
+const needsCategory = computed(
+  () =>
+    formType.value === 'Expense' ||
+    formType.value === 'Income' ||
+    formType.value === 'Interest',
+);
+
 const isTransfer = computed(() => formType.value === 'Transfer');
 const drawerTitle = computed(() => (editingId.value ? '編輯交易' : '新增交易'));
+
+const existingProjects = computed(() => {
+  const projects = new Set<string>();
+  for (const group of dailyGroups.value) {
+    for (const tx of group.transactions) {
+      if (tx.project) {
+        projects.add(tx.project);
+      }
+    }
+  }
+  return [...projects].map((p) => ({ value: p }));
+});
 
 // ── Helpers ──────────────────────────────────────
 
@@ -117,14 +156,26 @@ function formatDateHeader(dateStr: string): string {
 
 function amountColor(type: string): string {
   if (type === 'Income') return 'text-green-600';
-  if (type === 'Expense') return 'text-red-500';
+  if (type === 'Expense' || type === 'Interest') return 'text-red-500';
+  if (type === 'BalanceAdjustment') return 'text-orange-500';
   return 'text-blue-500';
 }
 
 function amountPrefix(type: string): string {
   if (type === 'Income') return '+';
-  if (type === 'Expense') return '-';
+  if (type === 'Expense' || type === 'Interest') return '-';
   return '';
+}
+
+function typeLabel(type: string): string {
+  const labels: Record<string, string> = {
+    Expense: '支出',
+    Income: '收入',
+    Transfer: '轉帳',
+    BalanceAdjustment: '餘額調整',
+    Interest: '利息',
+  };
+  return labels[type] ?? type;
 }
 
 function transactionSubtext(tx: TransactionResponse): string {
@@ -184,6 +235,9 @@ function resetForm() {
   formToAccountId.value = undefined;
   formDate.value = dayjs();
   formNote.value = '';
+  formCurrency.value = 'TWD';
+  formProject.value = '';
+  formTags.value = [];
 }
 
 function openAddDrawer() {
@@ -193,13 +247,16 @@ function openAddDrawer() {
 
 function openEditDrawer(tx: TransactionResponse) {
   editingId.value = tx.id;
-  formType.value = tx.transactionType as 'Expense' | 'Income' | 'Transfer';
+  formType.value = tx.transactionType as TransactionType;
   formAmount.value = tx.amount;
   formCategoryId.value = tx.categoryId ?? undefined;
   formAccountId.value = tx.accountId;
   formToAccountId.value = tx.toAccountId ?? undefined;
   formDate.value = dayjs(tx.transactionDate);
   formNote.value = tx.note ?? '';
+  formCurrency.value = tx.currency ?? 'TWD';
+  formProject.value = tx.project ?? '';
+  formTags.value = tx.tags ?? [];
   drawerOpen.value = true;
 }
 
@@ -208,7 +265,7 @@ function closeDrawer() {
 }
 
 function onTypeChange(key: string) {
-  formType.value = key as 'Expense' | 'Income' | 'Transfer';
+  formType.value = key as TransactionType;
   formCategoryId.value = undefined;
   formToAccountId.value = undefined;
 }
@@ -222,7 +279,7 @@ async function handleSave() {
     message.warning('請選擇帳戶');
     return;
   }
-  if (!isTransfer.value && !formCategoryId.value) {
+  if (needsCategory.value && !formCategoryId.value) {
     message.warning('請選擇分類');
     return;
   }
@@ -235,13 +292,19 @@ async function handleSave() {
     return;
   }
 
+  const tagsJson =
+    formTags.value.length > 0 ? JSON.stringify(formTags.value) : undefined;
+
   const payload: CreateTransactionRequest = {
     transactionType: formType.value,
     amount: formAmount.value,
     transactionDate: formDate.value.format('YYYY-MM-DD'),
-    categoryId: isTransfer.value ? undefined : formCategoryId.value,
+    categoryId: needsCategory.value ? formCategoryId.value : undefined,
     accountId: formAccountId.value,
     toAccountId: isTransfer.value ? formToAccountId.value : undefined,
+    currency: formCurrency.value,
+    project: formProject.value.trim() || undefined,
+    tags: tagsJson,
     note: formNote.value.trim() || undefined,
   };
 
@@ -266,7 +329,7 @@ async function handleSave() {
 function confirmDelete(tx: TransactionResponse) {
   Modal.confirm({
     title: '確認刪除',
-    content: `確定要刪除此筆${tx.transactionType === 'Income' ? '收入' : tx.transactionType === 'Expense' ? '支出' : '轉帳'}紀錄嗎？`,
+    content: `確定要刪除此筆${typeLabel(tx.transactionType)}紀錄嗎？`,
     okText: '刪除',
     okType: 'danger',
     cancelText: '取消',
@@ -388,12 +451,30 @@ onMounted(async () => {
                   class="i-lucide-arrow-left-right text-lg text-gray-400"
                 />
                 <div class="min-w-0 flex-1">
-                  <div class="truncate text-sm font-medium">
-                    {{
-                      tx.transactionType === 'Transfer'
-                        ? '轉帳'
-                        : (tx.categoryName ?? '未分類')
-                    }}
+                  <div class="flex items-center gap-1.5 truncate text-sm font-medium">
+                    <span>
+                      {{
+                        tx.transactionType === 'Transfer'
+                          ? '轉帳'
+                          : tx.transactionType === 'BalanceAdjustment'
+                            ? '餘額調整'
+                            : (tx.categoryName ?? '未分類')
+                      }}
+                    </span>
+                    <Tag
+                      v-if="tx.currency && tx.currency !== 'TWD'"
+                      color="blue"
+                      class="!text-xs !leading-none !px-1 !py-0 !m-0"
+                    >
+                      {{ tx.currency }}
+                    </Tag>
+                    <Tag
+                      v-if="tx.project"
+                      color="purple"
+                      class="!text-xs !leading-none !px-1 !py-0 !m-0"
+                    >
+                      {{ tx.project }}
+                    </Tag>
                   </div>
                   <div class="truncate text-xs text-gray-400">
                     {{ transactionSubtext(tx) }}
@@ -465,11 +546,14 @@ onMounted(async () => {
         <Tabs
           :active-key="formType"
           class="mb-2"
+          size="small"
           @change="(k: string | number) => onTypeChange(String(k))"
         >
           <TabPane key="Expense" tab="支出" />
           <TabPane key="Income" tab="收入" />
           <TabPane key="Transfer" tab="轉帳" />
+          <TabPane key="BalanceAdjustment" tab="餘額調整" />
+          <TabPane key="Interest" tab="利息" />
         </Tabs>
 
         <!-- Amount -->
@@ -484,8 +568,8 @@ onMounted(async () => {
           />
         </FormItem>
 
-        <!-- Category (not for Transfer) -->
-        <FormItem v-if="!isTransfer" label="分類" required>
+        <!-- Category (for Expense, Income, Interest) -->
+        <FormItem v-if="needsCategory" label="分類" required>
           <Select
             v-model:value="formCategoryId"
             :options="
@@ -536,11 +620,44 @@ onMounted(async () => {
           </Select>
         </FormItem>
 
+        <!-- Currency -->
+        <FormItem label="幣別">
+          <Select v-model:value="formCurrency" style="width: 100%">
+            <SelectOption
+              v-for="cur in CURRENCY_OPTIONS"
+              :key="cur"
+              :value="cur"
+            >
+              {{ cur }}
+            </SelectOption>
+          </Select>
+        </FormItem>
+
         <!-- Date -->
         <FormItem label="日期">
           <DatePicker
             v-model:value="formDate"
             :allow-clear="false"
+            style="width: 100%"
+          />
+        </FormItem>
+
+        <!-- Project -->
+        <FormItem label="專案">
+          <AutoComplete
+            v-model:value="formProject"
+            :allow-clear="true"
+            :options="existingProjects"
+            placeholder="選填，例如：飲食、交通費"
+          />
+        </FormItem>
+
+        <!-- Tags -->
+        <FormItem label="標籤">
+          <Select
+            v-model:value="formTags"
+            mode="tags"
+            placeholder="輸入後按 Enter 新增"
             style="width: 100%"
           />
         </FormItem>
