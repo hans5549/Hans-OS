@@ -101,6 +101,7 @@ public class ActivityService(ApplicationDbContext db) : IActivityService
         CreateActivityRequest request, CancellationToken ct = default)
     {
         await ValidateDepartmentExistsAsync(request.DepartmentId, ct);
+        await ValidateBudgetItemsAsync(request.DepartmentId, request.Year, request.Groups, request.Expenses, ct);
 
         var now = DateTime.UtcNow;
         var nextSequence = await GetNextSequenceAsync(
@@ -129,9 +130,9 @@ public class ActivityService(ApplicationDbContext db) : IActivityService
     public async Task<ActivityDetailResponse> UpdateAsync(
         Guid id, UpdateActivityRequest request, CancellationToken ct = default)
     {
-        // 確認活動存在
-        var exists = await db.Activities.AnyAsync(a => a.Id == id, ct);
-        if (!exists) throw new KeyNotFoundException("活動不存在");
+        var activity = await db.Activities.FirstOrDefaultAsync(a => a.Id == id, ct)
+            ?? throw new KeyNotFoundException("活動不存在");
+        await ValidateBudgetItemsAsync(activity.DepartmentId, activity.Year, request.Groups, request.Expenses, ct);
 
         var now = DateTime.UtcNow;
 
@@ -156,7 +157,6 @@ public class ActivityService(ApplicationDbContext db) : IActivityService
         }
 
         // 更新活動基本資訊
-        var activity = await db.Activities.FirstAsync(a => a.Id == id, ct);
         activity.Name = request.Name;
         activity.Description = request.Description;
         activity.UpdatedAt = now;
@@ -273,6 +273,60 @@ public class ActivityService(ApplicationDbContext db) : IActivityService
             foreach (var expenseInput in ungroupedExpenses)
             {
                 activity.Expenses.Add(CreateExpense(activity.Id, null, expenseInput, now));
+            }
+        }
+    }
+
+    private async Task ValidateBudgetItemsAsync(
+        Guid departmentId,
+        int year,
+        List<ActivityGroupInput>? groups,
+        List<ActivityExpenseInput>? ungroupedExpenses,
+        CancellationToken ct)
+    {
+        var budgetItemIds = EnumerateExpenseInputs(groups, ungroupedExpenses)
+            .Where(input => input.BudgetItemId.HasValue)
+            .Select(input => input.BudgetItemId!.Value)
+            .Distinct()
+            .ToList();
+        if (budgetItemIds.Count == 0)
+        {
+            return;
+        }
+
+        var matchedCount = await db.BudgetItems
+            .AsNoTracking()
+            .Where(item => budgetItemIds.Contains(item.Id))
+            .Where(item => item.DepartmentBudget.DepartmentId == departmentId
+                && item.DepartmentBudget.AnnualBudget.Year == year)
+            .CountAsync(ct);
+
+        if (matchedCount != budgetItemIds.Count)
+        {
+            throw new ArgumentException("活動細項綁定的預算項目必須屬於相同部門與年度");
+        }
+    }
+
+    private static IEnumerable<ActivityExpenseInput> EnumerateExpenseInputs(
+        List<ActivityGroupInput>? groups,
+        List<ActivityExpenseInput>? ungroupedExpenses)
+    {
+        if (groups is not null)
+        {
+            foreach (var group in groups)
+            {
+                foreach (var expense in group.Expenses)
+                {
+                    yield return expense;
+                }
+            }
+        }
+
+        if (ungroupedExpenses is not null)
+        {
+            foreach (var expense in ungroupedExpenses)
+            {
+                yield return expense;
             }
         }
     }
