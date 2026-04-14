@@ -246,6 +246,7 @@ const newActivityMonth = ref(resolveTransactionMonth(defaultFormState().transact
 
 const activityDrawerOpen = ref(false);
 const activityDrawerActivity = ref<ActivityDetailResponse | null>(null);
+let linkageRequestId = 0;
 
 const departmentOptions = computed(() =>
   departments.value.map((department) => ({
@@ -283,23 +284,31 @@ function resetNewActivityDraft() {
   newActivityMonth.value = resolveTransactionMonth(formState.value.transactionDate);
 }
 
-function resetActivityLinkState() {
-  activities.value = [];
-  budgetItems.value = [];
+function invalidateLinkageRequests() {
+  linkageRequestId += 1;
   activitiesLoading.value = false;
   budgetItemsLoading.value = false;
+}
+
+function resetActivityLinkState() {
+  invalidateLinkageRequests();
+  activities.value = [];
+  budgetItems.value = [];
   activityMode.value = 'none';
   resetNewActivityDraft();
 }
 
 async function loadLinkageOptions(departmentId?: string) {
-  if (!departmentId || formState.value.transactionType !== 1) {
+  if (!modalVisible.value || !departmentId || formState.value.transactionType !== 1) {
+    invalidateLinkageRequests();
     activities.value = [];
     budgetItems.value = [];
     return;
   }
 
+  const requestId = ++linkageRequestId;
   const transactionYear = resolveTransactionYear(formState.value.transactionDate);
+  const previousBudgetItem = budgetItems.value.find((item) => item.id === selectedBudgetItemId.value);
 
   activitiesLoading.value = true;
   budgetItemsLoading.value = true;
@@ -310,11 +319,45 @@ async function loadLinkageOptions(departmentId?: string) {
       getDepartmentBudgetItemsApi(transactionYear, departmentId).catch(() => []),
     ]);
 
+    if (
+      requestId !== linkageRequestId
+      || !modalVisible.value
+      || formState.value.transactionType !== 1
+      || formState.value.departmentId !== departmentId
+      || resolveTransactionYear(formState.value.transactionDate) !== transactionYear
+    ) {
+      return;
+    }
+
     activities.value = departmentActivities;
     budgetItems.value = departmentBudgetItems;
+
+    if (
+      formState.value.activityId
+      && !departmentActivities.some((activity) => activity.id === formState.value.activityId)
+    ) {
+      formState.value.activityId = undefined;
+    }
+
+    if (
+      selectedBudgetItemId.value
+      && !departmentBudgetItems.some((item) => item.id === selectedBudgetItemId.value)
+    ) {
+      const shouldClearAutoFilledName =
+        activityMode.value === 'new'
+        && previousBudgetItem
+        && newActivityName.value.trim() === previousBudgetItem.activityName;
+
+      selectedBudgetItemId.value = undefined;
+      if (shouldClearAutoFilledName) {
+        newActivityName.value = '';
+      }
+    }
   } finally {
-    activitiesLoading.value = false;
-    budgetItemsLoading.value = false;
+    if (requestId === linkageRequestId) {
+      activitiesLoading.value = false;
+      budgetItemsLoading.value = false;
+    }
   }
 }
 
@@ -357,9 +400,9 @@ async function openEditModal(record: BankTransactionResponse) {
   };
   resetActivityLinkState();
   activityMode.value = 'existing';
+  modalVisible.value = true;
   await loadLinkageOptions(record.departmentId ?? undefined);
   isSyncingFormState.value = false;
-  modalVisible.value = true;
 }
 
 watch(
@@ -383,6 +426,15 @@ watch(
     }
 
     await loadLinkageOptions(departmentId);
+  },
+);
+
+watch(
+  () => modalVisible.value,
+  (open) => {
+    if (!open) {
+      invalidateLinkageRequests();
+    }
   },
 );
 
