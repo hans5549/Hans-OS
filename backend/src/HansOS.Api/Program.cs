@@ -87,6 +87,7 @@ builder.Services.AddScoped<IFinanceAccountService, FinanceAccountService>();
 builder.Services.AddScoped<ITransactionCategoryService, TransactionCategoryService>();
 builder.Services.AddScoped<IFinanceTransactionService, FinanceTransactionService>();
 builder.Services.AddScoped<IStockTransactionService, StockTransactionService>();
+builder.Services.AddScoped<IArticleCollectionService, ArticleCollectionService>();
 
 // ── Controllers + Swagger ────────────────────────
 builder.Services.AddControllers();
