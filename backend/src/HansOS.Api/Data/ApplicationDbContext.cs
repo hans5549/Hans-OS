@@ -25,6 +25,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<TransactionCategory> TransactionCategories => Set<TransactionCategory>();
     public DbSet<FinanceTransaction> FinanceTransactions => Set<FinanceTransaction>();
     public DbSet<StockTransaction> StockTransactions => Set<StockTransaction>();
+    public DbSet<ArticleBookmarkGroup> ArticleBookmarkGroups => Set<ArticleBookmarkGroup>();
+    public DbSet<ArticleBookmark> ArticleBookmarks => Set<ArticleBookmark>();
     public DbSet<BudgetShareToken> BudgetShareTokens => Set<BudgetShareToken>();
 
     protected override void OnModelCreating(ModelBuilder builder)
@@ -38,6 +40,63 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             e.Property(u => u.Avatar).HasMaxLength(500);
             e.Property(u => u.Desc).HasMaxLength(500);
             e.Property(u => u.HomePath).HasMaxLength(200);
+        });
+
+        // ArticleBookmarkGroup
+        builder.Entity<ArticleBookmarkGroup>(e =>
+        {
+            e.HasKey(g => g.Id);
+            e.Property(g => g.UserId).IsRequired();
+            e.Property(g => g.Name).HasMaxLength(100).IsRequired();
+
+            e.HasOne(g => g.User)
+             .WithMany()
+             .HasForeignKey(g => g.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasIndex(g => new { g.UserId, g.Name }).IsUnique();
+            e.HasIndex(g => new { g.UserId, g.SortOrder });
+        });
+
+        // ArticleBookmark
+        builder.Entity<ArticleBookmark>(e =>
+        {
+            e.HasKey(b => b.Id);
+            e.Property(b => b.UserId).IsRequired();
+            e.Property(b => b.SourceType)
+             .HasConversion<string>()
+             .HasMaxLength(30);
+            e.Property(b => b.SourceId).HasMaxLength(200);
+            e.Property(b => b.Url).HasMaxLength(2048);
+            e.Property(b => b.Title).HasMaxLength(300).IsRequired();
+            e.Property(b => b.CustomTitle).HasMaxLength(300);
+            e.Property(b => b.ExcerptSnapshot).HasMaxLength(1000);
+            e.Property(b => b.CoverImageUrl).HasMaxLength(2048);
+            e.Property(b => b.Domain).HasMaxLength(255);
+            e.Property(b => b.Note).HasMaxLength(1000);
+            e.Property(b => b.Tags)
+             .HasColumnType("text[]")
+             .HasDefaultValueSql("ARRAY[]::text[]");
+
+            e.HasOne(b => b.User)
+             .WithMany()
+             .HasForeignKey(b => b.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne(b => b.Group)
+             .WithMany()
+             .HasForeignKey(b => b.GroupId)
+             .OnDelete(DeleteBehavior.SetNull);
+
+            e.HasIndex(b => new { b.UserId, b.Url })
+             .IsUnique()
+             .HasFilter("\"SourceType\" = 'ExternalUrl' AND \"Url\" IS NOT NULL");
+            e.HasIndex(b => new { b.UserId, b.SourceId })
+             .IsUnique()
+             .HasFilter("\"SourceType\" = 'InternalArticle' AND \"SourceId\" IS NOT NULL");
+            e.HasIndex(b => new { b.UserId, b.SourceType });
+            e.HasIndex(b => new { b.UserId, b.GroupId });
+            e.HasIndex(b => new { b.UserId, b.CreatedAt });
         });
 
         // Menu — self-referencing tree
