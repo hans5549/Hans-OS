@@ -18,11 +18,11 @@
 - **Permission Validation**: Comprehensive permission validation solutions, including button-level permission control.
 - **Multi-Theme**: Built-in multiple theme configurations & dark mode to meet personalized needs.
 - **Dynamic Menu**: Supports dynamic menus that can display based on permissions.
-- **Mock Data**: High-performance local Mock data solution based on `Nitro`.
+- **Mock Data**: Connect to an external `Nitro`-based mock service or directly to your existing backend.
 - **Rich Components**: Provides a wide range of components to meet most business needs.
 - **Standardization**: Code quality is ensured with tools like `ESLint`, `Prettier`, `Stylelint`, `Publint`, and `CSpell`.
 - **Engineering**: Development efficiency is improved with tools like `Pnpm Monorepo`, `TurboRepo`, and `Changeset`.
-- **Multi-UI Library Support**: Supports mainstream UI libraries like `Ant Design Vue`, `Element Plus`, and `Vuetify`, without being restricted to a specific framework.
+- **UI Extensibility**: The current demo app keeps `Ant Design Vue`, and you can add your own UI-framework variant when needed.
 
 ## Browser Support
 

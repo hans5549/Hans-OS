@@ -4,7 +4,7 @@
 
 This document explains how to use Mock data and interact with the server in a development environment, involving technologies such as:
 
-- [Nitro](https://nitro.unjs.io/) A lightweight backend server that can be deployed anywhere, used as a Mock server in the project.
+- [Nitro](https://nitro.unjs.io/) A lightweight backend server that can be deployed anywhere and can also be used as an external mock service outside this repository.
 - [axios](https://axios-http.com/docs/intro) Used to send HTTP requests to interact with the server.
 
 :::
@@ -45,8 +45,8 @@ export default defineConfig(async () => {
           '/api': {
             changeOrigin: true,
             rewrite: (path) => path.replace(/^\/api/, ''),
-            // mock proxy
-            target: 'http://localhost:5320/api',
+            // backend API server
+            target: 'http://localhost:5180',
             ws: true,
           },
         },
@@ -68,7 +68,7 @@ axios.get('/api/user').then((res) => {
 });
 ```
 
-At this point, the request will be proxied to `http://localhost:5320/api/user`.
+At this point, the request will be proxied to `http://localhost:5180/user`.
 
 ::: warning Note
 
@@ -338,19 +338,15 @@ The new version no longer supports mock in the production environment. Please us
 
 Mock data is an indispensable part of frontend development, serving as a key link in separating frontend and backend development. By agreeing on interfaces with the server side in advance and simulating request data and even logic, frontend development can proceed independently, without being blocked by the backend development process.
 
-The project uses [Nitro](https://nitro.unjs.io/) for local mock data processing. The principle is to start an additional backend service locally, which is a real backend service that can handle requests and return data.
+Mock data is still useful during frontend development, but the current repository no longer ships with a built-in Nitro mock app.
 
-### Using Nitro
+## Recommended setup
 
-The mock service code is located in the `apps/backend-mock` directory. It does not need to be started manually and is already integrated into the project. You only need to run `pnpm dev` in the project root directory. After running successfully, the console will print `http://localhost:5320/api`, and you can access this address to view the mock service.
-
-[Nitro](https://nitro.unjs.io/) syntax is simple, and you can configure and develop according to your needs. For specific configurations, you can refer to the [Nitro documentation](https://nitro.unjs.io/).
-
-## Disabling Mock Service
-
-Since mock is essentially a real backend service, if you do not need the mock service, you can configure `VITE_NITRO_MOCK=false` in the `.env.development` file in the project root directory to disable the mock service.
+For local development, point `VITE_GLOB_API_URL` in your app's `.env.development` to the existing backend or to your own external mock service.
 
 ```bash
 # .env.development
-VITE_NITRO_MOCK=false
+VITE_GLOB_API_URL=http://localhost:5180
 ```
+
+If you still want to use [Nitro](https://nitro.unjs.io/) or another mock solution, keep it outside this repository instead of restoring the old mock app here.

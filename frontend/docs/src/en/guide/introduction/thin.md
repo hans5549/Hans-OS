@@ -4,11 +4,11 @@ Starting from version `5.0`, we no longer provide slimmed-down repositories or b
 
 ## Application Slimming
 
-First, identify the version of the `UI` component library you need, and then delete the corresponding applications. For example, if you choose to use `Ant Design Vue`, you can delete the other applications. Simply remove the following two folders:
+The current repository is already slimmed down around `web-antd`. If you want to simplify it further, start by removing the demo and documentation directories you do not need:
 
 ```bash
-apps/web-ele
-apps/web-native
+playground
+docs
 
 ```
 
@@ -26,14 +26,9 @@ If you don’t need demo code, you can simply delete the `playground` folder
 
 If you don’t need documentation, you can delete the `docs` folder.
 
-## Remove Mock Service
+## Local API setup
 
-If you don’t need the `Mock` service, you can delete the `apps/backend-mock` folder. Also, remove the `VITE_NITRO_MOCK` variable from the `.env.development` file in your application.
-
-```bash
-# Whether to enable Nitro Mock service, true to enable, false to disable
-VITE_NITRO_MOCK=false
-```
+The repository no longer ships with a built-in Nitro mock app. For local development, point `VITE_GLOB_API_URL` in `.env.development` to your existing backend or an external mock service.
 
 ## Installing Dependencies
 
@@ -54,15 +49,10 @@ After slimming down, you may need to adjust commands according to your project. 
   "scripts": {
     "build:antd": "pnpm run build --filter=@vben/web-antd",
     "build:docs": "pnpm run build --filter=@vben/docs",
-    "build:ele": "pnpm run build --filter=@vben/web-ele",
-    "build:naive": "pnpm run build --filter=@vben/web-naive",
-    "build:tdesign": "pnpm run build --filter=@vben/web-tdesign",
     "build:play": "pnpm run build --filter=@vben/playground",
     "dev:antd": "pnpm -F @vben/web-antd run dev",
     "dev:docs": "pnpm -F @vben/docs run dev",
-    "dev:ele": "pnpm -F @vben/web-ele run dev",
-    "dev:play": "pnpm -F @vben/playground run dev",
-    "dev:naive": "pnpm -F @vben/web-naive run dev"
+    "dev:play": "pnpm -F @vben/playground run dev"
   }
 }
 ```
