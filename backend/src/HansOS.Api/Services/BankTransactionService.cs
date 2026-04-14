@@ -45,6 +45,7 @@ public class BankTransactionService(ApplicationDbContext db) : IBankTransactionS
         string bankName, CreateBankTransactionRequest request, CancellationToken ct = default)
     {
         await ValidateDepartmentExistsAsync(request.DepartmentId, ct);
+        await ValidateActivityAsync(request.TransactionType, request.DepartmentId, request.ActivityId, ct);
         var now = DateTime.UtcNow;
         var entity = CreateEntity(bankName, request, now);
 
@@ -76,6 +77,7 @@ public class BankTransactionService(ApplicationDbContext db) : IBankTransactionS
             ?? throw new KeyNotFoundException("交易記錄不存在");
 
         await ValidateDepartmentExistsAsync(request.DepartmentId, ct);
+        await ValidateActivityAsync(request.TransactionType, request.DepartmentId, request.ActivityId, ct);
         ApplyTransactionUpdate(entity, request);
         entity.UpdatedAt = DateTime.UtcNow;
 
@@ -128,6 +130,7 @@ public class BankTransactionService(ApplicationDbContext db) : IBankTransactionS
     {
         await ValidateDepartmentExistsAsync(request.DepartmentId, ct);
         var entities = await GetBatchUpdateEntitiesAsync(request.Ids, ct);
+        await ValidateBatchDepartmentUpdateAsync(entities, request.DepartmentId, ct);
         var now = DateTime.UtcNow;
         ApplyDepartmentUpdate(entities, request.DepartmentId, now);
         await db.SaveChangesAsync(ct);
@@ -240,6 +243,77 @@ public class BankTransactionService(ApplicationDbContext db) : IBankTransactionS
         }
     }
 
+    private async Task ValidateActivityAsync(
+        TransactionType transactionType,
+        Guid? departmentId,
+        Guid? activityId,
+        CancellationToken ct)
+    {
+        if (!activityId.HasValue)
+        {
+            return;
+        }
+
+        if (transactionType != TransactionType.Expense)
+        {
+            throw new ArgumentException("只有支出交易可以關聯活動");
+        }
+
+        if (!departmentId.HasValue)
+        {
+            throw new ArgumentException("關聯活動時必須指定部門");
+        }
+
+        var activityDepartmentId = await db.Activities
+            .AsNoTracking()
+            .Where(a => a.Id == activityId.Value)
+            .Select(a => (Guid?)a.DepartmentId)
+            .FirstOrDefaultAsync(ct);
+
+        if (activityDepartmentId is null)
+        {
+            throw new ArgumentException("指定的活動不存在");
+        }
+
+        if (activityDepartmentId != departmentId.Value)
+        {
+            throw new ArgumentException("指定的活動不屬於該部門");
+        }
+    }
+
+    private async Task ValidateBatchDepartmentUpdateAsync(
+        List<BankTransaction> entities,
+        Guid? departmentId,
+        CancellationToken ct)
+    {
+        var activityIds = entities
+            .Where(entity => entity.ActivityId.HasValue)
+            .Select(entity => entity.ActivityId!.Value)
+            .Distinct()
+            .ToList();
+        if (activityIds.Count == 0)
+        {
+            return;
+        }
+
+        if (!departmentId.HasValue)
+        {
+            throw new ArgumentException("已關聯活動的交易不可清除部門");
+        }
+
+        var activityDepartmentIds = await db.Activities
+            .AsNoTracking()
+            .Where(activity => activityIds.Contains(activity.Id))
+            .Select(activity => activity.DepartmentId)
+            .Distinct()
+            .ToListAsync(ct);
+
+        if (activityDepartmentIds.Count != 1 || activityDepartmentIds[0] != departmentId.Value)
+        {
+            throw new ArgumentException("已關聯活動的交易不可改到其他部門");
+        }
+    }
+
     private static BankTransaction CreateEntity(
         string bankName, CreateBankTransactionRequest request, DateTime now)
     {
@@ -256,6 +330,7 @@ public class BankTransactionService(ApplicationDbContext db) : IBankTransactionS
             Fee = request.Fee,
             ReceiptCollected = isExpense && request.ReceiptCollected,
             ReceiptMailed = isExpense && request.ReceiptMailed,
+            ActivityId = request.ActivityId,
             CreatedAt = now,
             UpdatedAt = now,
         };
@@ -408,8 +483,7 @@ public class BankTransactionService(ApplicationDbContext db) : IBankTransactionS
             .Where(t => t.BankName == bankName && t.TransactionDate < periodStart)
             .ToListAsync(ct);
 
-        var priorNet = priorTransactions.Sum(t =>
-            (t.TransactionType == TransactionType.Income ? t.Amount : -t.Amount) - t.Fee);
+        var priorNet = priorTransactions.Sum(GetNetAmount);
 
         return initialBalance + priorNet;
     }

@@ -31,25 +31,33 @@ import {
 import dayjs from 'dayjs';
 
 import type {
+  ActivityDetailResponse,
   ActivitySummaryResponse,
+  BudgetItemResponse,
   BankTransactionResponse,
   BankTransactionSummaryResponse,
   CreateBankTransactionRequest,
   DepartmentResponse,
-  TransactionType,
 } from '#/api';
 
 import {
   batchUpdateDepartmentApi,
+  createActivityApi,
   createBankTransactionApi,
+  deleteActivityApi,
   deleteBankTransactionApi,
   exportBankTransactionsApi,
   getActivitiesApi,
   getBankTransactionsApi,
   getBankTransactionSummaryApi,
+  getDepartmentBudgetItemsApi,
   getDepartmentsApi,
   updateBankTransactionApi,
 } from '#/api';
+
+import ActivityFormDrawer from '../activities/components/ActivityFormDrawer.vue';
+
+type ActivityMode = 'existing' | 'new' | 'none';
 
 const props = defineProps<{
   bankName: string;
@@ -60,7 +68,7 @@ const props = defineProps<{
 const currentYear = ref(dayjs().year());
 const currentMonth = ref<number | undefined>(dayjs().month() + 1);
 const defaultFormState = (): CreateBankTransactionRequest => ({
-  transactionType: 0 as TransactionType,
+  transactionType: 0,
   transactionDate: dayjs().format('YYYY-MM-DD'),
   description: '',
   amount: 0,
@@ -72,7 +80,10 @@ const defaultFormState = (): CreateBankTransactionRequest => ({
 const yearOptions = computed(() => {
   const startYear = 2019;
   const endYear = dayjs().year() + 1;
-  return Array.from({ length: endYear - startYear + 1 }, (_, index) => startYear + index);
+  return Array.from(
+    { length: endYear - startYear + 1 },
+    (_, index) => startYear + index,
+  );
 });
 
 const monthOptions = computed(() => {
@@ -92,7 +103,9 @@ const monthSegmentedValue = computed({
   },
 });
 
-const segmentedOptions = computed(() => monthOptions.value.map((o) => o.label));
+const segmentedOptions = computed(() =>
+  monthOptions.value.map((option) => option.label),
+);
 
 // ── 資料 ────────────────────────────────────────
 
@@ -105,21 +118,22 @@ const summary = ref<BankTransactionSummaryResponse>({
   closingBalance: 0,
 });
 const departments = ref<DepartmentResponse[]>([]);
-const activities = ref<ActivitySummaryResponse[]>([]);
 
 async function fetchData() {
   loading.value = true;
   try {
-    const [txList, txSummary, deptList, actList] = await Promise.all([
+    const [txList, txSummary, deptList] = await Promise.all([
       getBankTransactionsApi(props.bankName, currentYear.value, currentMonth.value),
-      getBankTransactionSummaryApi(props.bankName, currentYear.value, currentMonth.value),
+      getBankTransactionSummaryApi(
+        props.bankName,
+        currentYear.value,
+        currentMonth.value,
+      ),
       getDepartmentsApi(),
-      getActivitiesApi(currentYear.value),
     ]);
     transactions.value = txList;
     summary.value = txSummary;
     departments.value = deptList;
-    activities.value = actList;
   } finally {
     loading.value = false;
   }
@@ -147,18 +161,18 @@ const columns = [
 
 const totalIncome = computed(() =>
   transactions.value
-    .filter((t) => t.transactionType === 0)
-    .reduce((sum, t) => sum + t.amount, 0),
+    .filter((transaction) => transaction.transactionType === 0)
+    .reduce((sum, transaction) => sum + transaction.amount, 0),
 );
 
 const totalExpense = computed(() =>
   transactions.value
-    .filter((t) => t.transactionType === 1)
-    .reduce((sum, t) => sum + t.amount, 0),
+    .filter((transaction) => transaction.transactionType === 1)
+    .reduce((sum, transaction) => sum + transaction.amount, 0),
 );
 
 const totalFee = computed(() =>
-  transactions.value.reduce((sum, t) => sum + t.fee, 0),
+  transactions.value.reduce((sum, transaction) => sum + transaction.fee, 0),
 );
 
 // ── 金額格式化 ──────────────────────────────────
@@ -169,25 +183,141 @@ const formatCurrency = (val: number): string =>
     maximumFractionDigits: 0,
   });
 
+const formatMoneyInput = (val: number | string | undefined) =>
+  `$ ${val ?? ''}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+const parseMoneyInput = (val: string | undefined) =>
+  Number(val?.replace(/\$\s?|(,*)/g, '') ?? '0');
+
+const resolveTransactionYear = (date?: string) => {
+  const parsed = date ? dayjs(date) : dayjs();
+  return parsed.isValid() ? parsed.year() : dayjs().year();
+};
+
+const resolveTransactionMonth = (date?: string) => {
+  const parsed = date ? dayjs(date) : dayjs();
+  return parsed.isValid() ? parsed.month() + 1 : dayjs().month() + 1;
+};
+
 // ── Modal ───────────────────────────────────────
 
 const modalVisible = ref(false);
 const modalTitle = ref('新增交易');
 const editingId = ref<null | string>(null);
 const submitting = ref(false);
+const isSyncingFormState = ref(false);
 
-const formState = ref<CreateBankTransactionRequest & { activityId?: string }>({
+const formState = ref<CreateBankTransactionRequest>({
   ...defaultFormState(),
 });
 
+const activities = ref<ActivitySummaryResponse[]>([]);
+const activitiesLoading = ref(false);
+const budgetItems = ref<BudgetItemResponse[]>([]);
+const budgetItemsLoading = ref(false);
+const activityMode = ref<ActivityMode>('none');
+const selectedBudgetItemId = ref<string | undefined>();
+const newActivityName = ref('');
+const newActivityMonth = ref(resolveTransactionMonth(defaultFormState().transactionDate));
+
+const activityDrawerOpen = ref(false);
+const activityDrawerActivity = ref<ActivityDetailResponse | null>(null);
+
+const departmentOptions = computed(() =>
+  departments.value.map((department) => ({
+    id: department.id,
+    name: department.name,
+  })),
+);
+
+const selectedBudgetItem = computed(() =>
+  budgetItems.value.find((item) => item.id === selectedBudgetItemId.value),
+);
+
+const showActivityLinkSection = computed(
+  () => formState.value.transactionType === 1 && Boolean(formState.value.departmentId),
+);
+
+const showExistingActivitySelector = computed(
+  () =>
+    formState.value.transactionType === 1 &&
+    Boolean(formState.value.departmentId) &&
+    (Boolean(editingId.value) || activityMode.value === 'existing'),
+);
+
+const showNewActivitySection = computed(
+  () =>
+    !editingId.value &&
+    formState.value.transactionType === 1 &&
+    Boolean(formState.value.departmentId) &&
+    activityMode.value === 'new',
+);
+
+function resetNewActivityDraft() {
+  selectedBudgetItemId.value = undefined;
+  newActivityName.value = '';
+  newActivityMonth.value = resolveTransactionMonth(formState.value.transactionDate);
+}
+
+function resetActivityLinkState() {
+  activities.value = [];
+  budgetItems.value = [];
+  activitiesLoading.value = false;
+  budgetItemsLoading.value = false;
+  activityMode.value = 'none';
+  resetNewActivityDraft();
+}
+
+async function loadLinkageOptions(departmentId?: string) {
+  if (!departmentId || formState.value.transactionType !== 1) {
+    activities.value = [];
+    budgetItems.value = [];
+    return;
+  }
+
+  const transactionYear = resolveTransactionYear(formState.value.transactionDate);
+
+  activitiesLoading.value = true;
+  budgetItemsLoading.value = true;
+
+  try {
+    const [departmentActivities, departmentBudgetItems] = await Promise.all([
+      getActivitiesApi(transactionYear, undefined, departmentId).catch(() => []),
+      getDepartmentBudgetItemsApi(transactionYear, departmentId).catch(() => []),
+    ]);
+
+    activities.value = departmentActivities;
+    budgetItems.value = departmentBudgetItems;
+  } finally {
+    activitiesLoading.value = false;
+    budgetItemsLoading.value = false;
+  }
+}
+
+function handleActivityModeChange(mode: ActivityMode) {
+  activityMode.value = mode;
+
+  if (mode !== 'existing') {
+    formState.value.activityId = undefined;
+  }
+
+  if (mode !== 'new') {
+    resetNewActivityDraft();
+  }
+}
+
 function openCreateModal() {
+  isSyncingFormState.value = true;
   editingId.value = null;
   modalTitle.value = '新增交易';
   formState.value = defaultFormState();
+  resetActivityLinkState();
+  isSyncingFormState.value = false;
   modalVisible.value = true;
 }
 
-function openEditModal(record: BankTransactionResponse) {
+async function openEditModal(record: BankTransactionResponse) {
+  isSyncingFormState.value = true;
   editingId.value = record.id;
   modalTitle.value = '編輯交易';
   formState.value = {
@@ -201,8 +331,89 @@ function openEditModal(record: BankTransactionResponse) {
     receiptMailed: record.receiptMailed,
     activityId: record.activityId ?? undefined,
   };
+  resetActivityLinkState();
+  activityMode.value = 'existing';
+  await loadLinkageOptions(record.departmentId ?? undefined);
+  isSyncingFormState.value = false;
   modalVisible.value = true;
 }
+
+watch(
+  () => formState.value.departmentId,
+  async (departmentId, previousDepartmentId) => {
+    if (isSyncingFormState.value) {
+      return;
+    }
+
+    if (departmentId !== previousDepartmentId) {
+      formState.value.activityId = undefined;
+      selectedBudgetItemId.value = undefined;
+      if (activityMode.value === 'new') {
+        newActivityName.value = '';
+      }
+    }
+
+    if (!departmentId) {
+      resetActivityLinkState();
+      return;
+    }
+
+    await loadLinkageOptions(departmentId);
+  },
+);
+
+watch(
+  () => formState.value.transactionType,
+  async (transactionType) => {
+    if (isSyncingFormState.value) {
+      return;
+    }
+
+    if (transactionType !== 1) {
+      formState.value.activityId = undefined;
+      resetActivityLinkState();
+      return;
+    }
+
+    if (formState.value.departmentId) {
+      await loadLinkageOptions(formState.value.departmentId);
+    }
+  },
+);
+
+watch(
+  () => formState.value.transactionDate,
+  async (transactionDate) => {
+    if (activityMode.value === 'new') {
+      newActivityMonth.value = resolveTransactionMonth(transactionDate);
+    }
+
+    if (!modalVisible.value || !formState.value.departmentId || formState.value.transactionType !== 1) {
+      return;
+    }
+
+    await loadLinkageOptions(formState.value.departmentId);
+  },
+);
+
+watch(selectedBudgetItemId, (budgetItemId) => {
+  if (activityMode.value !== 'new' || !budgetItemId) {
+    return;
+  }
+
+  const budgetItem = budgetItems.value.find((item) => item.id === budgetItemId);
+  if (budgetItem && !newActivityName.value.trim()) {
+    newActivityName.value = budgetItem.activityName;
+  }
+});
+
+watch(currentYear, async () => {
+  if (!modalVisible.value || !formState.value.departmentId || formState.value.transactionType !== 1) {
+    return;
+  }
+
+  await loadLinkageOptions(formState.value.departmentId);
+});
 
 async function handleSubmit() {
   const description = formState.value.description.trim();
@@ -216,25 +427,107 @@ async function handleSubmit() {
     return;
   }
 
-  const payload = {
-    ...formState.value,
-    description,
-  };
+  if (showExistingActivitySelector.value && !editingId.value && activityMode.value === 'existing' && !formState.value.activityId) {
+    message.warning('請選擇要關聯的活動');
+    return;
+  }
+
+  let createdActivity: ActivityDetailResponse | null = null;
+  let transactionSaved = false;
 
   submitting.value = true;
   try {
+    if (!editingId.value && activityMode.value === 'new') {
+      if (!formState.value.departmentId) {
+        message.warning('建立活動前請先選擇部門');
+        return;
+      }
+
+      const activityName =
+        newActivityName.value.trim() || selectedBudgetItem.value?.activityName?.trim();
+
+      if (!activityName) {
+        message.warning('請輸入活動名稱');
+        return;
+      }
+
+      createdActivity = await createActivityApi({
+        departmentId: formState.value.departmentId,
+        year: resolveTransactionYear(formState.value.transactionDate),
+        month: newActivityMonth.value,
+        name: activityName,
+        expenses: selectedBudgetItem.value
+          ? [{
+              description: selectedBudgetItem.value.contentItem,
+              amount: formState.value.amount,
+              sequence: 1,
+              budgetItemId: selectedBudgetItem.value.id,
+            }]
+          : undefined,
+      });
+    }
+
+    const activityId = editingId.value
+      ? formState.value.activityId
+      : createdActivity?.id ?? formState.value.activityId;
+    const payload: CreateBankTransactionRequest = {
+      ...formState.value,
+      description,
+      activityId,
+    };
+
     if (editingId.value) {
       await updateBankTransactionApi(editingId.value, payload);
+      transactionSaved = true;
       message.success('交易已更新');
     } else {
       await createBankTransactionApi(props.bankName, payload);
+      transactionSaved = true;
       message.success('交易已新增');
     }
+
     modalVisible.value = false;
-    await fetchData();
+    try {
+      await fetchData();
+    } catch {
+      message.warning('交易已儲存，但列表重新整理失敗');
+    }
+
+    if (createdActivity) {
+      Modal.confirm({
+        title: '是否立即補填活動細項？',
+        content: '新活動已建立完成，是否現在開啟活動細項編輯？',
+        okText: '立即補填',
+        cancelText: '稍後再填',
+        onOk: () => {
+          activityDrawerActivity.value = createdActivity;
+          activityDrawerOpen.value = true;
+        },
+      });
+    }
+  } catch (error: any) {
+    if (createdActivity && !transactionSaved) {
+      try {
+        await deleteActivityApi(createdActivity.id);
+      } catch {
+        // Ignore cleanup failure and surface the original error.
+      }
+    }
+    message.error(error?.response?.data?.error ?? '儲存失敗');
   } finally {
     submitting.value = false;
   }
+}
+
+function handleActivityDrawerClose() {
+  activityDrawerOpen.value = false;
+  activityDrawerActivity.value = null;
+}
+
+async function handleActivityDrawerSaved() {
+  activityDrawerOpen.value = false;
+  activityDrawerActivity.value = null;
+  await fetchData();
 }
 
 // ── 刪除 ────────────────────────────────────────
@@ -277,7 +570,7 @@ const batchSubmitting = ref(false);
 
 const rowSelection = computed(() => ({
   selectedRowKeys: selectedRowKeys.value,
-  onChange: (keys: (number | string)[]) => {
+  onChange: (keys: Array<number | string>) => {
     selectedRowKeys.value = keys as string[];
   },
 }));
@@ -312,7 +605,6 @@ async function handleBatchUpdateDepartment() {
 <template>
   <Page content-class="p-0" :title="`${bankName}收支表`">
     <Card :body-style="{ padding: '16px 24px' }">
-      <!-- 頂部控制列 -->
       <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div class="flex items-center gap-3">
           <span class="text-2xl">{{ bankName.includes('上海') ? '🏦' : '🏛️' }}</span>
@@ -321,7 +613,7 @@ async function handleBatchUpdateDepartment() {
         <div class="flex items-center gap-2">
           <Select
             v-model:value="currentYear"
-            :options="yearOptions.map((y) => ({ label: `${y}年`, value: y }))"
+            :options="yearOptions.map((year) => ({ label: `${year}年`, value: year }))"
             style="width: 100px"
           />
           <Button
@@ -335,7 +627,6 @@ async function handleBatchUpdateDepartment() {
         </div>
       </div>
 
-      <!-- 月份切換器 -->
       <div class="mb-4">
         <Segmented
           v-model:value="monthSegmentedValue"
@@ -344,7 +635,6 @@ async function handleBatchUpdateDepartment() {
         />
       </div>
 
-      <!-- 摘要卡片 -->
       <Spin :spinning="loading">
         <Row :gutter="16" class="mb-4">
           <Col :md="6" :xs="12">
@@ -392,9 +682,7 @@ async function handleBatchUpdateDepartment() {
           </Col>
         </Row>
 
-        <!-- 操作列 -->
         <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <!-- 批次操作 -->
           <div
             v-if="selectedRowKeys.length > 0"
             class="flex items-center gap-2"
@@ -434,7 +722,6 @@ async function handleBatchUpdateDepartment() {
           </Button>
         </div>
 
-        <!-- 交易表格 -->
         <Table
           :columns="columns"
           :data-source="transactions"
@@ -446,12 +733,10 @@ async function handleBatchUpdateDepartment() {
           size="middle"
         >
           <template #bodyCell="{ column, record }">
-            <!-- 日期 -->
             <template v-if="column.dataIndex === 'transactionDate'">
               {{ (record as BankTransactionResponse).transactionDate }}
             </template>
 
-            <!-- 收入 -->
             <template v-if="column.key === 'income'">
               <span
                 v-if="(record as BankTransactionResponse).transactionType === 0"
@@ -461,7 +746,6 @@ async function handleBatchUpdateDepartment() {
               </span>
             </template>
 
-            <!-- 支出 -->
             <template v-if="column.key === 'expense'">
               <span
                 v-if="(record as BankTransactionResponse).transactionType === 1"
@@ -471,28 +755,24 @@ async function handleBatchUpdateDepartment() {
               </span>
             </template>
 
-            <!-- 手續費 -->
             <template v-if="column.dataIndex === 'fee'">
               <span v-if="(record as BankTransactionResponse).fee > 0" class="text-orange-500">
                 {{ formatCurrency((record as BankTransactionResponse).fee) }}
               </span>
             </template>
 
-            <!-- 餘額 -->
             <template v-if="column.dataIndex === 'runningBalance'">
               <span class="font-medium">
                 {{ formatCurrency((record as BankTransactionResponse).runningBalance) }}
               </span>
             </template>
 
-            <!-- 部門 -->
             <template v-if="column.dataIndex === 'departmentName'">
               <Tag v-if="(record as BankTransactionResponse).departmentName" color="blue">
                 {{ (record as BankTransactionResponse).departmentName }}
               </Tag>
             </template>
 
-            <!-- 來源活動（支出才顯示） -->
             <template v-if="column.key === 'activitySource'">
               <Tag
                 v-if="(record as BankTransactionResponse).transactionType === 1 && (record as BankTransactionResponse).activityName"
@@ -504,9 +784,11 @@ async function handleBatchUpdateDepartment() {
               <span v-else class="text-gray-300">—</span>
             </template>
 
-            <!-- 收據狀態（支出才顯示） -->
             <template v-if="column.key === 'receiptStatus'">
-              <div v-if="(record as BankTransactionResponse).transactionType === 1" class="flex items-center justify-center gap-2">
+              <div
+                v-if="(record as BankTransactionResponse).transactionType === 1"
+                class="flex items-center justify-center gap-2"
+              >
                 <Tooltip :title="(record as BankTransactionResponse).receiptCollected ? '已回收' : '未回收'">
                   <span
                     class="i-lucide-hand text-base"
@@ -523,7 +805,6 @@ async function handleBatchUpdateDepartment() {
               <span v-else class="text-gray-300">—</span>
             </template>
 
-            <!-- 操作 -->
             <template v-if="column.key === 'action'">
               <div class="flex gap-1">
                 <Button
@@ -546,7 +827,6 @@ async function handleBatchUpdateDepartment() {
             </template>
           </template>
 
-          <!-- 合計列 -->
           <template #summary>
             <Table.Summary.Row>
               <Table.Summary.Cell :index="0" :col-span="3">
@@ -565,7 +845,6 @@ async function handleBatchUpdateDepartment() {
             </Table.Summary.Row>
           </template>
 
-          <!-- 空狀態 -->
           <template #emptyText>
             <div class="py-8 text-center text-gray-400">
               本期間尚無交易記錄，請點擊「新增交易」按鈕建立
@@ -575,14 +854,13 @@ async function handleBatchUpdateDepartment() {
       </Spin>
     </Card>
 
-    <!-- 新增/編輯 Modal -->
     <Modal
       :confirm-loading="submitting"
       destroy-on-close
       ok-text="儲存"
       :open="modalVisible"
       :title="modalTitle"
-      :width="520"
+      :width="620"
       @cancel="modalVisible = false"
       @ok="handleSubmit"
     >
@@ -600,7 +878,10 @@ async function handleBatchUpdateDepartment() {
             class="w-full"
             format="YYYY/MM/DD"
             placeholder="選擇日期"
-            @change="(_: unknown, dateStr: string | string[]) => { formState.transactionDate = typeof dateStr === 'string' ? dateStr : dateStr[0] ?? ''; }"
+            @change="(_: unknown, dateStr: string | string[]) => {
+              formState.transactionDate =
+                typeof dateStr === 'string' ? dateStr : (dateStr[0] ?? '');
+            }"
           />
         </FormItem>
 
@@ -629,38 +910,22 @@ async function handleBatchUpdateDepartment() {
           </Select>
         </FormItem>
 
-        <Row :gutter="16">
-          <Col :span="12">
-            <FormItem label="金額" required>
-              <InputNumber
-                v-model:value="formState.amount"
-                class="w-full"
-                :formatter="(val: string | number | undefined) => `$ ${val}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')"
-                :min="1"
-                :parser="(val: string | undefined) => Number(val?.replace(/\$\s?|(,*)/g, '') ?? '0')"
-                :precision="0"
-              />
-            </FormItem>
-          </Col>
-          <Col :span="12">
-            <FormItem label="手續費">
-              <InputNumber
-                v-model:value="formState.fee"
-                class="w-full"
-                :formatter="(val: string | number | undefined) => `$ ${val}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')"
-                :min="0"
-                :parser="(val: string | undefined) => Number(val?.replace(/\$\s?|(,*)/g, '') ?? '0')"
-                :precision="0"
-                placeholder="選填"
-              />
-            </FormItem>
-          </Col>
-        </Row>
+        <FormItem v-if="!editingId && showActivityLinkSection" label="活動處理">
+          <RadioGroup
+            :value="activityMode"
+            @update:value="handleActivityModeChange"
+          >
+            <Radio value="none">不關聯活動</Radio>
+            <Radio value="existing">選擇既有活動</Radio>
+            <Radio value="new">建立新活動</Radio>
+          </RadioGroup>
+        </FormItem>
 
-        <FormItem v-if="editingId && formState.transactionType === 1" label="來源活動">
+        <FormItem v-if="showExistingActivitySelector" label="來源活動">
           <Select
             v-model:value="formState.activityId"
             allow-clear
+            :loading="activitiesLoading"
             placeholder="選擇來源活動（選填）"
           >
             <SelectOption
@@ -671,7 +936,87 @@ async function handleBatchUpdateDepartment() {
               {{ act.name }}
             </SelectOption>
           </Select>
+          <div
+            v-if="!activitiesLoading && activities.length === 0"
+            class="mt-1 text-gray-400 text-xs"
+          >
+            此部門在 {{ currentYear }} 年尚無可關聯的活動
+          </div>
         </FormItem>
+
+        <template v-if="showNewActivitySection">
+          <FormItem label="年度預算項目">
+            <Select
+              v-model:value="selectedBudgetItemId"
+              allow-clear
+              :loading="budgetItemsLoading"
+              placeholder="選擇年度預算項目（選填）"
+            >
+              <SelectOption
+                v-for="item in budgetItems"
+                :key="item.id"
+                :value="item.id"
+              >
+                {{ item.activityName }} - {{ item.contentItem }}
+              </SelectOption>
+            </Select>
+            <div
+              v-if="!budgetItemsLoading && budgetItems.length === 0"
+              class="mt-1 text-gray-400 text-xs"
+            >
+              此年度尚無可用預算項目，仍可建立活動，但不會自動帶入活動細項
+            </div>
+          </FormItem>
+
+          <Row :gutter="16">
+            <Col :span="14">
+              <FormItem label="新活動名稱" required>
+                <Input
+                  v-model:value="newActivityName"
+                  :maxlength="200"
+                  placeholder="請輸入活動名稱"
+                />
+              </FormItem>
+            </Col>
+            <Col :span="10">
+              <FormItem label="活動月份">
+                <Select v-model:value="newActivityMonth">
+                  <SelectOption v-for="month in 12" :key="month" :value="month">
+                    {{ month }} 月
+                  </SelectOption>
+                </Select>
+              </FormItem>
+            </Col>
+          </Row>
+        </template>
+
+        <Row :gutter="16">
+          <Col :span="12">
+            <FormItem label="金額" required>
+              <InputNumber
+                v-model:value="formState.amount"
+                class="w-full"
+                :formatter="formatMoneyInput"
+                :min="1"
+                :parser="parseMoneyInput"
+                :precision="0"
+              />
+            </FormItem>
+          </Col>
+          <Col :span="12">
+            <FormItem label="手續費">
+              <InputNumber
+                v-model:value="formState.fee"
+                class="w-full"
+                :formatter="formatMoneyInput"
+                :min="0"
+                :parser="parseMoneyInput"
+                :precision="0"
+                placeholder="選填"
+              />
+            </FormItem>
+          </Col>
+        </Row>
 
         <FormItem v-if="formState.transactionType === 1">
           <div class="flex gap-6">
@@ -681,5 +1026,15 @@ async function handleBatchUpdateDepartment() {
         </FormItem>
       </Form>
     </Modal>
+
+    <ActivityFormDrawer
+      :departments="departmentOptions"
+      :editing-activity="activityDrawerActivity"
+      :month="activityDrawerActivity?.month ?? resolveTransactionMonth(formState.transactionDate)"
+      :open="activityDrawerOpen"
+      :year="activityDrawerActivity?.year ?? resolveTransactionYear(formState.transactionDate)"
+      @close="handleActivityDrawerClose"
+      @saved="handleActivityDrawerSaved"
+    />
   </Page>
 </template>

@@ -38,6 +38,7 @@ export interface CreateBankTransactionRequest {
   fee?: number;
   receiptCollected?: boolean;
   receiptMailed?: boolean;
+  activityId?: string;
 }
 
 export interface UpdateBankTransactionRequest {

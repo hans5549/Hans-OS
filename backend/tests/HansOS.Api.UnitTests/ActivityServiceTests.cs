@@ -108,6 +108,52 @@ public class ActivityServiceTests : IDisposable
             .WithMessage("*部門不存在*");
     }
 
+    [Fact]
+    public async Task Create_BudgetItemFromDifferentYear_ThrowsArgumentException()
+    {
+        var budgetItemId = await SeedBudgetItemAsync(_departmentId, 2025);
+        var request = new CreateActivityRequest(
+            DepartmentId: _departmentId,
+            Year: 2026,
+            Month: 4,
+            Name: "年度不符",
+            Description: null,
+            Groups: null,
+            Expenses:
+            [
+                new ActivityExpenseInput(null, "開銷一", 3000m, null, 1, budgetItemId),
+            ]);
+
+        var act = () => _sut.CreateAsync(request);
+
+        await act.Should().ThrowAsync<ArgumentException>()
+            .WithMessage("*相同部門與年度*");
+    }
+
+    [Fact]
+    public async Task Create_BudgetItemFromDifferentDepartment_ThrowsArgumentException()
+    {
+        var otherDepartmentId = Guid.NewGuid();
+        await SeedDepartmentAsync(otherDepartmentId, "其他部門");
+        var budgetItemId = await SeedBudgetItemAsync(otherDepartmentId, 2026);
+        var request = new CreateActivityRequest(
+            DepartmentId: _departmentId,
+            Year: 2026,
+            Month: 4,
+            Name: "部門不符",
+            Description: null,
+            Groups: null,
+            Expenses:
+            [
+                new ActivityExpenseInput(null, "開銷一", 3000m, null, 1, budgetItemId),
+            ]);
+
+        var act = () => _sut.CreateAsync(request);
+
+        await act.Should().ThrowAsync<ArgumentException>()
+            .WithMessage("*相同部門與年度*");
+    }
+
     // ── UpdateAsync ─────────────────────────────────
 
     [Fact]
@@ -200,14 +246,58 @@ public class ActivityServiceTests : IDisposable
 
     private void SeedDepartment()
     {
+        SeedDepartmentAsync(_departmentId, "測試部門").GetAwaiter().GetResult();
+    }
+
+    private async Task SeedDepartmentAsync(Guid departmentId, string name)
+    {
+        var now = DateTime.UtcNow;
         _db.SportsDepartments.Add(new SportsDepartment
         {
-            Id = _departmentId,
-            Name = "測試部門",
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow,
+            Id = departmentId,
+            Name = name,
+            CreatedAt = now,
+            UpdatedAt = now,
         });
+        await _db.SaveChangesAsync();
+    }
+
+    private async Task<Guid> SeedBudgetItemAsync(Guid departmentId, int year)
+    {
+        var now = DateTime.UtcNow;
+        var annualBudget = new AnnualBudget
+        {
+            Id = Guid.NewGuid(),
+            Year = year,
+            Status = BudgetStatus.Draft,
+            CreatedAt = now,
+            UpdatedAt = now,
+        };
+        var departmentBudget = new DepartmentBudget
+        {
+            Id = Guid.NewGuid(),
+            AnnualBudgetId = annualBudget.Id,
+            DepartmentId = departmentId,
+            CreatedAt = now,
+            UpdatedAt = now,
+        };
+        var budgetItem = new BudgetItem
+        {
+            Id = Guid.NewGuid(),
+            DepartmentBudgetId = departmentBudget.Id,
+            Sequence = 1,
+            ActivityName = "測試活動",
+            ContentItem = "測試項目",
+            Amount = 1000m,
+            CreatedAt = now,
+            UpdatedAt = now,
+        };
+
+        _db.AnnualBudgets.Add(annualBudget);
+        _db.DepartmentBudgets.Add(departmentBudget);
+        _db.BudgetItems.Add(budgetItem);
         _db.SaveChanges();
+        return budgetItem.Id;
     }
 
     private async Task<Guid> SeedActivityAsync(string name, int year, int month)

@@ -13,7 +13,8 @@ public record CreateBankTransactionRequest(
     [Required][Range(1, double.MaxValue)] decimal Amount,
     [Range(0, double.MaxValue)] decimal Fee = 0,
     bool ReceiptCollected = false,
-    bool ReceiptMailed = false);
+    bool ReceiptMailed = false,
+    Guid? ActivityId = null);
 
 public record UpdateBankTransactionRequest(
     [Required] TransactionType TransactionType,
