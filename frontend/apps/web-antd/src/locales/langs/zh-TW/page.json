@@ -27,6 +27,319 @@
     "chatgptTasks": "AI 任務系統",
     "airbnbBooking": "短租平台架構",
     "agodaAiSupport": "旅遊平台客服",
-    "llmInferenceApi": "LLM 推論服務"
+    "llmInferenceApi": "LLM 推論服務",
+    "qrCodeGeneratorPage": {
+      "badges": {
+        "caseStudy": "案例研究",
+        "frontendOnly": "僅前端",
+        "basedOnPdf": "改寫自 PDF",
+        "readingTime": "約 10 分鐘"
+      },
+      "hero": {
+        "kicker": "系統設計 · QR Code 生成器",
+        "title": "QR Code 生成器",
+        "description": "從 URL 生成、token 映射到 302 redirect，拆解一個 QR Code 服務在唯一性、快取與擴展性上的核心設計取捨。",
+        "learnKicker": "你會學到",
+        "targetsTitle": "設計目標 / 案例假設",
+        "targetsNote": "標示為案例假設，非實際產品監控",
+        "highlights": {
+          "bottleneck": {
+            "title": "核心瓶頸不是 QR 圖片",
+            "description": "看懂 token、redirect、cache 三件事為何一起決定使用者感受。"
+          },
+          "apiSurface": {
+            "title": "把 API surface 切乾淨",
+            "description": "掌握建立、取圖、查詢原始 URL 與編輯刪除的 API 邊界。"
+          },
+          "scaling": {
+            "title": "知道怎麼往 1B codes 思考",
+            "description": "理解為何讀多寫少的服務，最終會被 index、cache、CDN 與副本拓樸主導。"
+          }
+        },
+        "visual": {
+          "kicker": "主視覺",
+          "title": "QR → token → redirect",
+          "description": "這張圖刻意不做成產品 mock，而是讓你先看見 request lifecycle 與熱路徑。",
+          "nodes": {
+            "input": {
+              "label": "輸入 URL",
+              "title": "建立 QR 對應"
+            },
+            "token": {
+              "label": "唯一 token",
+              "title": "`qr_token` + UNIQUE index"
+            },
+            "redirect": {
+              "label": "執行期路徑",
+              "title": "302 轉址到原始 URL"
+            }
+          },
+          "chips": {
+            "db": {
+              "label": "DB",
+              "value": "對應資料"
+            },
+            "cache": {
+              "label": "Cache",
+              "value": "讀取路徑"
+            },
+            "cdn": {
+              "label": "CDN",
+              "value": "QR 圖片"
+            }
+          }
+        },
+        "targets": {
+          "availability": {
+            "label": "可用性",
+            "value": "24/7",
+            "note": "案例假設，不是線上監控"
+          },
+          "redirectLatency": {
+            "label": "轉址延遲",
+            "value": "< 100ms",
+            "note": "高頻流量下仍需保持流暢"
+          },
+          "qrCodes": {
+            "label": "QR Code 數量",
+            "value": "1B",
+            "note": "系統設計容量目標"
+          },
+          "users": {
+            "label": "使用者",
+            "value": "100M",
+            "note": "文件中的規模假設"
+          }
+        }
+      },
+      "navigation": {
+        "progressLabel": "閱讀進度",
+        "inPageLabel": "頁內導覽",
+        "startReading": "開始閱讀",
+        "mobileTocAriaLabel": "QR Code 生成器行動版頁內導覽",
+        "desktopTocAriaLabel": "QR Code 生成器頁內導覽"
+      },
+      "sidebar": {
+        "currentSectionLabel": "目前章節",
+        "difficultyLabel": "難度",
+        "difficultyValue": "中階",
+        "scopeLabel": "範圍",
+        "scopeValue": "前端內容頁",
+        "tocKicker": "本頁重點",
+        "tocTitle": "黏性目錄"
+      },
+      "glossary": {
+        "kicker": "名詞表",
+        "title": "快速術語",
+        "expandPattern": "展開 {label} 定義",
+        "collapsePattern": "收合 {label} 定義",
+        "terms": {
+          "base62": {
+            "label": "Base62",
+            "description": "用 62 個字元 [0-9A-Za-z] 表示數字，讓 token 變短、可讀、可傳播。"
+          },
+          "collision": {
+            "label": "Collision",
+            "description": "不同輸入意外產生相同 token；可用 UNIQUE 約束 + retry 處理。"
+          },
+          "readHeavy": {
+            "label": "Read-heavy",
+            "description": "讀取量遠高於寫入量的流量型態，會讓快取與索引變得更重要。"
+          },
+          "cdn": {
+            "label": "CDN",
+            "description": "把靜態內容或熱門結果推到邊緣節點，降低跨區延遲。"
+          }
+        }
+      },
+      "ui": {
+        "copyButton": "複製",
+        "copyUnsupported": "目前瀏覽器不支援複製功能",
+        "copySuccess": "API 範例已複製",
+        "copyFailure": "複製失敗，請手動選取程式碼",
+        "requestLabel": "請求",
+        "responseLabel": "回應",
+        "copyApiAriaPattern": "複製 {label} API 範例"
+      },
+      "sections": {
+        "whyHard": {
+          "eyebrow": "章節 01",
+          "title": "為什麼這題困難",
+          "takeaway": "真正困難的不是畫出 QR，而是兼顧 token 唯一性、redirect 新鮮度與讀多寫少流量。"
+        },
+        "requirements": {
+          "eyebrow": "章節 02",
+          "title": "需求",
+          "takeaway": "需求同時要求建立、管理與 redirect，代表資料模型與體驗都必須可變。"
+        },
+        "apiSurface": {
+          "eyebrow": "章節 03",
+          "title": "API 介面",
+          "takeaway": "API surface 必須清楚切開建立、取圖、編輯、刪除與查詢原始 URL 的責任。"
+        },
+        "lifecycle": {
+          "eyebrow": "章節 04",
+          "title": "生命週期",
+          "takeaway": "建立流程與取用流程關心的瓶頸不同：前者在 token 寫入，後者在快取與 redirect。"
+        },
+        "scaling": {
+          "eyebrow": "章節 05",
+          "title": "擴展性",
+          "takeaway": "一旦流量放大，index、cache、CDN 與 read replicas 才是主角，不是 QR 圖本身。"
+        },
+        "tradeOffs": {
+          "eyebrow": "章節 06",
+          "title": "取捨",
+          "takeaway": "這份設計的關鍵是承認取捨：302 over 301、UNIQUE index over optimistic guess、simple DB before distribution。"
+        }
+      },
+      "tensions": {
+        "uniqueness": {
+          "title": "唯一性 vs. token 長度",
+          "description": "token 要短到容易傳播，又必須全域唯一，碰撞時還要可恢復。"
+        },
+        "freshness": {
+          "title": "新鮮度 vs. 快取",
+          "description": "QR mapping 可能被編輯或刪除，所以 redirect 不能被永久快取。"
+        },
+        "readHeavy": {
+          "title": "讀多寫少流量 vs. 簡單架構",
+          "description": "寫少讀多的特性，會讓快取命中率與 edge delivery 比寫入邏輯更重要。"
+        }
+      },
+      "requirements": {
+        "functional": {
+          "title": "功能需求",
+          "item1": "使用者可輸入指定 URL，服務回傳產生後的 QR Code。",
+          "item2": "已登入使用者可以管理自己建立過的 QR Code，身分以 JWT claims 判定。",
+          "item3": "掃描 QR Code 後，系統會 redirect 到原始 URL。"
+        },
+        "nonFunctional": {
+          "title": "非功能需求",
+          "item1": "服務需維持 24/7 高可用。",
+          "item2": "Redirection latency 目標低於 100ms。",
+          "item3": "支援 1B QR codes 與 100M users 的設計思維。"
+        }
+      },
+      "api": {
+        "create": {
+          "title": "建立 QR Code",
+          "description": "建立新的 QR Code mapping，成功後回傳 qr_token。"
+        },
+        "image": {
+          "title": "取得 QR 圖片",
+          "description": "依 qr_token 與樣式參數取得 QR 圖片位置。"
+        },
+        "edit": {
+          "title": "編輯 QR Code",
+          "description": "修改既有 mapping 的原始 URL。"
+        },
+        "delete": {
+          "title": "刪除 QR Code",
+          "description": "刪除既有 QR Code mapping。"
+        },
+        "lookup": {
+          "title": "取得原始 URL",
+          "description": "讀出 token 對應的原始 URL，供檢查或後續流程使用。"
+        }
+      },
+      "flow": {
+        "create": {
+          "label": "建立流程",
+          "steps": {
+            "receive": {
+              "title": "1. 收到建立請求",
+              "description": "使用者端帶入 URL 呼叫 POST /v1/qr_code。"
+            },
+            "validate": {
+              "title": "2. 驗證 URL + 產生 token",
+              "description": "後端先驗證 URL 是否合法，再產生全域唯一的 qr_token。"
+            },
+            "write": {
+              "title": "3. 寫入資料庫",
+              "description": "將 mapping 寫入 QrCodes 資料表，並靠 UNIQUE 約束處理碰撞。"
+            },
+            "return": {
+              "title": "4. 回傳結果",
+              "description": "回傳 qr_token 給使用者端，後續圖片可以由另一個 API 生成。"
+            }
+          }
+        },
+        "retrieve": {
+          "label": "取用 / redirect 流程",
+          "steps": {
+            "enter": {
+              "title": "1. 進入取用路徑",
+              "description": "使用者端用 qr_token 取圖、查原始 URL，或直接掃碼觸發 redirect。"
+            },
+            "cache": {
+              "title": "2. 先查快取 / edge",
+              "description": "熱門請求優先命中 cache / CDN，降低直接打 DB 的機率。"
+            },
+            "lookup": {
+              "title": "3. 回源查表",
+              "description": "若需要回源，Backend 透過 qr_token index 查詢 mapping。"
+            },
+            "redirect": {
+              "title": "4. 執行 302 redirect",
+              "description": "掃碼導向使用 302 redirect，確保 mapping 更新後仍能拿到最新目標。"
+            }
+          }
+        }
+      },
+      "scaling": {
+        "indexing": {
+          "title": "索引",
+          "item1": "qr_token 要有 index，避免 full table scan。",
+          "item2": "UNIQUE 約束順便負責 collision detection。"
+        },
+        "caching": {
+          "title": "快取",
+          "item1": "這是 read-heavy 服務，write:read 約 1:100。",
+          "item2": "cache miss 再打 DB，刪除時同步做 invalidation。"
+        },
+        "cdn": {
+          "title": "CDN",
+          "item1": "QR 圖片是天然適合放 edge 的靜態資產。",
+          "item2": "熱門 QR 可直接由 CDN 回應，縮短跨區延遲。"
+        },
+        "replicas": {
+          "title": "副本與清理",
+          "item1": "單一 DB instance 在可預見未來足夠，但需要 read replicas。",
+          "item2": "閒置 mapping 可以靠 cron jobs 清理，避免長期膨脹。"
+        }
+      },
+      "tradeOffs": {
+        "redirect": {
+          "decision": "使用 302 而不是 301",
+          "reason": "避免瀏覽器永久快取 mapping，讓編輯或刪除後仍能拿到最新狀態。"
+        },
+        "token": {
+          "decision": "使用 Hash + nonce + Base62，而不是純決定性雜湊",
+          "reason": "避免相同輸入永遠得到相同 token，保留更高的隨機性與更彈性的結果。"
+        },
+        "database": {
+          "decision": "先接受單一主 DB，再靠 read replicas 延展",
+          "reason": "在 200GB 等級資料量下仍可先保持架構簡單，把複雜度留給真的需要時。"
+        },
+        "edge": {
+          "decision": "把 QR 圖與熱門 mapping 推到 CDN / cache",
+          "reason": "真正高頻的是讀取與 redirect，不是寫入；edge 命中能大幅降低延遲。"
+        }
+      },
+      "footer": {
+        "takeawaysKicker": "重點帶走",
+        "takeawaysTitle": "三個應該帶走的觀念",
+        "takeaways": {
+          "item1": "QR Code 生成器的核心不是把字串畫成圖，而是把 URL mapping 做成可讀、可改、可快取的服務。",
+          "item2": "302 redirect、UNIQUE index、cache / CDN 命中率，是這個案例最重要的三個設計抓手。",
+          "item3": "這頁展示的是系統設計思路，不是已接好 backend 的可操作工具。"
+        },
+        "relatedKicker": "系列內容",
+        "relatedTitle": "相關案例",
+        "relatedComingSoon": "即將推出",
+        "sourceNote": "本頁整理自使用者提供的 PDF，重新編排成 Hans-OS 的系統設計閱讀頁。"
+      }
+    }
   }
 }
