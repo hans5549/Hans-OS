@@ -3,6 +3,9 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using FluentAssertions;
+using HansOS.Api.Data.Entities;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace HansOS.Api.IntegrationTests;
 
@@ -180,6 +183,46 @@ public class FinanceTransactionControllerTests(HansOsWebApplicationFactory facto
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
+    [Fact]
+    public async Task CreateExpense_ForeignAccount_Returns404()
+    {
+        var token = await LoginAndGetTokenAsync();
+        var otherToken = await CreateUserAndGetTokenAsync();
+        var foreignAccountId = await CreateAccountAndGetIdAsync(otherToken, "外部帳戶");
+        var categoryId = await CreateCategoryAndGetIdAsync(token, "本人分類", "Expense");
+
+        var response = await AuthorizedPostAsync("/finance/transactions", token, new
+        {
+            transactionType = "Expense",
+            amount = 500,
+            transactionDate = "2025-04-01",
+            categoryId,
+            accountId = foreignAccountId,
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task CreateTransfer_ForeignToAccount_Returns404()
+    {
+        var token = await LoginAndGetTokenAsync();
+        var otherToken = await CreateUserAndGetTokenAsync();
+        var accountId = await CreateAccountAndGetIdAsync(token, "本人來源帳戶");
+        var foreignToAccountId = await CreateAccountAndGetIdAsync(otherToken, "外部目標帳戶");
+
+        var response = await AuthorizedPostAsync("/finance/transactions", token, new
+        {
+            transactionType = "Transfer",
+            amount = 1000,
+            transactionDate = "2025-04-01",
+            accountId,
+            toAccountId = foreignToAccountId,
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
     // ── GET /finance/transactions (month filter) ────
 
     [Fact]
@@ -286,6 +329,35 @@ public class FinanceTransactionControllerTests(HansOsWebApplicationFactory facto
         var body = await ReadBodyAsync(response);
         body.GetProperty("code").GetInt32().Should().Be(0);
         body.GetProperty("data").GetProperty("amount").GetDecimal().Should().Be(800);
+    }
+
+    [Fact]
+    public async Task UpdateTransaction_ForeignCategory_Returns404()
+    {
+        var token = await LoginAndGetTokenAsync();
+        var otherToken = await CreateUserAndGetTokenAsync();
+        var accountId = await CreateAccountAndGetIdAsync(token, "更新本人帳戶");
+        var categoryId = await CreateCategoryAndGetIdAsync(token, "更新本人分類", "Expense");
+        var foreignCategoryId = await CreateCategoryAndGetIdAsync(otherToken, "外部分類", "Expense");
+
+        var createResp = await AuthorizedPostAsync("/finance/transactions", token, new
+        {
+            transactionType = "Expense", amount = 500,
+            transactionDate = "2025-04-01", categoryId, accountId,
+        });
+        var createBody = await ReadBodyAsync(createResp);
+        var id = createBody.GetProperty("data").GetProperty("id").GetString()!;
+
+        var response = await AuthorizedPutAsync($"/finance/transactions/{id}", token, new
+        {
+            transactionType = "Expense",
+            amount = 800,
+            transactionDate = "2025-04-01",
+            categoryId = foreignCategoryId,
+            accountId,
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     // ── DELETE /finance/transactions/{id} ────────────
@@ -615,12 +687,46 @@ public class FinanceTransactionControllerTests(HansOsWebApplicationFactory facto
         return body.GetProperty("data").GetProperty("id").GetString()!;
     }
 
-    private async Task<string> LoginAndGetTokenAsync()
+    private async Task<string> CreateUserAndGetTokenAsync()
+    {
+        var username = $"user_{Guid.NewGuid():N}";
+        const string password = "P@ssw0rd!123";
+        await EnsureUserAsync(username, password);
+        return await LoginAndGetTokenAsync(username, password);
+    }
+
+    private async Task EnsureUserAsync(string username, string password)
+    {
+        using var scope = factory.Services.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+
+        var existingUser = await userManager.FindByNameAsync(username);
+        if (existingUser is not null)
+        {
+            return;
+        }
+
+        var user = new ApplicationUser
+        {
+            UserName = username,
+            Email = $"{username}@example.com",
+            EmailConfirmed = true,
+            RealName = username,
+            IsActive = true,
+        };
+
+        var result = await userManager.CreateAsync(user, password);
+        result.Succeeded.Should().BeTrue();
+    }
+
+    private async Task<string> LoginAndGetTokenAsync(
+        string username = "hans",
+        string password = "H@ns19951204")
     {
         var response = await _client.PostAsJsonAsync("/auth/login", new
         {
-            username = "hans",
-            password = "H@ns19951204",
+            username,
+            password,
         });
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();
         return body.GetProperty("data").GetProperty("accessToken").GetString()!;

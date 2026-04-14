@@ -205,6 +205,12 @@ public class FinanceTransactionService(
     {
         var transactionType = ParseTransactionType(request.TransactionType);
         ValidateTransactionRequest(transactionType, request.CategoryId, request.AccountId, request.ToAccountId);
+        await ValidateTransactionReferencesAsync(
+            userId,
+            request.AccountId,
+            request.ToAccountId,
+            request.CategoryId,
+            ct);
 
         var now = DateTime.UtcNow;
         var transaction = new FinanceTransaction
@@ -232,7 +238,7 @@ public class FinanceTransactionService(
             "交易已建立: {TransactionId}, 類型={Type}, 金額={Amount}",
             transaction.Id, transactionType, request.Amount);
 
-        return await LoadTransactionResponseAsync(transaction.Id, ct);
+        return await LoadTransactionResponseAsync(userId, transaction.Id, ct);
     }
 
     /// <inheritdoc />
@@ -245,6 +251,13 @@ public class FinanceTransactionService(
         var transaction = await db.FinanceTransactions
             .FirstOrDefaultAsync(t => t.Id == transactionId && t.UserId == userId, ct)
             ?? throw new KeyNotFoundException("交易記錄不存在");
+
+        await ValidateTransactionReferencesAsync(
+            userId,
+            request.AccountId,
+            request.ToAccountId,
+            request.CategoryId,
+            ct);
 
         transaction.TransactionType = transactionType;
         transaction.Amount = request.Amount;
@@ -262,7 +275,7 @@ public class FinanceTransactionService(
 
         logger.LogInformation("交易已更新: {TransactionId}", transactionId);
 
-        return await LoadTransactionResponseAsync(transaction.Id, ct);
+        return await LoadTransactionResponseAsync(userId, transaction.Id, ct);
     }
 
     /// <inheritdoc />
@@ -335,16 +348,53 @@ public class FinanceTransactionService(
         }
     }
 
+    private async Task ValidateTransactionReferencesAsync(
+        string userId,
+        Guid accountId,
+        Guid? toAccountId,
+        Guid? categoryId,
+        CancellationToken ct)
+    {
+        var accountExists = await db.FinanceAccounts
+            .AnyAsync(a => a.Id == accountId && a.UserId == userId, ct);
+        if (!accountExists)
+        {
+            throw new KeyNotFoundException("帳戶不存在");
+        }
+
+        if (toAccountId.HasValue)
+        {
+            var toAccountExists = await db.FinanceAccounts
+                .AnyAsync(a => a.Id == toAccountId.Value && a.UserId == userId, ct);
+            if (!toAccountExists)
+            {
+                throw new KeyNotFoundException("目標帳戶不存在");
+            }
+        }
+
+        if (categoryId.HasValue)
+        {
+            var categoryExists = await db.TransactionCategories
+                .AnyAsync(c => c.Id == categoryId.Value && (c.UserId == userId || c.UserId == null), ct);
+            if (!categoryExists)
+            {
+                throw new KeyNotFoundException("分類不存在");
+            }
+        }
+    }
+
     /// <summary>載入交易記錄含關聯資料並轉為回應 DTO</summary>
     private async Task<TransactionResponse> LoadTransactionResponseAsync(
-        Guid transactionId, CancellationToken ct)
+        string userId,
+        Guid transactionId,
+        CancellationToken ct)
     {
         var t = await db.FinanceTransactions
             .AsNoTracking()
             .Include(x => x.Category)
             .Include(x => x.Account)
             .Include(x => x.ToAccount)
-            .FirstAsync(x => x.Id == transactionId, ct);
+            .FirstAsync(x => x.Id == transactionId && x.UserId == userId, ct);
 
         return MapToResponse(t);
     }
