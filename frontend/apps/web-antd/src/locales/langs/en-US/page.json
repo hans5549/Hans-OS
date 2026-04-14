@@ -10,7 +10,27 @@
   "dashboard": {
     "title": "Dashboard",
     "analytics": "Analytics",
-    "workspace": "Workspace"
+    "workspace": "Workspace",
+    "todo": "Todo",
+    "todoDemo": "Demo",
+    "todoDescription": "This page is currently a read-only demo used to establish the sidebar entry and information architecture. Any interactive state will be reset on refresh.",
+    "todoDeploymentHint": "Recommended rollout order: frontend first, backend second",
+    "todoListTitle": "Current todo list",
+    "todoDueAt": "Due date: ",
+    "todoStatusPending": "Pending",
+    "todoStatusInProgress": "In Progress",
+    "todoStatusDone": "Done",
+    "todoPriorityHigh": "High Priority",
+    "todoPriorityMedium": "Medium Priority",
+    "todoPriorityLow": "Low Priority",
+    "todoTitleContract": "Finalize the todo tab contract",
+    "todoSummaryContract": "Confirm the sidebar todo-tab requirements, including menu path, component mapping, and rollout order.",
+    "todoTitleData": "Align homepage and todo page sample data",
+    "todoSummaryData": "Review the existing workspace sample items and decide whether they should be shared from one constant source.",
+    "todoTitleSmoke": "Complete the todo page smoke check",
+    "todoSummarySmoke": "Cover menu-tree verification and frontend type checks so the sidebar entry never points to a missing page.",
+    "todoTitleScope": "Lock the MVP scope",
+    "todoSummaryScope": "Keep this release as a read-only demo page without adding a Todo API or database model."
   },
   "systemDesign": {
     "title": "Modern System Design Practice",

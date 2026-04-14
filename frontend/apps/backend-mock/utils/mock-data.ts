@@ -56,7 +56,7 @@ export const MOCK_CODES = [
   },
 ];
 
-const dashboardMenus = [
+const createDashboardMenus = (includeTodo: boolean) => [
   {
     meta: {
       order: -1,
@@ -72,6 +72,7 @@ const dashboardMenus = [
         component: '/dashboard/analytics/index',
         meta: {
           affixTab: true,
+          order: 1,
           title: 'page.dashboard.analytics',
         },
       },
@@ -80,9 +81,24 @@ const dashboardMenus = [
         path: '/workspace',
         component: '/dashboard/workspace/index',
         meta: {
+          order: 2,
           title: 'page.dashboard.workspace',
         },
       },
+      ...(includeTodo
+        ? [
+            {
+              name: 'Todo',
+              path: '/todo',
+              component: '/dashboard/todo/index',
+              meta: {
+                authority: ['admin'],
+                order: 3,
+                title: 'page.dashboard.todo',
+              },
+            },
+          ]
+        : []),
     ],
   },
 ];
@@ -178,15 +194,15 @@ const createDemosMenus = (role: 'admin' | 'super' | 'user') => {
 
 export const MOCK_MENUS = [
   {
-    menus: [...dashboardMenus, ...createDemosMenus('super')],
+    menus: [...createDashboardMenus(false), ...createDemosMenus('super')],
     username: 'vben',
   },
   {
-    menus: [...dashboardMenus, ...createDemosMenus('admin')],
+    menus: [...createDashboardMenus(true), ...createDemosMenus('admin')],
     username: 'admin',
   },
   {
-    menus: [...dashboardMenus, ...createDemosMenus('user')],
+    menus: [...createDashboardMenus(false), ...createDemosMenus('user')],
     username: 'jack',
   },
 ];
