@@ -7,6 +7,14 @@ namespace HansOS.Api.Services;
 public class UserService(
     UserManager<ApplicationUser> userManager) : IUserService
 {
+    private static readonly HashSet<string> RemovedDashboardHomePaths =
+    [
+        "/analytics",
+        "/dashboard",
+        "/todo",
+        "/workspace"
+    ];
+
     public async Task<UserInfoResponse> GetUserInfoAsync(string userId, CancellationToken ct = default)
     {
         var user = await userManager.FindByIdAsync(userId)
@@ -21,7 +29,7 @@ public class UserService(
             Avatar: user.Avatar ?? string.Empty,
             Roles: [.. roles],
             Desc: user.Desc ?? string.Empty,
-            HomePath: user.HomePath ?? "/analytics",
+            HomePath: NormalizeHomePath(user.HomePath),
             Token: string.Empty,
             Email: user.Email ?? string.Empty,
             Phone: user.PhoneNumber ?? string.Empty
@@ -77,4 +85,14 @@ public class UserService(
         "PasswordMismatch" => "舊密碼不正確",
         _ => "操作失敗，請稍後再試"
     };
+
+    private static string NormalizeHomePath(string? homePath)
+    {
+        if (string.IsNullOrWhiteSpace(homePath) || RemovedDashboardHomePaths.Contains(homePath))
+        {
+            return "/index";
+        }
+
+        return homePath;
+    }
 }

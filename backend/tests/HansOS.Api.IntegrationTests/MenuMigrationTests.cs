@@ -9,6 +9,8 @@ public class MenuMigrationTests
 {
     private const string AdminRoleId = "a1b2c3d4-0000-0000-0000-000000000001";
     private const string DashboardMenuId = "d1e2f3a4-0000-0000-0000-000000000001";
+    private const string AnalyticsMenuId = "d1e2f3a4-0000-0000-0000-000000000002";
+    private const string WorkspaceMenuId = "d1e2f3a4-0000-0000-0000-000000000003";
     private const string TodoMenuId = "d1e2f3a4-0000-0000-0000-000000000010";
 
     [Fact]
@@ -67,7 +69,101 @@ public class MenuMigrationTests
             sql.Contains($"'{TodoMenuId}'"));
     }
 
+    [Fact]
+    public void RemoveDashboardMenusAndResetHomePath_Up_EmitsCleanupSql()
+    {
+        var migration = new RemoveDashboardMenusAndResetHomePathAccessor();
+        var migrationBuilder = new MigrationBuilder("Npgsql.EntityFrameworkCore.PostgreSQL");
+
+        migration.ApplyUp(migrationBuilder);
+
+        var sqlOperations = migrationBuilder.Operations
+            .OfType<SqlOperation>()
+            .Select(operation => operation.Sql)
+            .ToArray();
+
+        sqlOperations.Should().Contain(sql =>
+            sql.Contains("DELETE FROM \"RoleMenus\"") &&
+            sql.Contains($"'{TodoMenuId}'") &&
+            sql.Contains($"'{AnalyticsMenuId}'") &&
+            sql.Contains($"'{WorkspaceMenuId}'") &&
+            sql.Contains($"'{DashboardMenuId}'"));
+
+        sqlOperations.Should().Contain(sql =>
+            sql.Contains("DELETE FROM \"Menus\"") &&
+            sql.Contains($"'{TodoMenuId}'") &&
+            sql.Contains($"'{AnalyticsMenuId}'") &&
+            sql.Contains($"'{WorkspaceMenuId}'"));
+
+        sqlOperations.Should().Contain(sql =>
+            sql.Contains("DELETE FROM \"Menus\"") &&
+            sql.Contains($"'{DashboardMenuId}'"));
+
+        sqlOperations.Should().Contain(sql =>
+            sql.Contains("UPDATE \"AspNetUsers\"") &&
+            sql.Contains("SET \"HomePath\" = '/index'") &&
+            sql.Contains("WHERE \"HomePath\" IN ('/dashboard', '/analytics', '/workspace', '/todo')"));
+    }
+
+    [Fact]
+    public void RemoveDashboardMenusAndResetHomePath_Down_RecreatesMenuTreeAndHomePath()
+    {
+        var migration = new RemoveDashboardMenusAndResetHomePathAccessor();
+        var migrationBuilder = new MigrationBuilder("Npgsql.EntityFrameworkCore.PostgreSQL");
+
+        migration.ApplyDown(migrationBuilder);
+
+        var sqlOperations = migrationBuilder.Operations
+            .OfType<SqlOperation>()
+            .Select(operation => operation.Sql)
+            .ToArray();
+
+        sqlOperations.Should().Contain(sql =>
+            sql.Contains("'Dashboard'") &&
+            sql.Contains("'/dashboard'") &&
+            sql.Contains("'/analytics'") &&
+            sql.Contains($"'{DashboardMenuId}'"));
+
+        sqlOperations.Should().Contain(sql =>
+            sql.Contains("'Analytics'") &&
+            sql.Contains($"'{AnalyticsMenuId}'") &&
+            sql.Contains("'/dashboard/analytics/index'"));
+
+        sqlOperations.Should().Contain(sql =>
+            sql.Contains("'Workspace'") &&
+            sql.Contains($"'{WorkspaceMenuId}'") &&
+            sql.Contains("'/dashboard/workspace/index'"));
+
+        sqlOperations.Should().Contain(sql =>
+            sql.Contains("'Todo'") &&
+            sql.Contains($"'{TodoMenuId}'") &&
+            sql.Contains("'[\"admin\"]'"));
+
+        sqlOperations.Should().Contain(sql =>
+            sql.Contains("INSERT INTO \"RoleMenus\"") &&
+            sql.Contains($"'{AdminRoleId}'") &&
+            sql.Contains($"'{DashboardMenuId}'"));
+
+        sqlOperations.Should().Contain(sql =>
+            sql.Contains("UPDATE \"AspNetUsers\"") &&
+            sql.Contains("SET \"HomePath\" = '/analytics'") &&
+            sql.Contains("WHERE \"HomePath\" = '/index'"));
+    }
+
     private sealed class AddTodoMenuItemAccessor : AddTodoMenuItem
+    {
+        public void ApplyUp(MigrationBuilder migrationBuilder)
+        {
+            Up(migrationBuilder);
+        }
+
+        public void ApplyDown(MigrationBuilder migrationBuilder)
+        {
+            Down(migrationBuilder);
+        }
+    }
+
+    private sealed class RemoveDashboardMenusAndResetHomePathAccessor : RemoveDashboardMenusAndResetHomePath
     {
         public void ApplyUp(MigrationBuilder migrationBuilder)
         {

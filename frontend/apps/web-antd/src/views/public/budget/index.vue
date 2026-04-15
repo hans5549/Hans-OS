@@ -48,7 +48,7 @@ const loadingBudget = ref(false);
 const saving = ref(false);
 
 // 比對模式左側 — 歷史年度
-const compareYear = ref<number | null>(null);
+const compareYear = ref<number>();
 const compareBudget = ref<PublicBudgetResponse | null>(null);
 const compareItems = ref<BudgetItemRow[]>([]);
 const loadingCompare = ref(false);
@@ -137,7 +137,7 @@ async function fetchBudget() {
 }
 
 async function fetchCompareBudget() {
-  if (!compareYear.value) return;
+  if (compareYear.value === undefined) return;
   loadingCompare.value = true;
   try {
     compareBudget.value = await getPublicDepartmentBudgetApi(
@@ -212,7 +212,7 @@ watch(selectedYear, () => {
   fetchBudget();
   // 比對模式：重設左側年度
   if (compareYear.value === selectedYear.value) {
-    compareYear.value = null;
+    compareYear.value = undefined;
     compareBudget.value = null;
     compareItems.value = [];
   }

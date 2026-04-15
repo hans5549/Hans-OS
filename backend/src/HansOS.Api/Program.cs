@@ -153,7 +153,7 @@ using (var scope = app.Services.CreateScope())
             RealName = "Hans",
             Email = "hans@hans-os.dev",
             IsActive = true,
-            HomePath = "/analytics"
+            HomePath = "/index"
         };
         await userManager.CreateAsync(user, "H@ns19951204");
         await userManager.AddToRoleAsync(user, "admin");

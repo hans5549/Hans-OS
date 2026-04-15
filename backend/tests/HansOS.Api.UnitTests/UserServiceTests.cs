@@ -29,7 +29,7 @@ public class UserServiceTests
             UserName = "hans",
             RealName = "Hans",
             Avatar = "https://example.com/avatar.png",
-            HomePath = "/analytics",
+            HomePath = "/custom-home",
             IsActive = true
         };
         _userManager.FindByIdAsync("user-1").Returns(user);
@@ -42,7 +42,7 @@ public class UserServiceTests
         result.RealName.Should().Be("Hans");
         result.Avatar.Should().Be("https://example.com/avatar.png");
         result.Roles.Should().Contain("admin");
-        result.HomePath.Should().Be("/analytics");
+        result.HomePath.Should().Be("/custom-home");
     }
 
     [Fact]
@@ -208,9 +208,31 @@ public class UserServiceTests
         result.Roles.Should().BeEmpty();
         result.Username.Should().Be("noroles");
         result.Avatar.Should().Be(string.Empty);
-        result.HomePath.Should().Be("/analytics");
+        result.HomePath.Should().Be("/index");
         result.Email.Should().Be(string.Empty);
         result.Phone.Should().Be(string.Empty);
         result.Desc.Should().Be(string.Empty);
+    }
+
+    [Theory]
+    [InlineData("/analytics")]
+    [InlineData("/dashboard")]
+    [InlineData("/todo")]
+    [InlineData("/workspace")]
+    public async Task GetUserInfo_LegacyDashboardHomePath_NormalizesToIndex(string legacyHomePath)
+    {
+        var user = new ApplicationUser
+        {
+            Id = "legacy-user",
+            UserName = "legacy",
+            HomePath = legacyHomePath,
+            IsActive = true
+        };
+        _userManager.FindByIdAsync("legacy-user").Returns(user);
+        _userManager.GetRolesAsync(user).Returns(new List<string>());
+
+        var result = await _sut.GetUserInfoAsync("legacy-user");
+
+        result.HomePath.Should().Be("/index");
     }
 }
