@@ -4,7 +4,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { preferences } from '@vben/preferences';
 import { $t } from '#/locales';
 
-import { Button, Card, Progress, Segmented, Tag, message } from 'ant-design-vue';
+import { Button, Card, Segmented, Tag, message } from 'ant-design-vue';
 
 import {
   createQrCodeGeneratorPageContent,
@@ -14,6 +14,8 @@ import {
   type SectionId,
   type SectionMeta,
 } from './content';
+import FlowDiagram from './FlowDiagram.vue';
+import FlowTimeline from './FlowTimeline.vue';
 import GlossaryPanel from './GlossaryPanel.vue';
 
 defineOptions({ name: 'QrCodeGeneratorDocumentTab' });
@@ -139,231 +141,141 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="mx-auto flex w-full max-w-7xl flex-col gap-6 p-4 md:p-6 lg:p-8">
-    <section class="case-panel overflow-hidden">
-      <div class="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_360px]">
-        <div class="space-y-6">
-          <div class="flex flex-wrap gap-2">
-            <Tag class="case-badge">{{ pageContent.badges.caseStudy }}</Tag>
-            <Tag class="case-badge">{{ pageContent.badges.frontendOnly }}</Tag>
-            <Tag class="case-badge">{{ pageContent.badges.basedOnPdf }}</Tag>
-            <Tag class="case-badge">{{ pageContent.badges.readingTime }}</Tag>
-          </div>
+  <div class="doc-root">
+    <!-- 頂部閱讀進度條 -->
+    <div class="progress-bar" :style="{ width: `${progressPercent}%` }" />
 
-          <div class="space-y-4">
-            <p class="case-kicker">{{ pageContent.hero.kicker }}</p>
-            <div class="space-y-3">
-              <h1 class="text-3xl font-semibold tracking-tight text-foreground lg:text-5xl">
-                {{ pageContent.hero.title }}
-              </h1>
-              <p class="max-w-3xl text-base leading-7 text-muted-foreground lg:text-lg">
-                {{ pageContent.hero.description }}
-              </p>
-            </div>
-          </div>
+    <div class="mx-auto flex w-full max-w-7xl flex-col gap-10 p-4 md:p-6 lg:p-8">
 
-          <div class="grid gap-4 md:grid-cols-3">
-            <Card
-              v-for="item in pageContent.hero.highlights"
-              :key="item.title"
-              :bordered="false"
-              class="case-subcard"
-            >
-              <div class="space-y-2">
-                <h2 class="text-base font-semibold text-foreground">
-                  {{ item.title }}
-                </h2>
-                <p class="text-sm leading-6 text-muted-foreground">
-                  {{ item.description }}
-                </p>
-              </div>
-            </Card>
-          </div>
-
-          <div class="space-y-3">
-            <div class="flex items-center justify-between gap-3">
-              <div>
-                <p class="section-kicker">{{ pageContent.hero.learnKicker }}</p>
-                <h2 class="text-lg font-semibold text-foreground">
-                  {{ pageContent.hero.targetsTitle }}
-                </h2>
-              </div>
-              <span class="text-xs text-muted-foreground">
-                {{ pageContent.hero.targetsNote }}
-              </span>
-            </div>
-            <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <Card
-                v-for="target in pageContent.designTargets"
-                :key="target.label"
-                :bordered="false"
-                class="target-card"
-                size="small"
-              >
-                <div class="space-y-1">
-                  <p class="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-                    {{ target.label }}
-                  </p>
-                  <p class="text-2xl font-semibold text-foreground">
-                    {{ target.value }}
-                  </p>
-                  <p class="text-xs leading-5 text-muted-foreground">
-                    {{ target.note }}
-                  </p>
-                </div>
-              </Card>
-            </div>
-          </div>
+      <!-- ==================== HERO ==================== -->
+      <section class="hero-section">
+        <div class="flex flex-wrap gap-2">
+          <Tag class="case-badge">{{ pageContent.badges.caseStudy }}</Tag>
+          <Tag class="case-badge">{{ pageContent.badges.frontendOnly }}</Tag>
+          <Tag class="case-badge">{{ pageContent.badges.basedOnPdf }}</Tag>
+          <Tag class="case-badge">{{ pageContent.badges.readingTime }}</Tag>
         </div>
 
-        <Card :bordered="false" class="hero-artifact">
-          <div class="space-y-5">
-            <div class="space-y-2">
-              <p class="section-kicker">{{ pageContent.hero.visual.kicker }}</p>
-              <h2 class="text-lg font-semibold text-foreground">
-                {{ pageContent.hero.visual.title }}
-              </h2>
-              <p class="text-sm leading-6 text-muted-foreground">
-                {{ pageContent.hero.visual.description }}
-              </p>
-            </div>
+        <div class="mt-6 space-y-3">
+          <p class="case-kicker">{{ pageContent.hero.kicker }}</p>
+          <h1 class="text-3xl font-bold tracking-tight text-foreground lg:text-5xl">
+            {{ pageContent.hero.title }}
+          </h1>
+          <p class="max-w-3xl text-base leading-7 text-muted-foreground lg:text-lg">
+            {{ pageContent.hero.description }}
+          </p>
+        </div>
 
-            <div class="space-y-3">
-              <template
-                v-for="(node, index) in pageContent.hero.visual.nodes"
-                :key="node.title"
-              >
-                <div :class="['diagram-node', index === 0 ? 'diagram-node--accent' : '']">
-                  <span class="diagram-label">{{ node.label }}</span>
-                  <strong class="diagram-title">{{ node.title }}</strong>
-                </div>
-                <div
-                  v-if="index < pageContent.hero.visual.nodes.length - 1"
-                  class="diagram-arrow"
-                  aria-hidden="true"
-                >
-                  ↓
-                </div>
-              </template>
-            </div>
-
-            <div class="grid gap-3 sm:grid-cols-3">
-              <div
-                v-for="chip in pageContent.hero.visual.chips"
-                :key="chip.label"
-                class="artifact-chip"
-              >
-                <span class="artifact-chip__label">{{ chip.label }}</span>
-                <span class="artifact-chip__value">{{ chip.value }}</span>
-              </div>
-            </div>
-          </div>
-        </Card>
-      </div>
-    </section>
-
-    <section class="xl:hidden">
-      <Card :bordered="false" class="case-panel">
-        <div class="space-y-4">
-          <div class="space-y-2">
-            <div class="flex items-center justify-between gap-3">
-              <span class="text-sm font-medium text-foreground">
-                {{ pageContent.navigation.progressLabel }}
-              </span>
-              <span class="text-sm text-muted-foreground">
-                {{ progressPercent }}%
-              </span>
-            </div>
-            <Progress :percent="progressPercent" :show-info="false" size="small" />
-          </div>
-          <details class="toc-details">
-            <summary class="toc-details__summary">
-              {{ pageContent.navigation.inPageLabel }} · {{ currentSectionTitle }}
-            </summary>
-            <nav
-              class="mt-4 space-y-2"
-              :aria-label="pageContent.navigation.mobileTocAriaLabel"
-            >
-              <a
-                v-for="section in pageContent.sections"
-                :key="section.id"
-                :aria-current="activeSectionId === section.id ? 'true' : undefined"
-                :class="[
-                  'toc-link',
-                  activeSectionId === section.id ? 'toc-link--active' : '',
-                ]"
-                :href="`#${section.id}`"
-              >
-                <span class="toc-link__eyebrow">{{ section.eyebrow }}</span>
-                <span>{{ section.title }}</span>
-              </a>
-            </nav>
-          </details>
-          <GlossaryPanel
-            :active-term-id="activeGlossaryId"
-            :get-toggle-aria-label="pageContent.ui.getGlossaryToggleAriaLabel"
-            :kicker="pageContent.glossary.kicker"
-            layout="mobile"
-            :terms="pageContent.glossary.terms"
-            :title="pageContent.glossary.title"
-            title-class="text-base"
-            @toggle="toggleGlossary"
+        <!-- 水平流程圖（inline） -->
+        <div class="mt-8">
+          <FlowDiagram
+            :chips="pageContent.hero.visual.chips"
+            :description="pageContent.hero.visual.description"
+            :kicker="pageContent.hero.visual.kicker"
+            :nodes="pageContent.hero.visual.nodes"
+            :title="pageContent.hero.visual.title"
           />
         </div>
-      </Card>
-    </section>
 
-    <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_280px]">
-      <main class="space-y-6">
-        <section :id="pageContent.whyHardSection.id" class="section-anchor">
-          <Card :bordered="false" class="case-panel">
+        <!-- 你會學到的重點 — 無邊框水平排列 -->
+        <div class="mt-8 space-y-4">
+          <p class="section-kicker">{{ pageContent.hero.learnKicker }}</p>
+          <div class="grid gap-6 md:grid-cols-3">
+            <div v-for="item in pageContent.hero.highlights" :key="item.title" class="highlight-item">
+              <h3 class="text-sm font-bold text-foreground">{{ item.title }}</h3>
+              <p class="mt-1 text-sm leading-6 text-muted-foreground">{{ item.description }}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 設計目標 — 水平 stat strip -->
+        <div class="stat-strip">
+          <div class="flex items-center justify-between gap-3">
+            <h2 class="text-base font-bold text-foreground">
+              {{ pageContent.hero.targetsTitle }}
+            </h2>
+            <span class="text-xs text-muted-foreground">
+              {{ pageContent.hero.targetsNote }}
+            </span>
+          </div>
+          <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <div v-for="target in pageContent.designTargets" :key="target.label" class="stat-item">
+              <p class="stat-item__value">{{ target.value }}</p>
+              <p class="stat-item__label">{{ target.label }}</p>
+              <p class="stat-item__note">{{ target.note }}</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== 行動版 TOC ==================== -->
+      <section class="xl:hidden">
+        <Card :bordered="false" class="case-panel">
+          <div class="space-y-4">
+            <details class="toc-details">
+              <summary class="toc-details__summary">
+                {{ pageContent.navigation.inPageLabel }} · {{ currentSectionTitle }}
+              </summary>
+              <nav
+                class="mt-4 space-y-2"
+                :aria-label="pageContent.navigation.mobileTocAriaLabel"
+              >
+                <a
+                  v-for="section in pageContent.sections"
+                  :key="section.id"
+                  :aria-current="activeSectionId === section.id ? 'true' : undefined"
+                  :class="[
+                    'toc-link',
+                    activeSectionId === section.id ? 'toc-link--active' : '',
+                  ]"
+                  :href="`#${section.id}`"
+                >
+                  <span class="toc-link__eyebrow">{{ section.eyebrow }}</span>
+                  <span>{{ section.title }}</span>
+                </a>
+              </nav>
+            </details>
+          </div>
+        </Card>
+      </section>
+
+      <!-- ==================== MAIN + SIDEBAR ==================== -->
+      <div class="grid gap-8 xl:grid-cols-[minmax(0,1fr)_260px]">
+        <main class="space-y-10">
+
+          <!-- 章節 1: 為什麼這題困難 — accent border 卡片 -->
+          <section :id="pageContent.whyHardSection.id" class="section-anchor">
             <div class="section-header">
               <div>
                 <p class="section-kicker">{{ pageContent.whyHardSection.eyebrow }}</p>
-                <h2 class="text-2xl font-semibold text-foreground">
-                  {{ pageContent.whyHardSection.title }}
-                </h2>
+                <h2 class="section-title">{{ pageContent.whyHardSection.title }}</h2>
               </div>
-              <p class="section-takeaway">
-                {{ pageContent.whyHardSection.takeaway }}
-              </p>
+              <p class="section-takeaway">{{ pageContent.whyHardSection.takeaway }}</p>
             </div>
 
             <div class="grid gap-4 md:grid-cols-3">
-              <Card
-                v-for="item in pageContent.tensionCards"
+              <div
+                v-for="(item, index) in pageContent.tensionCards"
                 :key="item.title"
-                :bordered="false"
-                class="case-subcard h-full"
+                :class="['tension-card', `tension-card--${index}`]"
               >
-                <div class="space-y-3">
-                  <h3 class="text-base font-semibold text-foreground">
-                    {{ item.title }}
-                  </h3>
-                  <p class="text-sm leading-6 text-muted-foreground">
-                    {{ item.description }}
-                  </p>
-                </div>
-              </Card>
+                <h3 class="text-sm font-bold text-foreground">{{ item.title }}</h3>
+                <p class="mt-2 text-sm leading-6 text-muted-foreground">{{ item.description }}</p>
+              </div>
             </div>
-          </Card>
-        </section>
+          </section>
 
-        <section :id="pageContent.requirementsSection.id" class="section-anchor">
-          <Card :bordered="false" class="case-panel">
+          <!-- 章節 2: 需求分析 — 雙欄 numbered list -->
+          <section :id="pageContent.requirementsSection.id" class="section-anchor">
             <div class="section-header">
               <div>
                 <p class="section-kicker">{{ pageContent.requirementsSection.eyebrow }}</p>
-                <h2 class="text-2xl font-semibold text-foreground">
-                  {{ pageContent.requirementsSection.title }}
-                </h2>
+                <h2 class="section-title">{{ pageContent.requirementsSection.title }}</h2>
               </div>
-              <p class="section-takeaway">
-                {{ pageContent.requirementsSection.takeaway }}
-              </p>
+              <p class="section-takeaway">{{ pageContent.requirementsSection.takeaway }}</p>
             </div>
 
-            <div class="grid gap-4 lg:grid-cols-2">
+            <div class="grid gap-6 lg:grid-cols-2">
               <Card
                 v-for="group in pageContent.requirementGroups"
                 :key="group.title"
@@ -371,36 +283,30 @@ onBeforeUnmount(() => {
                 class="case-subcard h-full"
               >
                 <div class="space-y-4">
-                  <h3 class="text-lg font-semibold text-foreground">
-                    {{ group.title }}
-                  </h3>
-                  <ul class="space-y-3 text-sm leading-6 text-muted-foreground">
+                  <h3 class="text-base font-bold text-foreground">{{ group.title }}</h3>
+                  <ol class="space-y-3 text-sm leading-6 text-muted-foreground">
                     <li
-                      v-for="item in group.items"
+                      v-for="(item, idx) in group.items"
                       :key="item"
-                      class="list-disc pl-2 marker:text-primary"
+                      class="req-item"
                     >
-                      {{ item }}
+                      <span class="req-number">{{ idx + 1 }}</span>
+                      <span>{{ item }}</span>
                     </li>
-                  </ul>
+                  </ol>
                 </div>
               </Card>
             </div>
-          </Card>
-        </section>
+          </section>
 
-        <section :id="pageContent.apiSurfaceSection.id" class="section-anchor">
-          <Card :bordered="false" class="case-panel">
+          <!-- 章節 3: API Surface — 保留卡片但改善 code block -->
+          <section :id="pageContent.apiSurfaceSection.id" class="section-anchor">
             <div class="section-header">
               <div>
                 <p class="section-kicker">{{ pageContent.apiSurfaceSection.eyebrow }}</p>
-                <h2 class="text-2xl font-semibold text-foreground">
-                  {{ pageContent.apiSurfaceSection.title }}
-                </h2>
+                <h2 class="section-title">{{ pageContent.apiSurfaceSection.title }}</h2>
               </div>
-              <p class="section-takeaway">
-                {{ pageContent.apiSurfaceSection.takeaway }}
-              </p>
+              <p class="section-takeaway">{{ pageContent.apiSurfaceSection.takeaway }}</p>
             </div>
 
             <div class="grid gap-4 xl:grid-cols-2">
@@ -414,12 +320,8 @@ onBeforeUnmount(() => {
                   <div class="space-y-2">
                     <span :class="methodClassMap[card.method]">{{ card.method }}</span>
                     <div class="space-y-1">
-                      <h3 class="text-lg font-semibold text-foreground">
-                        {{ card.title }}
-                      </h3>
-                      <p class="break-all text-sm font-medium text-foreground">
-                        {{ card.path }}
-                      </p>
+                      <h3 class="text-base font-bold text-foreground">{{ card.title }}</h3>
+                      <p class="break-all font-mono text-sm text-muted-foreground">{{ card.path }}</p>
                     </div>
                   </div>
                   <Button
@@ -432,11 +334,9 @@ onBeforeUnmount(() => {
                   </Button>
                 </div>
 
-                <p class="mt-4 text-sm leading-6 text-muted-foreground">
-                  {{ card.description }}
-                </p>
+                <p class="mt-3 text-sm leading-6 text-muted-foreground">{{ card.description }}</p>
 
-                <div class="mt-4 flex flex-wrap gap-2">
+                <div class="mt-3 flex flex-wrap gap-2">
                   <span
                     v-for="item in card.request"
                     :key="`${card.path}-request-${item}`"
@@ -456,21 +356,16 @@ onBeforeUnmount(() => {
                 <pre class="api-snippet" tabindex="0"><code>{{ card.snippet }}</code></pre>
               </Card>
             </div>
-          </Card>
-        </section>
+          </section>
 
-        <section :id="pageContent.lifecycleSection.id" class="section-anchor">
-          <Card :bordered="false" class="case-panel">
+          <!-- 章節 4: Request Lifecycle — Timeline -->
+          <section :id="pageContent.lifecycleSection.id" class="section-anchor">
             <div class="section-header">
               <div>
                 <p class="section-kicker">{{ pageContent.lifecycleSection.eyebrow }}</p>
-                <h2 class="text-2xl font-semibold text-foreground">
-                  {{ pageContent.lifecycleSection.title }}
-                </h2>
+                <h2 class="section-title">{{ pageContent.lifecycleSection.title }}</h2>
               </div>
-              <p class="section-takeaway">
-                {{ pageContent.lifecycleSection.takeaway }}
-              </p>
+              <p class="section-takeaway">{{ pageContent.lifecycleSection.takeaway }}</p>
             </div>
 
             <div class="space-y-5">
@@ -479,53 +374,29 @@ onBeforeUnmount(() => {
                 :options="pageContent.flowOptions"
                 block
               />
-
-              <div class="grid gap-4">
-                <Card
-                  v-for="step in currentFlowSteps"
-                  :key="step.title"
-                  :bordered="false"
-                  class="case-subcard"
-                >
-                  <div class="grid gap-3 lg:grid-cols-[180px_minmax(0,1fr)]">
-                    <p class="text-sm font-semibold text-foreground">
-                      {{ step.title }}
-                    </p>
-                    <p class="text-sm leading-6 text-muted-foreground">
-                      {{ step.description }}
-                    </p>
-                  </div>
-                </Card>
-              </div>
+              <FlowTimeline :steps="currentFlowSteps" />
             </div>
-          </Card>
-        </section>
+          </section>
 
-        <section :id="pageContent.scalingSection.id" class="section-anchor">
-          <Card :bordered="false" class="case-panel">
+          <!-- 章節 5: Scaling 策略 — Bento Grid -->
+          <section :id="pageContent.scalingSection.id" class="section-anchor">
             <div class="section-header">
               <div>
                 <p class="section-kicker">{{ pageContent.scalingSection.eyebrow }}</p>
-                <h2 class="text-2xl font-semibold text-foreground">
-                  {{ pageContent.scalingSection.title }}
-                </h2>
+                <h2 class="section-title">{{ pageContent.scalingSection.title }}</h2>
               </div>
-              <p class="section-takeaway">
-                {{ pageContent.scalingSection.takeaway }}
-              </p>
+              <p class="section-takeaway">{{ pageContent.scalingSection.takeaway }}</p>
             </div>
 
-            <div class="grid gap-4 md:grid-cols-2">
+            <div class="bento-grid">
               <Card
-                v-for="item in pageContent.scalingCards"
+                v-for="(item, index) in pageContent.scalingCards"
                 :key="item.title"
                 :bordered="false"
-                class="case-subcard h-full"
+                :class="['case-subcard h-full', index === 0 ? 'bento-featured' : '']"
               >
                 <div class="space-y-4">
-                  <h3 class="text-lg font-semibold text-foreground">
-                    {{ item.title }}
-                  </h3>
+                  <h3 class="text-base font-bold text-foreground">{{ item.title }}</h3>
                   <ul class="space-y-3 text-sm leading-6 text-muted-foreground">
                     <li
                       v-for="bullet in item.bullets"
@@ -538,378 +409,231 @@ onBeforeUnmount(() => {
                 </div>
               </Card>
             </div>
-          </Card>
-        </section>
+          </section>
 
-        <section :id="pageContent.tradeOffsSection.id" class="section-anchor">
-          <Card :bordered="false" class="case-panel">
+          <!-- 章節 6: Trade-offs — Decision Table -->
+          <section :id="pageContent.tradeOffsSection.id" class="section-anchor">
             <div class="section-header">
               <div>
                 <p class="section-kicker">{{ pageContent.tradeOffsSection.eyebrow }}</p>
-                <h2 class="text-2xl font-semibold text-foreground">
-                  {{ pageContent.tradeOffsSection.title }}
-                </h2>
+                <h2 class="section-title">{{ pageContent.tradeOffsSection.title }}</h2>
               </div>
-              <p class="section-takeaway">
-                {{ pageContent.tradeOffsSection.takeaway }}
-              </p>
+              <p class="section-takeaway">{{ pageContent.tradeOffsSection.takeaway }}</p>
             </div>
 
-            <div class="grid gap-4 lg:grid-cols-2">
-              <Card
+            <div class="decision-table">
+              <div
                 v-for="item in pageContent.tradeOffs"
                 :key="item.decision"
-                :bordered="false"
-                class="case-subcard h-full"
+                class="decision-row"
               >
-                <div class="space-y-3">
-                  <h3 class="text-base font-semibold text-foreground">
-                    {{ item.decision }}
-                  </h3>
-                  <p class="text-sm leading-6 text-muted-foreground">
-                    {{ item.reason }}
-                  </p>
+                <div class="decision-row__decision">
+                  <p class="text-sm font-bold text-foreground">{{ item.decision }}</p>
                 </div>
-              </Card>
+                <div class="decision-row__reason">
+                  <p class="text-sm leading-6 text-muted-foreground">{{ item.reason }}</p>
+                </div>
+              </div>
             </div>
+          </section>
 
-            <div class="mt-6 grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
-              <Card :bordered="false" class="case-subcard">
-                <div class="space-y-4">
-                  <div>
-                    <p class="section-kicker">{{ pageContent.footer.takeawaysKicker }}</p>
-                    <h3 class="text-lg font-semibold text-foreground">
-                      {{ pageContent.footer.takeawaysTitle }}
-                    </h3>
-                  </div>
-                  <ul class="space-y-3 text-sm leading-6 text-muted-foreground">
-                    <li
-                      v-for="item in pageContent.footer.takeaways"
-                      :key="item"
-                      class="list-disc pl-2 marker:text-primary"
-                    >
-                      {{ item }}
-                    </li>
-                  </ul>
-                </div>
-              </Card>
-
-              <Card :bordered="false" class="case-subcard">
-                <div class="space-y-4">
-                  <div>
-                    <p class="section-kicker">{{ pageContent.footer.relatedKicker }}</p>
-                    <h3 class="text-lg font-semibold text-foreground">
-                      {{ pageContent.footer.relatedTitle }}
-                    </h3>
-                  </div>
-                  <div class="space-y-3">
-                    <div
-                      v-for="item in pageContent.footer.relatedCases"
-                      :key="item"
-                      class="related-case"
-                    >
-                      <span class="text-sm font-medium text-foreground">
-                        {{ item }}
-                      </span>
-                      <span class="text-xs text-muted-foreground">
-                        {{ pageContent.footer.relatedComingSoon }}
-                      </span>
-                    </div>
-                  </div>
-                  <p class="text-xs leading-5 text-muted-foreground">
-                    {{ pageContent.footer.sourceNote }}
-                  </p>
-                </div>
-              </Card>
-            </div>
-          </Card>
-        </section>
-      </main>
-
-      <aside class="hidden xl:block">
-        <div class="sticky top-6 space-y-4">
-          <Card :bordered="false" class="case-panel">
-            <div class="space-y-4">
-              <div class="space-y-2">
-                <div class="flex items-center justify-between gap-3">
-                  <span class="text-sm font-medium text-foreground">
-                    {{ pageContent.navigation.progressLabel }}
-                  </span>
-                  <span class="text-sm text-muted-foreground">
-                    {{ progressPercent }}%
-                  </span>
-                </div>
-                <Progress :percent="progressPercent" :show-info="false" size="small" />
+          <!-- ==================== FOOTER ==================== -->
+          <section class="footer-section">
+            <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
+              <div class="footer-takeaways">
+                <p class="section-kicker">{{ pageContent.footer.takeawaysKicker }}</p>
+                <h3 class="mt-1 text-lg font-bold text-foreground">
+                  {{ pageContent.footer.takeawaysTitle }}
+                </h3>
+                <ul class="mt-4 space-y-3 text-sm leading-6 text-muted-foreground">
+                  <li
+                    v-for="item in pageContent.footer.takeaways"
+                    :key="item"
+                    class="list-disc pl-2 marker:text-primary"
+                  >
+                    {{ item }}
+                  </li>
+                </ul>
               </div>
 
-              <dl class="grid gap-3">
-                <div class="meta-row">
-                  <dt>{{ pageContent.sidebar.currentSectionLabel }}</dt>
-                  <dd>{{ currentSectionTitle }}</dd>
+              <div class="footer-related">
+                <p class="section-kicker">{{ pageContent.footer.relatedKicker }}</p>
+                <h3 class="mt-1 text-base font-bold text-foreground">
+                  {{ pageContent.footer.relatedTitle }}
+                </h3>
+                <div class="mt-4 space-y-2">
+                  <div
+                    v-for="item in pageContent.footer.relatedCases"
+                    :key="item"
+                    class="related-case"
+                  >
+                    <span class="text-sm font-medium text-foreground">{{ item }}</span>
+                    <span class="text-xs text-muted-foreground">
+                      {{ pageContent.footer.relatedComingSoon }}
+                    </span>
+                  </div>
                 </div>
-                <div class="meta-row">
-                  <dt>{{ pageContent.sidebar.difficultyLabel }}</dt>
-                  <dd>{{ pageContent.sidebar.difficultyValue }}</dd>
-                </div>
-                <div class="meta-row">
-                  <dt>{{ pageContent.sidebar.scopeLabel }}</dt>
-                  <dd>{{ pageContent.sidebar.scopeValue }}</dd>
-                </div>
-              </dl>
-            </div>
-          </Card>
-
-          <Card :bordered="false" class="case-panel">
-            <div class="space-y-4">
-              <div>
-                <p class="section-kicker">{{ pageContent.sidebar.tocKicker }}</p>
-                <h2 class="text-lg font-semibold text-foreground">
-                  {{ pageContent.sidebar.tocTitle }}
-                </h2>
+                <p class="mt-4 text-xs leading-5 text-muted-foreground">
+                  {{ pageContent.footer.sourceNote }}
+                </p>
               </div>
+            </div>
+          </section>
+        </main>
 
-              <nav
-                class="space-y-2"
-                :aria-label="pageContent.navigation.desktopTocAriaLabel"
-              >
-                <a
-                  v-for="section in pageContent.sections"
-                  :key="section.id"
-                  :aria-current="activeSectionId === section.id ? 'true' : undefined"
-                  :class="[
-                    'toc-link',
-                    activeSectionId === section.id ? 'toc-link--active' : '',
-                  ]"
-                  :href="`#${section.id}`"
+        <!-- ==================== SIDEBAR ==================== -->
+        <aside class="hidden xl:block">
+          <div class="sticky top-6 space-y-4">
+            <!-- TOC + Metadata -->
+            <Card :bordered="false" class="case-panel">
+              <div class="space-y-4">
+                <dl class="grid gap-2">
+                  <div class="meta-row">
+                    <dt>{{ pageContent.sidebar.currentSectionLabel }}</dt>
+                    <dd>{{ currentSectionTitle }}</dd>
+                  </div>
+                  <div class="meta-row">
+                    <dt>{{ pageContent.sidebar.difficultyLabel }}</dt>
+                    <dd>{{ pageContent.sidebar.difficultyValue }}</dd>
+                  </div>
+                  <div class="meta-row">
+                    <dt>{{ pageContent.sidebar.scopeLabel }}</dt>
+                    <dd>{{ pageContent.sidebar.scopeValue }}</dd>
+                  </div>
+                </dl>
+              </div>
+            </Card>
+
+            <!-- 目錄 -->
+            <Card :bordered="false" class="case-panel">
+              <div class="space-y-3">
+                <div>
+                  <p class="section-kicker">{{ pageContent.sidebar.tocKicker }}</p>
+                  <h2 class="text-base font-bold text-foreground">
+                    {{ pageContent.sidebar.tocTitle }}
+                  </h2>
+                </div>
+
+                <nav
+                  class="space-y-1"
+                  :aria-label="pageContent.navigation.desktopTocAriaLabel"
                 >
-                  <span class="toc-link__eyebrow">{{ section.eyebrow }}</span>
-                  <span>{{ section.title }}</span>
-                </a>
-              </nav>
-            </div>
-          </Card>
+                  <a
+                    v-for="section in pageContent.sections"
+                    :key="section.id"
+                    :aria-current="activeSectionId === section.id ? 'true' : undefined"
+                    :class="[
+                      'toc-link',
+                      activeSectionId === section.id ? 'toc-link--active' : '',
+                    ]"
+                    :href="`#${section.id}`"
+                  >
+                    <span class="toc-link__eyebrow">{{ section.eyebrow }}</span>
+                    <span>{{ section.title }}</span>
+                  </a>
+                </nav>
+              </div>
+            </Card>
 
-          <Card :bordered="false" class="case-panel">
-            <GlossaryPanel
-              :active-term-id="activeGlossaryId"
-              :get-toggle-aria-label="pageContent.ui.getGlossaryToggleAriaLabel"
-              :kicker="pageContent.glossary.kicker"
-              layout="desktop"
-              :terms="pageContent.glossary.terms"
-              :title="pageContent.glossary.title"
-              title-class="text-lg"
-              @toggle="toggleGlossary"
-            />
-          </Card>
-        </div>
-      </aside>
+            <!-- 術語表 -->
+            <Card :bordered="false" class="case-panel">
+              <GlossaryPanel
+                :active-term-id="activeGlossaryId"
+                :get-toggle-aria-label="pageContent.ui.getGlossaryToggleAriaLabel"
+                :kicker="pageContent.glossary.kicker"
+                layout="desktop"
+                :terms="pageContent.glossary.terms"
+                :title="pageContent.glossary.title"
+                title-class="text-base"
+                @toggle="toggleGlossary"
+              />
+            </Card>
+          </div>
+        </aside>
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped>
+/* ── 全域 ── */
+.doc-root {
+  position: relative;
+}
+
+.progress-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 50;
+  height: 2px;
+  background: hsl(var(--primary));
+  transition: width 300ms ease-out;
+}
+
+/* ── Hero ── */
+.hero-section {
+  border: 1px solid hsl(var(--border));
+  border-radius: 1rem;
+  background:
+    linear-gradient(180deg, hsl(var(--card)) 0%, hsl(var(--background)) 100%);
+  padding: 2rem;
+  box-shadow: 0 24px 64px -56px hsl(var(--foreground) / 0.35);
+}
+
+.stat-strip {
+  margin-top: 2rem;
+  border-top: 1px solid hsl(var(--border));
+  padding-top: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.stat-item__value {
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: hsl(var(--foreground));
+  line-height: 1.2;
+}
+
+.stat-item__label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: hsl(var(--muted-foreground));
+}
+
+.stat-item__note {
+  font-size: 0.75rem;
+  color: hsl(var(--muted-foreground));
+  line-height: 1.5;
+}
+
+.highlight-item {
+  border-left: 2px solid hsl(var(--primary) / 0.3);
+  padding-left: 1rem;
+}
+
+/* ── 卡片共用 ── */
 .api-card,
 .case-panel,
-.case-subcard,
-.hero-artifact,
-.target-card {
+.case-subcard {
   border: 1px solid hsl(var(--border));
   background:
     linear-gradient(180deg, hsl(var(--card)) 0%, hsl(var(--background)) 100%);
   box-shadow: 0 24px 64px -56px hsl(var(--foreground) / 0.35);
 }
 
-.api-snippet {
-  overflow-x: auto;
-  margin-top: 1rem;
-  border-radius: 1rem;
-  border: 1px solid hsl(var(--border));
-  background-color: hsl(var(--muted));
-  padding: 1rem;
-  color: hsl(var(--foreground));
-  font-size: 0.8125rem;
-  line-height: 1.6;
-}
-
-.artifact-chip,
-.diagram-node,
-.pill-chip,
-.related-case,
-.toc-link {
-  border: 1px solid hsl(var(--border));
-  background-color: hsl(var(--background));
-}
-
-.artifact-chip {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  border-radius: 1rem;
-  padding: 0.875rem 1rem;
-}
-
-.artifact-chip__label {
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: hsl(var(--muted-foreground));
-}
-
-.artifact-chip__value {
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: hsl(var(--foreground));
-}
-
-.case-badge {
-  border-color: hsl(var(--border));
-  background-color: hsl(var(--muted));
-  color: hsl(var(--muted-foreground));
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-
-.case-kicker,
-.section-kicker,
-.toc-link__eyebrow {
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: hsl(var(--muted-foreground));
-}
-
-.diagram-arrow {
-  text-align: center;
-  font-size: 1.125rem;
-  color: hsl(var(--muted-foreground));
-}
-
-.diagram-label {
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: hsl(var(--muted-foreground));
-}
-
-.diagram-node {
-  display: flex;
-  flex-direction: column;
-  gap: 0.375rem;
-  border-radius: 1rem;
-  padding: 1rem 1.125rem;
-}
-
-.diagram-node--accent {
-  border-color: hsl(var(--primary) / 0.28);
-  background:
-    linear-gradient(
-      135deg,
-      hsl(var(--primary) / 0.12) 0%,
-      hsl(var(--background)) 100%
-    );
-}
-
-.diagram-title {
-  color: hsl(var(--foreground));
-  font-size: 1rem;
-  font-weight: 600;
-}
-.toc-link:hover,
-.toc-link:focus-visible {
-  border-color: hsl(var(--primary) / 0.28);
-  color: hsl(var(--primary));
-}
-
-.hero-artifact {
-  position: relative;
-  overflow: hidden;
-}
-
-.hero-artifact::before {
-  position: absolute;
-  inset: -30% auto auto 40%;
-  height: 14rem;
-  width: 14rem;
-  border-radius: 999px;
-  background: hsl(var(--primary) / 0.08);
-  content: '';
-  filter: blur(12px);
-}
-
-.meta-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  font-size: 0.875rem;
-  line-height: 1.5;
-}
-
-.meta-row dt {
-  color: hsl(var(--muted-foreground));
-}
-
-.meta-row dd {
-  color: hsl(var(--foreground));
-  font-weight: 600;
-  text-align: right;
-}
-
-.method-badge {
-  display: inline-flex;
-  align-items: center;
-  border-radius: 999px;
-  border: 1px solid transparent;
-  padding: 0.3rem 0.65rem;
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-}
-
-.method-badge--delete {
-  border-color: hsl(var(--destructive) / 0.18);
-  background-color: hsl(var(--destructive) / 0.12);
-  color: hsl(var(--destructive));
-}
-
-.method-badge--get {
-  border-color: hsl(var(--success) / 0.18);
-  background-color: hsl(var(--success) / 0.12);
-  color: hsl(var(--success));
-}
-
-.method-badge--post {
-  border-color: hsl(var(--primary) / 0.18);
-  background-color: hsl(var(--primary) / 0.12);
-  color: hsl(var(--primary));
-}
-
-.method-badge--put {
-  border-color: hsl(var(--warning) / 0.18);
-  background-color: hsl(var(--warning) / 0.12);
-  color: hsl(var(--warning));
-}
-
-.pill-chip {
-  display: inline-flex;
-  align-items: center;
-  border-radius: 999px;
-  padding: 0.35rem 0.75rem;
-  font-size: 0.75rem;
-  color: hsl(var(--muted-foreground));
-}
-
-.related-case {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  border-radius: 1rem;
-  padding: 0.875rem 1rem;
-}
-
+/* ── Section 共用 ── */
 .section-anchor {
   scroll-margin-top: 6rem;
 }
@@ -923,11 +647,275 @@ onBeforeUnmount(() => {
   border-bottom: 1px solid hsl(var(--border));
 }
 
+.section-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: hsl(var(--foreground));
+  line-height: 1.3;
+}
+
 .section-takeaway {
   max-width: 36rem;
   color: hsl(var(--muted-foreground));
-  font-size: 0.95rem;
+  font-size: 0.9375rem;
   line-height: 1.7;
+}
+
+/* ── Kickers / Labels ── */
+.case-kicker,
+.section-kicker,
+.toc-link__eyebrow {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: hsl(var(--muted-foreground));
+}
+
+.case-badge {
+  border-color: hsl(var(--border));
+  background-color: hsl(var(--muted));
+  color: hsl(var(--muted-foreground));
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+
+/* ── Tension 卡片（accent border） ── */
+.tension-card {
+  border-radius: 0.75rem;
+  border: 1px solid hsl(var(--border));
+  border-left: 3px solid hsl(var(--primary) / 0.4);
+  background-color: hsl(var(--card));
+  padding: 1.25rem;
+  transition: border-color 200ms ease;
+}
+
+.tension-card--0 {
+  border-left-color: hsl(var(--primary) / 0.5);
+}
+
+.tension-card--1 {
+  border-left-color: hsl(var(--warning) / 0.5);
+}
+
+.tension-card--2 {
+  border-left-color: hsl(var(--destructive) / 0.5);
+}
+
+/* ── Requirement numbered list ── */
+.req-item {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.req-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.375rem;
+  height: 1.375rem;
+  border-radius: 999px;
+  background-color: hsl(var(--primary) / 0.1);
+  color: hsl(var(--primary));
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+
+/* ── API 卡片 ── */
+.api-snippet {
+  overflow-x: auto;
+  margin-top: 0.75rem;
+  border-radius: 0.75rem;
+  border: 1px solid hsl(var(--border));
+  background-color: hsl(var(--muted));
+  padding: 1rem;
+  color: hsl(var(--foreground));
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
+  font-size: 0.8125rem;
+  line-height: 1.6;
+}
+
+.method-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.method-badge--delete {
+  border-color: hsl(var(--destructive) / 0.18);
+  background-color: hsl(var(--destructive) / 0.1);
+  color: hsl(var(--destructive));
+}
+
+.method-badge--get {
+  border-color: hsl(var(--success) / 0.18);
+  background-color: hsl(var(--success) / 0.1);
+  color: hsl(var(--success));
+}
+
+.method-badge--post {
+  border-color: hsl(var(--primary) / 0.18);
+  background-color: hsl(var(--primary) / 0.1);
+  color: hsl(var(--primary));
+}
+
+.method-badge--put {
+  border-color: hsl(var(--warning) / 0.18);
+  background-color: hsl(var(--warning) / 0.1);
+  color: hsl(var(--warning));
+}
+
+.pill-chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid hsl(var(--border));
+  background-color: hsl(var(--background));
+  padding: 0.3rem 0.7rem;
+  font-size: 0.6875rem;
+  color: hsl(var(--muted-foreground));
+}
+
+/* ── Bento Grid（Scaling） ── */
+.bento-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 768px) {
+  .bento-grid {
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: auto auto;
+  }
+
+  .bento-featured {
+    grid-row: 1 / 3;
+  }
+}
+
+/* ── Decision Table（Trade-offs） ── */
+.decision-table {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+
+.decision-row {
+  display: grid;
+  gap: 0;
+  grid-template-columns: 1fr;
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+.decision-row:last-child {
+  border-bottom: none;
+}
+
+@media (min-width: 768px) {
+  .decision-row {
+    grid-template-columns: minmax(200px, 0.4fr) 1fr;
+  }
+}
+
+.decision-row__decision {
+  background-color: hsl(var(--muted) / 0.5);
+  padding: 1rem 1.25rem;
+}
+
+.decision-row__reason {
+  padding: 1rem 1.25rem;
+}
+
+/* ── Footer ── */
+.footer-section {
+  border-top: 1px solid hsl(var(--border));
+  padding-top: 2rem;
+}
+
+.footer-takeaways {
+  padding: 1.5rem;
+  border-radius: 0.75rem;
+  background: linear-gradient(
+    135deg,
+    hsl(var(--primary) / 0.04) 0%,
+    hsl(var(--background)) 100%
+  );
+  border: 1px solid hsl(var(--primary) / 0.12);
+}
+
+.footer-related {
+  padding: 1.5rem;
+  border-radius: 0.75rem;
+  border: 1px solid hsl(var(--border));
+  background-color: hsl(var(--card));
+}
+
+.related-case {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid hsl(var(--border));
+  background-color: hsl(var(--background));
+  padding: 0.75rem 1rem;
+}
+
+/* ── Sidebar ── */
+.meta-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.meta-row dt {
+  color: hsl(var(--muted-foreground));
+}
+
+.meta-row dd {
+  color: hsl(var(--foreground));
+  font-weight: 600;
+  text-align: right;
+}
+
+/* ── TOC Links ── */
+.toc-link {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  border-radius: 0.5rem;
+  border: 1px solid transparent;
+  padding: 0.625rem 0.75rem;
+  color: hsl(var(--foreground));
+  text-decoration: none;
+  transition:
+    border-color 200ms ease,
+    color 200ms ease,
+    background-color 200ms ease;
+}
+
+.toc-link:hover,
+.toc-link:focus-visible {
+  border-color: hsl(var(--primary) / 0.2);
+  color: hsl(var(--primary));
+}
+
+.toc-link--active {
+  border-color: hsl(var(--primary) / 0.28);
+  background-color: hsl(var(--primary) / 0.08);
+  color: hsl(var(--primary));
 }
 
 .toc-details {
@@ -937,7 +925,7 @@ onBeforeUnmount(() => {
 .toc-details__summary {
   cursor: pointer;
   list-style: none;
-  font-size: 0.95rem;
+  font-size: 0.9375rem;
   font-weight: 600;
   color: hsl(var(--foreground));
 }
@@ -946,31 +934,24 @@ onBeforeUnmount(() => {
   display: none;
 }
 
-.toc-link {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  border-radius: 1rem;
-  padding: 0.875rem 1rem;
-  color: hsl(var(--foreground));
-  text-decoration: none;
-  transition:
-    border-color 200ms ease,
-    color 200ms ease,
-    background-color 200ms ease;
-}
-
-.toc-link--active {
-  border-color: hsl(var(--primary) / 0.28);
-  background-color: hsl(var(--primary) / 0.12);
-  color: hsl(var(--primary));
-}
-
+/* ── Responsive ── */
 @media (min-width: 1024px) {
   .section-header {
     flex-direction: row;
     align-items: end;
     justify-content: space-between;
+  }
+}
+
+/* ── 動態偏好 ── */
+@media (prefers-reduced-motion: reduce) {
+  .progress-bar {
+    transition: none;
+  }
+
+  .toc-link,
+  .tension-card {
+    transition: none;
   }
 }
 </style>
