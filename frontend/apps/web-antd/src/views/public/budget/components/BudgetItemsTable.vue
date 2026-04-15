@@ -67,11 +67,36 @@ const total = computed(() =>
 
 const formatCurrency = (value: number) => value.toLocaleString('zh-TW');
 
-function updateField(index: number, field: string, value: unknown) {
+function updateItem(index: number, patch: Partial<BudgetItemRow>) {
   const updated = [...props.items];
-  (updated[index] as Record<string, unknown>)[field] = value;
+  const currentItem = updated[index];
+  if (!currentItem) {
+    return;
+  }
+
+  updated[index] = {
+    ...currentItem,
+    ...patch,
+  };
   emit('update:items', updated);
 }
+
+const updateActivityName = (index: number, activityName: string) =>
+  updateItem(index, { activityName });
+
+const updateContentItem = (index: number, contentItem: string) =>
+  updateItem(index, { contentItem });
+
+const updateAmount = (index: number, amount: number | string | null) =>
+  updateItem(index, {
+    amount:
+      typeof amount === 'string'
+        ? Number(amount || 0)
+        : amount ?? 0,
+  });
+
+const updateNote = (index: number, note: string) =>
+  updateItem(index, { note });
 </script>
 
 <template>
@@ -98,7 +123,7 @@ function updateField(index: number, field: string, value: unknown) {
           :value="items[index]!.activityName"
           placeholder="活動名稱"
           size="small"
-          @update:value="updateField(index, 'activityName', $event)"
+          @update:value="updateActivityName(index, $event)"
         />
         <span v-else>{{ items[index]!.activityName }}</span>
       </template>
@@ -111,7 +136,7 @@ function updateField(index: number, field: string, value: unknown) {
           :value="items[index]!.contentItem"
           placeholder="內容項目"
           size="small"
-          @update:value="updateField(index, 'contentItem', $event)"
+          @update:value="updateContentItem(index, $event)"
         />
         <span v-else>{{ items[index]!.contentItem }}</span>
       </template>
@@ -126,7 +151,7 @@ function updateField(index: number, field: string, value: unknown) {
           :value="items[index]!.amount"
           size="small"
           style="width: 100%"
-          @update:value="updateField(index, 'amount', $event)"
+          @update:value="updateAmount(index, $event)"
         />
         <span v-else>{{ formatCurrency(items[index]!.amount) }}</span>
       </template>
@@ -139,7 +164,7 @@ function updateField(index: number, field: string, value: unknown) {
           :value="items[index]!.note"
           placeholder="備註"
           size="small"
-          @update:value="updateField(index, 'note', $event)"
+          @update:value="updateNote(index, $event)"
         />
         <span v-else>{{ items[index]!.note ?? '' }}</span>
       </template>

@@ -50,7 +50,7 @@ function setupAccessGuard(router: Router) {
     const userStore = useUserStore();
     const authStore = useAuthStore();
 
-    // 基本路由，这些路由不需要进入权限拦截
+    // 基本路由中的登录页和显式公开页不需要进入权限拦截
     if (coreRouteNames.includes(to.name as string)) {
       if (to.path === LOGIN_PATH && accessStore.accessToken) {
         return decodeURIComponent(
@@ -59,7 +59,10 @@ function setupAccessGuard(router: Router) {
             preferences.app.defaultHomePath,
         );
       }
-      return true;
+
+      if (to.meta.ignoreAccess || to.path.startsWith('/auth')) {
+        return true;
+      }
     }
 
     // accessToken 检查

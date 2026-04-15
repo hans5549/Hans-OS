@@ -50,6 +50,61 @@ const coreRoutes: RouteRecordRaw[] = [
     redirect: preferences.app.defaultHomePath,
     children: [
       {
+        name: 'Index',
+        path: '/index',
+        component: () => import('#/views/_core/home/index.vue'),
+        meta: {
+          hideInBreadcrumb: true,
+          hideInMenu: true,
+          hideInTab: true,
+          title: '首頁',
+        },
+      },
+      {
+        name: 'LegacyDashboard',
+        path: '/dashboard',
+        redirect: preferences.app.defaultHomePath,
+        meta: {
+          hideInBreadcrumb: true,
+          hideInMenu: true,
+          hideInTab: true,
+          title: 'Legacy Dashboard Redirect',
+        },
+      },
+      {
+        name: 'LegacyAnalytics',
+        path: '/analytics',
+        redirect: preferences.app.defaultHomePath,
+        meta: {
+          hideInBreadcrumb: true,
+          hideInMenu: true,
+          hideInTab: true,
+          title: 'Legacy Analytics Redirect',
+        },
+      },
+      {
+        name: 'LegacyWorkspace',
+        path: '/workspace',
+        redirect: preferences.app.defaultHomePath,
+        meta: {
+          hideInBreadcrumb: true,
+          hideInMenu: true,
+          hideInTab: true,
+          title: 'Legacy Workspace Redirect',
+        },
+      },
+      {
+        name: 'LegacyTodo',
+        path: '/todo',
+        redirect: preferences.app.defaultHomePath,
+        meta: {
+          hideInBreadcrumb: true,
+          hideInMenu: true,
+          hideInTab: true,
+          title: 'Legacy Todo Redirect',
+        },
+      },
+      {
         name: 'Profile',
         path: '/profile',
         component: () => import('#/views/_core/profile/index.vue'),
