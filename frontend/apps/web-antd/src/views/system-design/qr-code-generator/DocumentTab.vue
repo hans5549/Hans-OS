@@ -128,6 +128,10 @@ function observeSections() {
   elements.forEach((element) => sectionObserver?.observe(element));
 }
 
+function scrollToSection(sectionId: SectionId) {
+  document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth' });
+}
+
 const toggleGlossary = (termId: string) => {
   activeGlossaryId.value = activeGlossaryId.value === termId ? '' : termId;
 };
@@ -229,6 +233,7 @@ onBeforeUnmount(() => {
                     activeSectionId === section.id ? 'toc-link--active' : '',
                   ]"
                   :href="`#${section.id}`"
+                  @click.prevent="scrollToSection(section.id)"
                 >
                   <span class="toc-link__eyebrow">{{ section.eyebrow }}</span>
                   <span>{{ section.title }}</span>
@@ -527,6 +532,7 @@ onBeforeUnmount(() => {
                       activeSectionId === section.id ? 'toc-link--active' : '',
                     ]"
                     :href="`#${section.id}`"
+                    @click.prevent="scrollToSection(section.id)"
                   >
                     <span class="toc-link__eyebrow">{{ section.eyebrow }}</span>
                     <span>{{ section.title }}</span>
