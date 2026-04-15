@@ -17,6 +17,18 @@ interface RequirementCard {
   title: BilingualText;
 }
 
+type SummaryCard =
+  | {
+      body: BilingualText;
+      kind: 'body';
+      title: BilingualText;
+    }
+  | {
+      kind: 'points';
+      points: BilingualText[];
+      title: BilingualText;
+    };
+
 interface ApiEndpoint {
   method: 'DELETE' | 'GET' | 'POST' | 'PUT';
   notes: BilingualText[];
@@ -108,8 +120,9 @@ const metricCards: MetricCard[] = [
   },
 ];
 
-const summaryCards = [
+const summaryCards: SummaryCard[] = [
   {
+    kind: 'body',
     title: copy('What problem is this design solving?', '這個設計在解什麼問題？'),
     body: copy(
       'The service accepts a URL, creates a globally unique qr_token, and generates the corresponding QR code. When the QR code is scanned, the system uses that token to resolve the original URL and returns a redirect.',
@@ -117,6 +130,7 @@ const summaryCards = [
     ),
   },
   {
+    kind: 'points',
     title: copy('The decisions that matter most', '最重要的三個設計決策'),
     points: [
       copy(
@@ -469,58 +483,66 @@ const scalingContent = {
     ),
   ],
 };
+
+const architectureSnapshot = [
+  'Client -> QR Image / CDN',
+  '-> https://myqrcode.com/{qr_token}',
+  '-> App Server (stateless)',
+  '-> Cache (hot mappings)',
+  '-> DB / Read Replicas',
+  '-> Original URL',
+  '-> 302 Redirect',
+].join('\n');
 </script>
 
 <template>
   <div
     lang="en"
-    class="mx-auto max-w-7xl space-y-8 p-5"
+    class="min-h-full bg-[radial-gradient(circle_at_top_left,_rgba(56,189,248,0.12),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(59,130,246,0.12),_transparent_26%),linear-gradient(180deg,_#f8fbff_0%,_#f8fafc_38%,_#ffffff_100%)]"
   >
-    <a-alert
-      type="info"
-      show-icon
-      class="rounded-2xl border border-sky-100"
-    >
-      <template #message>
-        <div class="space-y-1">
-          <p class="text-sm font-semibold text-slate-900">{{ pageNote.message.en }}</p>
-          <p lang="zh-Hant" class="text-sm leading-6 text-slate-600">{{ pageNote.message.zhTw }}</p>
-        </div>
-      </template>
-      <template #description>
-        <div class="space-y-1 pt-1">
-          <p class="text-sm leading-7 text-slate-600">{{ pageNote.description.en }}</p>
-          <p lang="zh-Hant" class="text-sm leading-7 text-slate-500">{{ pageNote.description.zhTw }}</p>
-        </div>
-      </template>
-    </a-alert>
+    <div class="mx-auto max-w-7xl space-y-6 px-4 py-6 md:px-6 lg:space-y-8 lg:px-8 lg:py-8">
+      <a-alert
+        type="info"
+        show-icon
+        class="rounded-3xl border border-sky-100/90 bg-white/[0.85] shadow-sm shadow-sky-100/70"
+      >
+        <template #message>
+          <div class="space-y-1">
+            <p class="text-sm font-semibold text-slate-900">{{ pageNote.message.en }}</p>
+            <p lang="zh-Hant" class="text-sm leading-6 text-slate-600">{{ pageNote.message.zhTw }}</p>
+          </div>
+        </template>
+        <template #description>
+          <div class="space-y-1 pt-1">
+            <p class="text-sm leading-7 text-slate-600">{{ pageNote.description.en }}</p>
+            <p lang="zh-Hant" class="text-sm leading-7 text-slate-500">{{ pageNote.description.zhTw }}</p>
+          </div>
+        </template>
+      </a-alert>
 
-    <section class="space-y-6">
-      <div class="overflow-hidden rounded-3xl bg-slate-950 text-slate-50 shadow-sm">
-        <div class="grid gap-6 px-6 py-8 lg:grid-cols-[1.2fr_0.8fr] lg:px-8 lg:py-10">
-          <div class="space-y-5">
+      <section class="overflow-hidden rounded-[32px] border border-slate-200/70 bg-slate-950 text-slate-50 shadow-[0_28px_90px_-48px_rgba(15,23,42,0.75)]">
+        <div class="grid gap-8 px-6 py-7 lg:grid-cols-[1.2fr_0.8fr] lg:px-8 lg:py-9">
+          <div class="space-y-6">
             <div class="space-y-2">
-              <p class="text-sm font-medium uppercase tracking-[0.2em] text-sky-300">
+              <div class="inline-flex rounded-full border border-sky-400/30 bg-sky-400/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-sky-200">
                 System Design Case Study
-              </p>
+              </div>
               <p lang="zh-Hant" class="text-sm leading-6 text-slate-300">系統設計案例研究</p>
             </div>
 
-            <div class="space-y-3">
-              <h1 class="text-3xl font-semibold md:text-4xl">QR Code Generator</h1>
-              <p class="max-w-4xl text-base leading-8 text-slate-100">
-                The design treats a QR code generator as a service that accepts a URL, creates a QR image, and
-                redirects through a tokenized endpoint. The real difficulty is not image generation itself, but
-                <span class="font-semibold text-white">
-                  unique token creation, low-latency redirects, caching strategy, and large-scale growth
-                </span>.
+            <div class="space-y-4">
+              <h1 class="max-w-4xl text-4xl font-semibold tracking-tight text-white md:text-5xl">
+                QR Code Generator
+              </h1>
+              <p class="max-w-4xl text-base leading-8 text-slate-200 md:text-lg">
+                The QR image is the easy part. The hard part is making
+                <span class="font-semibold text-white">token generation, redirect freshness, and caching</span>
+                feel instant even when the system grows to billions of mappings.
               </p>
-              <p lang="zh-Hant" class="max-w-4xl text-sm leading-7 text-slate-300">
-                這個設計把 QR Code 產生器視為一個服務：接收 URL、建立 QR 圖像，並透過 token 化端點完成
-                redirect。真正困難的不是產圖本身，而是
-                <span lang="zh-Hant" class="font-semibold text-slate-100">
-                  唯一 token 的產生、低延遲重新導向、快取策略，以及大規模成長
-                </span>。
+              <p lang="zh-Hant" class="max-w-4xl text-sm leading-7 text-slate-300 md:text-base">
+                產圖本身其實不難，真正困難的是讓
+                <span class="font-semibold text-slate-100">token 生成、redirect 新鮮度與快取策略</span>
+                在資料量與流量都放大後，仍然維持即時且可靠。
               </p>
             </div>
 
@@ -540,16 +562,555 @@ const scalingContent = {
             </div>
           </div>
 
-          <div class="rounded-2xl border border-white/10 bg-white/5 p-5">
-            <div class="space-y-1">
-              <p class="text-sm font-semibold text-white">How to read this page</p>
-              <p lang="zh-Hant" class="text-sm leading-6 text-slate-300">這頁怎麼讀最快</p>
+          <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-1">
+            <div class="rounded-[28px] border border-white/10 bg-white/[0.06] p-5 backdrop-blur">
+              <div class="space-y-1">
+                <p class="text-sm font-semibold text-white">Reading lens</p>
+                <p lang="zh-Hant" class="text-sm leading-6 text-slate-300">先抓核心壓力，再看細節取捨</p>
+              </div>
+              <div class="mt-4 space-y-4">
+                <div
+                  v-for="item in heroChecklist"
+                  :key="item.en"
+                  class="space-y-1 border-b border-white/10 pb-4 last:border-b-0 last:pb-0"
+                >
+                  <p class="text-sm font-medium leading-6 text-slate-100">{{ item.en }}</p>
+                  <p lang="zh-Hant" class="text-sm leading-6 text-slate-300">{{ item.zhTw }}</p>
+                </div>
+              </div>
             </div>
 
+            <div class="rounded-[28px] border border-sky-400/20 bg-gradient-to-br from-sky-400/15 via-slate-900 to-slate-950 p-5">
+              <div class="space-y-1">
+                <p class="text-sm font-semibold text-white">Architecture snapshot</p>
+                <p lang="zh-Hant" class="text-sm leading-6 text-slate-300">從掃描到轉址的最短路徑</p>
+              </div>
+              <pre class="mt-4 overflow-x-auto rounded-2xl border border-white/10 bg-slate-950/80 p-4 text-xs leading-6 text-sky-100">{{ architectureSnapshot }}</pre>
+              <p class="mt-3 text-xs leading-6 text-slate-300">{{ scalingContent.snapshotNote.en }}</p>
+              <p lang="zh-Hant" class="text-xs leading-6 text-slate-400">{{ scalingContent.snapshotNote.zhTw }}</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="grid gap-4 xl:hidden">
+        <div class="rounded-[28px] border border-slate-200/70 bg-white/90 p-5 shadow-[0_24px_60px_-50px_rgba(15,23,42,0.45)] backdrop-blur">
+          <div class="space-y-1">
+            <p class="text-sm font-semibold text-slate-900">Page Map</p>
+            <p lang="zh-Hant" class="text-sm leading-6 text-slate-500">頁面導覽</p>
+          </div>
+          <div class="mt-4 grid gap-2 sm:grid-cols-2">
+            <a
+              v-for="link in sectionLinks"
+              :key="`${link.id}-mobile`"
+              :href="`#${link.id}`"
+              class="block cursor-pointer rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-3 transition hover:border-sky-300 hover:bg-sky-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+            >
+              <p class="text-sm font-semibold text-slate-800">{{ link.title.en }}</p>
+              <p lang="zh-Hant" class="mt-1 text-sm leading-6 text-slate-500">{{ link.title.zhTw }}</p>
+            </a>
+          </div>
+        </div>
+
+        <div class="grid gap-4 md:grid-cols-3">
+          <div
+            v-for="metric in metricCards"
+            :key="`${metric.label.en}-mobile`"
+            class="rounded-[28px] border border-slate-200/70 bg-white/90 p-5 shadow-[0_24px_60px_-50px_rgba(15,23,42,0.45)] backdrop-blur"
+          >
+            <div class="space-y-1">
+              <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{{ metric.label.en }}</p>
+              <p lang="zh-Hant" class="text-sm text-slate-500">{{ metric.label.zhTw }}</p>
+            </div>
+            <div class="mt-3 space-y-1">
+              <p class="text-lg font-semibold text-slate-950">{{ metric.value.en }}</p>
+              <p lang="zh-Hant" class="text-sm font-medium text-slate-500">{{ metric.value.zhTw }}</p>
+            </div>
+            <div class="mt-3 space-y-1">
+              <p class="text-sm leading-7 text-slate-700">{{ metric.description.en }}</p>
+              <p lang="zh-Hant" class="text-sm leading-7 text-slate-500">{{ metric.description.zhTw }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-start">
+        <div class="space-y-6 lg:space-y-8">
+          <section
+            id="summary"
+            class="scroll-mt-24 rounded-[28px] border border-slate-200/70 bg-white/90 p-6 shadow-[0_24px_60px_-50px_rgba(15,23,42,0.45)] backdrop-blur md:p-8"
+          >
+            <div class="space-y-6">
+              <div class="space-y-3">
+                <p class="text-sm font-semibold uppercase tracking-[0.2em] text-sky-600">Executive Summary</p>
+                <div class="space-y-3">
+                  <h2 class="text-3xl font-semibold tracking-tight text-slate-950">Read the system in one focused pass</h2>
+                  <p class="max-w-3xl text-sm leading-7 text-slate-700 md:text-base">
+                    Start here to understand the product framing, the primary bottleneck, and the three design choices
+                    that shape everything else on the page.
+                  </p>
+                  <p lang="zh-Hant" class="max-w-3xl text-sm leading-7 text-slate-500 md:text-base">
+                    從這裡開始抓整份設計的問題定義、主要瓶頸，以及會一路影響後續實作的三個關鍵決策。
+                  </p>
+                </div>
+              </div>
+
+              <div class="grid gap-4 lg:grid-cols-[1.05fr_0.95fr]">
+                <div
+                  v-for="card in summaryCards"
+                  :key="card.title.en"
+                  :class="card.kind === 'body'
+                    ? 'rounded-[28px] bg-slate-950 p-6 text-slate-50 shadow-lg shadow-slate-200/20'
+                    : 'rounded-[28px] border border-sky-100 bg-sky-50/70 p-6'"
+                >
+                  <div class="space-y-1">
+                    <p :class="card.kind === 'body' ? 'text-lg font-semibold text-white' : 'text-lg font-semibold text-slate-950'">
+                      {{ card.title.en }}
+                    </p>
+                    <p
+                      lang="zh-Hant"
+                      :class="card.kind === 'body' ? 'text-sm font-medium text-slate-300' : 'text-sm font-medium text-sky-800'"
+                    >
+                      {{ card.title.zhTw }}
+                    </p>
+                  </div>
+
+                  <div
+                    v-if="card.kind === 'body'"
+                    class="mt-5 space-y-3"
+                  >
+                    <p class="text-sm leading-7 text-slate-200 md:text-[15px]">{{ card.body.en }}</p>
+                    <p lang="zh-Hant" class="text-sm leading-7 text-slate-300 md:text-[15px]">{{ card.body.zhTw }}</p>
+                  </div>
+
+                  <ol
+                    v-else
+                    class="mt-5 space-y-3"
+                  >
+                    <li
+                      v-for="(point, index) in card.points"
+                      :key="point.en"
+                      class="flex gap-3 rounded-2xl bg-white px-4 py-4 shadow-sm shadow-sky-100/70"
+                    >
+                      <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sky-600 text-xs font-semibold text-white">
+                        {{ index + 1 }}
+                      </span>
+                      <div class="space-y-1">
+                        <p class="text-sm leading-7 text-slate-700">{{ point.en }}</p>
+                        <p lang="zh-Hant" class="text-sm leading-7 text-slate-500">{{ point.zhTw }}</p>
+                      </div>
+                    </li>
+                  </ol>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section
+            id="requirements"
+            class="scroll-mt-24 rounded-[28px] border border-slate-200/70 bg-white/90 p-6 shadow-[0_24px_60px_-50px_rgba(15,23,42,0.45)] backdrop-blur md:p-8"
+          >
+            <div class="space-y-6">
+              <div class="space-y-3">
+                <p class="text-sm font-semibold uppercase tracking-[0.2em] text-sky-600">Requirements</p>
+                <h2 class="text-3xl font-semibold tracking-tight text-slate-950">Separate what the system does from what pressures it</h2>
+                <p class="max-w-3xl text-sm leading-7 text-slate-700 md:text-base">
+                  Functional requirements define the user-facing surface. Non-functional requirements define the real
+                  engineering pressure around latency, availability, and scale.
+                </p>
+                <p lang="zh-Hant" class="max-w-3xl text-sm leading-7 text-slate-500 md:text-base">
+                  功能需求描述產品表面要做什麼；非功能需求則決定真正的工程壓力，像是延遲、可用性與規模。
+                </p>
+              </div>
+
+              <div class="grid gap-4 xl:grid-cols-2">
+                <div
+                  v-for="(section, index) in requirements"
+                  :key="section.title.en"
+                  :class="index === 0
+                    ? 'rounded-[28px] border border-sky-100 bg-gradient-to-br from-sky-50 to-white p-6'
+                    : 'rounded-[28px] border border-violet-100 bg-gradient-to-br from-violet-50 to-white p-6'"
+                >
+                  <div class="space-y-1">
+                    <p class="text-lg font-semibold text-slate-950">{{ section.title.en }}</p>
+                    <p lang="zh-Hant" class="text-sm font-medium text-slate-500">{{ section.title.zhTw }}</p>
+                  </div>
+
+                  <ul class="mt-5 space-y-3">
+                    <li
+                      v-for="point in section.points"
+                      :key="point.en"
+                      class="rounded-2xl border border-white/80 bg-white/95 px-4 py-4 shadow-sm shadow-slate-100"
+                    >
+                      <p class="text-sm leading-7 text-slate-700">{{ point.en }}</p>
+                      <p lang="zh-Hant" class="mt-1 text-sm leading-7 text-slate-500">{{ point.zhTw }}</p>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section
+            id="api-design"
+            class="scroll-mt-24 rounded-[28px] border border-slate-200/70 bg-white/90 p-6 shadow-[0_24px_60px_-50px_rgba(15,23,42,0.45)] backdrop-blur md:p-8"
+          >
+            <div class="space-y-6">
+              <div class="space-y-3">
+                <p class="text-sm font-semibold uppercase tracking-[0.2em] text-sky-600">API Design</p>
+                <h2 class="text-3xl font-semibold tracking-tight text-slate-950">Small API surface, high operational impact</h2>
+                <p class="max-w-3xl text-sm leading-7 text-slate-700 md:text-base">
+                  The endpoint list is short, but every route carries consequences for uniqueness, cache invalidation,
+                  asset delivery, and redirect freshness.
+                </p>
+                <p lang="zh-Hant" class="max-w-3xl text-sm leading-7 text-slate-500 md:text-base">
+                  端點看似不多，但每一條路由都會牽動唯一性、快取失效、靜態資產傳遞，以及 redirect 的新鮮度。
+                </p>
+              </div>
+
+              <div class="grid gap-4 xl:grid-cols-2">
+                <div
+                  v-for="endpoint in apiEndpoints"
+                  :key="`${endpoint.method}-${endpoint.path}`"
+                  :class="endpoint.method === 'GET'
+                    ? 'rounded-[28px] border border-blue-100 bg-blue-50/40 p-5'
+                    : endpoint.method === 'POST'
+                      ? 'rounded-[28px] border border-emerald-100 bg-emerald-50/50 p-5'
+                      : endpoint.method === 'PUT'
+                        ? 'rounded-[28px] border border-amber-100 bg-amber-50/50 p-5'
+                        : 'rounded-[28px] border border-rose-100 bg-rose-50/50 p-5'"
+                >
+                  <div class="space-y-4">
+                    <div class="flex flex-wrap items-center gap-2">
+                      <a-tag
+                        :color="endpoint.method === 'GET'
+                          ? 'blue'
+                          : endpoint.method === 'POST'
+                            ? 'green'
+                            : endpoint.method === 'PUT'
+                              ? 'orange'
+                              : 'red'"
+                      >
+                        {{ endpoint.method }}
+                      </a-tag>
+                      <code class="rounded-full bg-white px-3 py-1 text-[11px] font-medium text-slate-700 shadow-sm">
+                        {{ endpoint.path }}
+                      </code>
+                    </div>
+
+                    <div class="space-y-1">
+                      <p class="text-base font-semibold text-slate-900">{{ endpoint.summary.en }}</p>
+                      <p lang="zh-Hant" class="text-sm leading-7 text-slate-500">{{ endpoint.summary.zhTw }}</p>
+                    </div>
+
+                    <div
+                      v-if="endpoint.requestExample"
+                      class="overflow-x-auto rounded-2xl bg-slate-950 p-4 text-xs leading-6 text-slate-100 shadow-inner"
+                    >
+                      <p class="mb-1 text-slate-300">Request</p>
+                      <p lang="zh-Hant" class="mb-2 text-slate-400">請求範例</p>
+                      <pre>{{ endpoint.requestExample }}</pre>
+                    </div>
+
+                    <div
+                      v-if="endpoint.responseExample"
+                      class="overflow-x-auto rounded-2xl bg-slate-950 p-4 text-xs leading-6 text-slate-100 shadow-inner"
+                    >
+                      <p class="mb-1 text-slate-300">Response</p>
+                      <p lang="zh-Hant" class="mb-2 text-slate-400">回應範例</p>
+                      <pre>{{ endpoint.responseExample }}</pre>
+                    </div>
+
+                    <ul class="space-y-3">
+                      <li
+                        v-for="note in endpoint.notes"
+                        :key="note.en"
+                        class="rounded-2xl bg-white px-4 py-4 shadow-sm shadow-slate-100"
+                      >
+                        <p class="text-sm leading-7 text-slate-700">{{ note.en }}</p>
+                        <p lang="zh-Hant" class="mt-1 text-sm leading-7 text-slate-500">{{ note.zhTw }}</p>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section
+            id="flows"
+            class="scroll-mt-24 rounded-[28px] border border-slate-200/70 bg-white/90 p-6 shadow-[0_24px_60px_-50px_rgba(15,23,42,0.45)] backdrop-blur md:p-8"
+          >
+            <div class="space-y-6">
+              <div class="space-y-3">
+                <p class="text-sm font-semibold uppercase tracking-[0.2em] text-sky-600">Core Flows</p>
+                <h2 class="text-3xl font-semibold tracking-tight text-slate-950">Follow write-path logic and read-path pressure separately</h2>
+                <p class="max-w-3xl text-sm leading-7 text-slate-700 md:text-base">
+                  These flows show where validation, persistence, caching, and redirect behavior start to matter.
+                </p>
+                <p lang="zh-Hant" class="max-w-3xl text-sm leading-7 text-slate-500 md:text-base">
+                  這兩條流程把驗證、落地儲存、快取與 redirect 行為拆開來看，會更容易理解整體壓力來源。
+                </p>
+              </div>
+
+              <div class="grid gap-4 xl:grid-cols-2">
+                <div
+                  v-for="flow in flows"
+                  :key="flow.title.en"
+                  class="rounded-[28px] border border-slate-200 bg-slate-50/70 p-6"
+                >
+                  <div class="space-y-1">
+                    <p class="text-lg font-semibold text-slate-950">{{ flow.title.en }}</p>
+                    <p lang="zh-Hant" class="text-sm font-medium text-slate-500">{{ flow.title.zhTw }}</p>
+                  </div>
+
+                  <div class="mt-5 rounded-2xl border border-amber-100 bg-amber-50 px-4 py-4">
+                    <p class="text-sm font-medium leading-7 text-amber-900">{{ flow.emphasis.en }}</p>
+                    <p lang="zh-Hant" class="mt-1 text-sm leading-7 text-amber-700">{{ flow.emphasis.zhTw }}</p>
+                  </div>
+
+                  <ol class="mt-5 space-y-4">
+                    <li
+                      v-for="(step, index) in flow.steps"
+                      :key="step.en"
+                      class="flex gap-4"
+                    >
+                      <span class="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-white">
+                        {{ index + 1 }}
+                      </span>
+                      <div class="min-w-0 rounded-2xl bg-white px-4 py-4 shadow-sm shadow-slate-100">
+                        <p class="text-sm leading-7 text-slate-700">{{ step.en }}</p>
+                        <p lang="zh-Hant" class="mt-1 text-sm leading-7 text-slate-500">{{ step.zhTw }}</p>
+                      </div>
+                    </li>
+                  </ol>
+                </div>
+              </div>
+
+              <div class="grid gap-4 md:grid-cols-2">
+                <div class="md:col-span-2 space-y-1">
+                  <p class="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">{{ redirectComparison.title.en }}</p>
+                  <p lang="zh-Hant" class="text-sm leading-6 text-slate-500">{{ redirectComparison.title.zhTw }}</p>
+                </div>
+
+                <div class="rounded-[28px] border border-slate-200 bg-slate-50/70 p-6">
+                  <div class="space-y-1">
+                    <h3 class="text-lg font-semibold text-slate-900">{{ redirectComparison.permanent.title.en }}</h3>
+                    <p lang="zh-Hant" class="text-sm font-medium text-slate-500">{{ redirectComparison.permanent.title.zhTw }}</p>
+                  </div>
+                  <div class="mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-4">
+                    <p class="text-sm leading-7 text-slate-700">{{ redirectComparison.permanent.body.en }}</p>
+                    <p lang="zh-Hant" class="mt-1 text-sm leading-7 text-slate-500">{{ redirectComparison.permanent.body.zhTw }}</p>
+                  </div>
+                </div>
+
+                <div class="rounded-[28px] border border-blue-200 bg-blue-50/70 p-6">
+                  <div class="space-y-1">
+                    <h3 class="text-lg font-semibold text-blue-950">{{ redirectComparison.temporary.title.en }}</h3>
+                    <p lang="zh-Hant" class="text-sm font-medium text-blue-700">{{ redirectComparison.temporary.title.zhTw }}</p>
+                  </div>
+                  <div class="mt-4 rounded-2xl border border-blue-100 bg-white/90 px-4 py-4">
+                    <p class="text-sm leading-7 text-blue-900">{{ redirectComparison.temporary.body.en }}</p>
+                    <p lang="zh-Hant" class="mt-1 text-sm leading-7 text-blue-700">{{ redirectComparison.temporary.body.zhTw }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section
+            id="deep-dives"
+            class="scroll-mt-24 rounded-[28px] border border-slate-200/70 bg-white/90 p-6 shadow-[0_24px_60px_-50px_rgba(15,23,42,0.45)] backdrop-blur md:p-8"
+          >
+            <div class="space-y-6">
+              <div class="space-y-3">
+                <p class="text-sm font-semibold uppercase tracking-[0.2em] text-sky-600">Deep Dives</p>
+                <h2 class="text-3xl font-semibold tracking-tight text-slate-950">Focus on the decisions that change operability over time</h2>
+                <p class="max-w-3xl text-sm leading-7 text-slate-700 md:text-base">
+                  These are the questions that usually decide whether the service stays fast, correct, and maintainable
+                  after the first launch.
+                </p>
+                <p lang="zh-Hant" class="max-w-3xl text-sm leading-7 text-slate-500 md:text-base">
+                  這些題目通常決定系統在上線之後，能不能持續維持速度、正確性，以及可維運性。
+                </p>
+              </div>
+
+              <div class="space-y-4">
+                <div
+                  v-for="section in deepDives"
+                  :key="section.title.en"
+                  class="rounded-[28px] border border-slate-200 bg-slate-50/70 p-6"
+                >
+                  <div class="space-y-1">
+                    <p class="text-lg font-semibold text-slate-950">{{ section.title.en }}</p>
+                    <p lang="zh-Hant" class="text-sm font-medium text-slate-500">{{ section.title.zhTw }}</p>
+                  </div>
+
+                  <div class="mt-5 grid gap-4 xl:grid-cols-[0.9fr_1.1fr_1fr]">
+                    <div class="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm shadow-slate-100">
+                      <div class="space-y-1">
+                        <p class="text-sm font-semibold text-slate-900">Problem</p>
+                        <p lang="zh-Hant" class="text-sm font-medium text-slate-500">問題</p>
+                      </div>
+                      <p class="mt-3 text-sm leading-7 text-slate-700">{{ section.problem.en }}</p>
+                      <p lang="zh-Hant" class="mt-1 text-sm leading-7 text-slate-500">{{ section.problem.zhTw }}</p>
+                    </div>
+
+                    <div class="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm shadow-slate-100">
+                      <div class="space-y-1">
+                        <p class="text-sm font-semibold text-slate-900">Design Decisions</p>
+                        <p lang="zh-Hant" class="text-sm font-medium text-slate-500">設計決策</p>
+                      </div>
+                      <ul class="mt-3 space-y-3">
+                        <li
+                          v-for="item in section.decisions"
+                          :key="item.en"
+                          class="rounded-2xl bg-slate-50 px-4 py-4"
+                        >
+                          <p class="text-sm leading-7 text-slate-700">{{ item.en }}</p>
+                          <p lang="zh-Hant" class="mt-1 text-sm leading-7 text-slate-500">{{ item.zhTw }}</p>
+                        </li>
+                      </ul>
+                    </div>
+
+                    <div class="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm shadow-slate-100">
+                      <div class="space-y-1">
+                        <p class="text-sm font-semibold text-slate-900">Trade-offs</p>
+                        <p lang="zh-Hant" class="text-sm font-medium text-slate-500">取捨</p>
+                      </div>
+                      <ul class="mt-3 space-y-3">
+                        <li
+                          v-for="item in section.tradeoffs"
+                          :key="item.en"
+                          class="rounded-2xl bg-slate-50 px-4 py-4"
+                        >
+                          <p class="text-sm leading-7 text-slate-700">{{ item.en }}</p>
+                          <p lang="zh-Hant" class="mt-1 text-sm leading-7 text-slate-500">{{ item.zhTw }}</p>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section
+            id="scaling"
+            class="scroll-mt-24 rounded-[28px] border border-slate-200/70 bg-white/90 p-6 shadow-[0_24px_60px_-50px_rgba(15,23,42,0.45)] backdrop-blur md:p-8"
+          >
+            <div class="space-y-6">
+              <div class="space-y-3">
+                <p class="text-sm font-semibold uppercase tracking-[0.2em] text-sky-600">Scaling / Decisions</p>
+                <h2 class="text-3xl font-semibold tracking-tight text-slate-950">Scale planning starts from the redirect path</h2>
+                <p class="max-w-3xl text-sm leading-7 text-slate-700 md:text-base">
+                  This is a read-heavy system, so scaling starts with redirect traffic, cache hit rates, and static
+                  asset delivery—not with the QR image generator itself.
+                </p>
+                <p lang="zh-Hant" class="max-w-3xl text-sm leading-7 text-slate-500 md:text-base">
+                  這是一個讀多寫少的系統，所以擴充策略要先從 redirect 流量、快取命中率與靜態資產傳遞出發，而不是從產圖服務本身開始。
+                </p>
+              </div>
+
+              <div class="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
+                <div class="space-y-4">
+                  <div class="rounded-[28px] border border-slate-200 bg-slate-50/70 p-6">
+                    <div class="space-y-1">
+                      <p class="text-lg font-semibold text-slate-950">Capacity Thinking</p>
+                      <p lang="zh-Hant" class="text-sm font-medium text-slate-500">容量思考</p>
+                    </div>
+                    <p class="mt-4 text-sm leading-7 text-slate-700 md:text-[15px]">{{ scalingContent.capacity.en }}</p>
+                    <p lang="zh-Hant" class="mt-1 text-sm leading-7 text-slate-500 md:text-[15px]">{{ scalingContent.capacity.zhTw }}</p>
+                  </div>
+
+                  <div class="rounded-[28px] border border-slate-200 bg-slate-950 p-6 text-slate-100 shadow-[0_20px_60px_-45px_rgba(15,23,42,0.85)]">
+                    <div class="space-y-1">
+                      <p class="text-sm font-semibold text-white">Architecture Snapshot</p>
+                      <p lang="zh-Hant" class="text-sm font-medium text-slate-300">架構快照</p>
+                    </div>
+                    <pre class="mt-4 overflow-x-auto rounded-2xl border border-white/10 bg-white/5 p-4 text-xs leading-6 text-slate-100">{{ architectureSnapshot }}</pre>
+                    <p class="mt-4 text-xs leading-6 text-slate-300">{{ scalingContent.snapshotNote.en }}</p>
+                    <p lang="zh-Hant" class="text-xs leading-6 text-slate-400">{{ scalingContent.snapshotNote.zhTw }}</p>
+                  </div>
+                </div>
+
+                <div class="rounded-[28px] border border-slate-200 bg-slate-50/70 p-6">
+                  <div class="space-y-1">
+                    <p class="text-lg font-semibold text-slate-950">Key Takeaways</p>
+                    <p lang="zh-Hant" class="text-sm font-medium text-slate-500">關鍵結論</p>
+                  </div>
+                  <ul class="mt-5 space-y-3">
+                    <li
+                      v-for="point in scalingContent.takeaways"
+                      :key="point.en"
+                      class="rounded-2xl border border-white/80 bg-white px-4 py-4 shadow-sm shadow-slate-100"
+                    >
+                      <p class="text-sm leading-7 text-slate-700">{{ point.en }}</p>
+                      <p lang="zh-Hant" class="mt-1 text-sm leading-7 text-slate-500">{{ point.zhTw }}</p>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <aside class="hidden space-y-4 xl:sticky xl:top-6 xl:block">
+          <div class="rounded-[28px] border border-slate-200/70 bg-white/90 p-5 shadow-[0_24px_60px_-50px_rgba(15,23,42,0.45)] backdrop-blur">
+            <div class="space-y-1">
+              <p class="text-sm font-semibold text-slate-900">Page Map</p>
+              <p lang="zh-Hant" class="text-sm leading-6 text-slate-500">頁面導覽</p>
+            </div>
+            <div class="mt-4 space-y-2">
+              <a
+                v-for="link in sectionLinks"
+                :key="link.id"
+                :href="`#${link.id}`"
+                class="block cursor-pointer rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-3 transition hover:border-sky-300 hover:bg-sky-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+              >
+                <p class="text-sm font-semibold text-slate-800">{{ link.title.en }}</p>
+                <p lang="zh-Hant" class="mt-1 text-sm leading-6 text-slate-500">{{ link.title.zhTw }}</p>
+              </a>
+            </div>
+          </div>
+
+          <div class="rounded-[28px] border border-slate-200/70 bg-white/90 p-5 shadow-[0_24px_60px_-50px_rgba(15,23,42,0.45)] backdrop-blur">
+            <div class="space-y-1">
+              <p class="text-sm font-semibold text-slate-900">System pressure points</p>
+              <p lang="zh-Hant" class="text-sm leading-6 text-slate-500">先看的三個系統壓力</p>
+            </div>
+
+            <div class="mt-4 space-y-3">
+              <div
+                v-for="metric in metricCards"
+                :key="metric.label.en"
+                class="rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-4"
+              >
+                <div class="space-y-1">
+                  <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{{ metric.label.en }}</p>
+                  <p lang="zh-Hant" class="text-sm text-slate-500">{{ metric.label.zhTw }}</p>
+                </div>
+                <div class="mt-3 space-y-1">
+                  <p class="text-lg font-semibold text-slate-950">{{ metric.value.en }}</p>
+                  <p lang="zh-Hant" class="text-sm font-medium text-slate-500">{{ metric.value.zhTw }}</p>
+                </div>
+                <div class="mt-3 space-y-1">
+                  <p class="text-sm leading-7 text-slate-700">{{ metric.description.en }}</p>
+                  <p lang="zh-Hant" class="text-sm leading-7 text-slate-500">{{ metric.description.zhTw }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="rounded-[28px] border border-slate-200/70 bg-slate-950 p-5 text-slate-50 shadow-[0_24px_60px_-50px_rgba(15,23,42,0.7)]">
+            <div class="space-y-1">
+              <p class="text-sm font-semibold text-white">How to read this page</p>
+              <p lang="zh-Hant" class="text-sm leading-6 text-slate-300">閱讀建議</p>
+            </div>
             <div class="mt-4 space-y-4">
               <div
                 v-for="item in heroChecklist"
-                :key="item.en"
+                :key="`${item.en}-aside`"
                 class="space-y-1 border-b border-white/10 pb-4 last:border-b-0 last:pb-0"
               >
                 <p class="text-sm font-medium leading-6 text-slate-100">{{ item.en }}</p>
@@ -557,467 +1118,8 @@ const scalingContent = {
               </div>
             </div>
           </div>
-        </div>
+        </aside>
       </div>
-
-      <div class="grid gap-4 md:grid-cols-3">
-        <a-card
-          v-for="metric in metricCards"
-          :key="metric.label.en"
-          class="h-full rounded-2xl shadow-sm"
-          size="small"
-        >
-          <div class="space-y-3">
-            <div class="space-y-1">
-              <p class="text-sm font-medium text-slate-500">{{ metric.label.en }}</p>
-               <p lang="zh-Hant" class="text-sm text-slate-500">{{ metric.label.zhTw }}</p>
-            </div>
-            <div class="space-y-1">
-              <p class="text-xl font-semibold text-slate-900">{{ metric.value.en }}</p>
-              <p lang="zh-Hant" class="text-sm font-medium text-slate-500">{{ metric.value.zhTw }}</p>
-            </div>
-            <div class="space-y-1">
-              <p class="text-sm leading-7 text-slate-700">{{ metric.description.en }}</p>
-              <p lang="zh-Hant" class="text-sm leading-7 text-slate-500">{{ metric.description.zhTw }}</p>
-            </div>
-          </div>
-        </a-card>
-      </div>
-    </section>
-
-    <section
-      id="summary"
-      class="space-y-4"
-    >
-      <div class="space-y-2">
-        <p class="text-sm font-semibold uppercase tracking-wide text-blue-600">Executive Summary</p>
-        <h2 class="text-2xl font-semibold text-slate-900">Read the system in one pass</h2>
-        <p class="max-w-4xl text-sm leading-7 text-slate-700">
-          Use this section to understand the problem framing, the page structure, and the three decisions that
-          drive the rest of the design.
-        </p>
-        <p lang="zh-Hant" class="max-w-4xl text-sm leading-7 text-slate-500">
-          這一節的目的是先讓你快速抓到問題定義、頁面結構，以及驅動整份設計的三個核心決策。
-        </p>
-      </div>
-
-      <a-card class="rounded-2xl shadow-sm">
-        <div class="space-y-4">
-          <div class="space-y-1">
-            <p class="text-sm font-semibold text-slate-900">Page Map</p>
-            <p lang="zh-Hant" class="text-sm leading-6 text-slate-500">頁面導覽</p>
-          </div>
-
-          <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            <a
-              v-for="link in sectionLinks"
-              :key="link.id"
-              :href="`#${link.id}`"
-              class="block cursor-pointer rounded-2xl border border-slate-200 p-4 transition hover:border-blue-300 hover:bg-blue-50/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-            >
-              <p class="text-sm font-semibold text-slate-800">{{ link.title.en }}</p>
-              <p lang="zh-Hant" class="mt-1 text-sm leading-6 text-slate-500">{{ link.title.zhTw }}</p>
-            </a>
-          </div>
-        </div>
-      </a-card>
-
-      <div class="grid gap-4 lg:grid-cols-2">
-        <a-card
-          v-for="card in summaryCards"
-          :key="card.title.en"
-          class="h-full rounded-2xl shadow-sm"
-        >
-          <template #title>
-            <div class="space-y-1">
-              <p class="text-base font-semibold text-slate-900">{{ card.title.en }}</p>
-              <p lang="zh-Hant" class="text-sm font-medium text-slate-500">{{ card.title.zhTw }}</p>
-            </div>
-          </template>
-
-          <div
-            v-if="'body' in card"
-            class="space-y-2"
-          >
-            <p class="text-sm leading-7 text-slate-700">{{ card.body.en }}</p>
-            <p lang="zh-Hant" class="text-sm leading-7 text-slate-500">{{ card.body.zhTw }}</p>
-          </div>
-
-          <ul
-            v-else
-            class="space-y-3"
-          >
-            <li
-              v-for="point in card.points"
-              :key="point.en"
-              class="rounded-xl bg-slate-50 p-4"
-            >
-              <p class="text-sm leading-7 text-slate-700">{{ point.en }}</p>
-              <p lang="zh-Hant" class="mt-1 text-sm leading-7 text-slate-500">{{ point.zhTw }}</p>
-            </li>
-          </ul>
-        </a-card>
-      </div>
-    </section>
-
-    <section
-      id="requirements"
-      class="space-y-4"
-    >
-      <div class="space-y-2">
-        <p class="text-sm font-semibold uppercase tracking-wide text-blue-600">Requirements</p>
-        <h2 class="text-2xl font-semibold text-slate-900">Separate what the system must do from how well it must do it</h2>
-        <p class="max-w-4xl text-sm leading-7 text-slate-700">
-          The functional requirements define the product surface, while the non-functional requirements set the
-          real design pressure around availability, latency, and scale.
-        </p>
-        <p lang="zh-Hant" class="max-w-4xl text-sm leading-7 text-slate-500">
-          功能需求決定產品表面長相，非功能需求則決定真正的設計壓力：可用性、延遲與擴充規模。
-        </p>
-      </div>
-
-      <div class="grid gap-4 xl:grid-cols-2">
-        <a-card
-          v-for="section in requirements"
-          :key="section.title.en"
-          class="rounded-2xl shadow-sm"
-        >
-          <template #title>
-            <div class="space-y-1">
-              <p class="text-base font-semibold text-slate-900">{{ section.title.en }}</p>
-              <p lang="zh-Hant" class="text-sm font-medium text-slate-500">{{ section.title.zhTw }}</p>
-            </div>
-          </template>
-
-          <ul class="space-y-3">
-            <li
-              v-for="point in section.points"
-              :key="point.en"
-              class="rounded-xl bg-slate-50 p-4"
-            >
-              <p class="text-sm leading-7 text-slate-700">{{ point.en }}</p>
-              <p lang="zh-Hant" class="mt-1 text-sm leading-7 text-slate-500">{{ point.zhTw }}</p>
-            </li>
-          </ul>
-        </a-card>
-      </div>
-    </section>
-
-    <section
-      id="api-design"
-      class="space-y-4"
-    >
-      <div class="space-y-2">
-        <p class="text-sm font-semibold uppercase tracking-wide text-blue-600">API Design</p>
-        <h2 class="text-2xl font-semibold text-slate-900">Small API surface, high operational impact</h2>
-        <p class="max-w-4xl text-sm leading-7 text-slate-700">
-          The API list is short, but each endpoint carries important behavior around uniqueness, cache invalidation,
-          static asset delivery, and redirect freshness.
-        </p>
-        <p lang="zh-Hant" class="max-w-4xl text-sm leading-7 text-slate-500">
-          API 面向看起來不多，但每個端點都帶著關鍵行為：唯一性、快取失效、靜態資產傳遞，以及 redirect 的新鮮度。
-        </p>
-      </div>
-
-      <a-card class="rounded-2xl shadow-sm">
-        <template #title>
-          <div class="space-y-1">
-            <p class="text-base font-semibold text-slate-900">API Design</p>
-            <p lang="zh-Hant" class="text-sm font-medium text-slate-500">API 設計</p>
-          </div>
-        </template>
-
-        <div class="grid gap-4 xl:grid-cols-2">
-          <a-card
-            v-for="endpoint in apiEndpoints"
-            :key="`${endpoint.method}-${endpoint.path}`"
-            class="h-full rounded-2xl border border-slate-200"
-            size="small"
-          >
-            <div class="space-y-4">
-              <div class="flex flex-wrap items-center gap-2">
-                <a-tag
-                  :color="endpoint.method === 'GET'
-                    ? 'blue'
-                    : endpoint.method === 'POST'
-                      ? 'green'
-                      : endpoint.method === 'PUT'
-                        ? 'orange'
-                        : 'red'"
-                >
-                  {{ endpoint.method }}
-                </a-tag>
-                <code class="rounded bg-slate-100 px-2 py-1 text-xs text-slate-700">
-                  {{ endpoint.path }}
-                </code>
-              </div>
-
-              <div class="space-y-1">
-                <p class="text-sm font-medium leading-7 text-slate-800">{{ endpoint.summary.en }}</p>
-                <p lang="zh-Hant" class="text-sm leading-7 text-slate-500">{{ endpoint.summary.zhTw }}</p>
-              </div>
-
-              <div
-                v-if="endpoint.requestExample"
-                class="overflow-x-auto rounded-2xl bg-slate-950 p-4 text-xs leading-6 text-slate-100"
-              >
-                <p class="mb-1 text-slate-300">Request</p>
-                <p lang="zh-Hant" class="mb-2 text-slate-400">請求範例</p>
-                <pre>{{ endpoint.requestExample }}</pre>
-              </div>
-
-              <div
-                v-if="endpoint.responseExample"
-                class="overflow-x-auto rounded-2xl bg-slate-950 p-4 text-xs leading-6 text-slate-100"
-              >
-                <p class="mb-1 text-slate-300">Response</p>
-                <p lang="zh-Hant" class="mb-2 text-slate-400">回應範例</p>
-                <pre>{{ endpoint.responseExample }}</pre>
-              </div>
-
-              <ul class="space-y-3">
-                <li
-                  v-for="note in endpoint.notes"
-                  :key="note.en"
-                  class="rounded-xl bg-slate-50 p-4"
-                >
-                  <p class="text-sm leading-7 text-slate-700">{{ note.en }}</p>
-                  <p lang="zh-Hant" class="mt-1 text-sm leading-7 text-slate-500">{{ note.zhTw }}</p>
-                </li>
-              </ul>
-            </div>
-          </a-card>
-        </div>
-      </a-card>
-    </section>
-
-    <section
-      id="flows"
-      class="space-y-4"
-    >
-      <div class="space-y-2">
-        <p class="text-sm font-semibold uppercase tracking-wide text-blue-600">Core Flows</p>
-        <h2 class="text-2xl font-semibold text-slate-900">Follow the write path and the read path separately</h2>
-        <p class="max-w-4xl text-sm leading-7 text-slate-700">
-          These flows show where validation, storage, caching, and redirect behavior matter most.
-        </p>
-        <p lang="zh-Hant" class="max-w-4xl text-sm leading-7 text-slate-500">
-          這兩條流程分別標出驗證、儲存、快取與 redirect 行為最重要的節點。
-        </p>
-      </div>
-
-      <div class="grid gap-4 xl:grid-cols-2">
-        <a-card
-          v-for="flow in flows"
-          :key="flow.title.en"
-          class="rounded-2xl shadow-sm"
-        >
-          <template #title>
-            <div class="space-y-1">
-              <p class="text-base font-semibold text-slate-900">{{ flow.title.en }}</p>
-              <p lang="zh-Hant" class="text-sm font-medium text-slate-500">{{ flow.title.zhTw }}</p>
-            </div>
-          </template>
-
-          <p class="mb-4 rounded-xl bg-amber-50 px-4 py-3 text-sm leading-7 text-amber-800">
-            <span class="font-medium">{{ flow.emphasis.en }}</span>
-            <span lang="zh-Hant" class="mt-1 block text-amber-700">{{ flow.emphasis.zhTw }}</span>
-          </p>
-
-          <ol class="space-y-3">
-            <li
-              v-for="step in flow.steps"
-              :key="step.en"
-              class="rounded-xl bg-slate-50 p-4"
-            >
-              <p class="text-sm leading-7 text-slate-700">{{ step.en }}</p>
-              <p lang="zh-Hant" class="mt-1 text-sm leading-7 text-slate-500">{{ step.zhTw }}</p>
-            </li>
-          </ol>
-        </a-card>
-      </div>
-
-      <a-card class="rounded-2xl shadow-sm">
-        <template #title>
-          <div class="space-y-1">
-            <p class="text-base font-semibold text-slate-900">{{ redirectComparison.title.en }}</p>
-            <p lang="zh-Hant" class="text-sm font-medium text-slate-500">{{ redirectComparison.title.zhTw }}</p>
-          </div>
-        </template>
-
-        <div class="grid gap-4 md:grid-cols-2">
-          <div class="rounded-2xl border border-slate-200 p-5">
-            <div class="space-y-1">
-              <h3 class="text-base font-semibold text-slate-900">{{ redirectComparison.permanent.title.en }}</h3>
-              <p lang="zh-Hant" class="text-sm font-medium text-slate-500">{{ redirectComparison.permanent.title.zhTw }}</p>
-            </div>
-            <div class="mt-3 space-y-1">
-              <p class="text-sm leading-7 text-slate-700">{{ redirectComparison.permanent.body.en }}</p>
-              <p lang="zh-Hant" class="text-sm leading-7 text-slate-500">{{ redirectComparison.permanent.body.zhTw }}</p>
-            </div>
-          </div>
-
-          <div class="rounded-2xl border border-blue-200 bg-blue-50 p-5">
-            <div class="space-y-1">
-              <h3 class="text-base font-semibold text-blue-900">{{ redirectComparison.temporary.title.en }}</h3>
-              <p lang="zh-Hant" class="text-sm font-medium text-blue-700">{{ redirectComparison.temporary.title.zhTw }}</p>
-            </div>
-            <div class="mt-3 space-y-1">
-              <p class="text-sm leading-7 text-blue-900">{{ redirectComparison.temporary.body.en }}</p>
-              <p lang="zh-Hant" class="text-sm leading-7 text-blue-700">{{ redirectComparison.temporary.body.zhTw }}</p>
-            </div>
-          </div>
-        </div>
-      </a-card>
-    </section>
-
-    <section
-      id="deep-dives"
-      class="space-y-4"
-    >
-      <div class="space-y-2">
-        <p class="text-sm font-semibold uppercase tracking-wide text-blue-600">Deep Dives</p>
-        <h2 class="text-2xl font-semibold text-slate-900">Focus on the questions that decide long-term operability</h2>
-        <p class="max-w-4xl text-sm leading-7 text-slate-700">
-          These are the design questions that usually determine whether the service stays fast, correct, and
-          maintainable at scale.
-        </p>
-        <p lang="zh-Hant" class="max-w-4xl text-sm leading-7 text-slate-500">
-          這些問題通常決定服務在大規模下，是否仍能維持速度、正確性與可維運性。
-        </p>
-      </div>
-
-      <div class="grid gap-4">
-        <a-card
-          v-for="section in deepDives"
-          :key="section.title.en"
-          class="rounded-2xl shadow-sm"
-        >
-          <template #title>
-            <div class="space-y-1">
-              <p class="text-base font-semibold text-slate-900">{{ section.title.en }}</p>
-              <p lang="zh-Hant" class="text-sm font-medium text-slate-500">{{ section.title.zhTw }}</p>
-            </div>
-          </template>
-
-          <div class="grid gap-4 xl:grid-cols-[1.2fr_1fr]">
-            <div class="space-y-4">
-              <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <div class="space-y-1">
-                  <p class="text-sm font-semibold text-slate-900">Problem</p>
-                  <p lang="zh-Hant" class="text-sm font-medium text-slate-500">問題</p>
-                </div>
-                <p class="mt-3 text-sm leading-7 text-slate-700">{{ section.problem.en }}</p>
-                <p lang="zh-Hant" class="mt-1 text-sm leading-7 text-slate-500">{{ section.problem.zhTw }}</p>
-              </div>
-
-              <div class="rounded-2xl border border-slate-200 p-4">
-                <div class="space-y-1">
-                  <p class="text-sm font-semibold text-slate-900">Design Decisions</p>
-                  <p lang="zh-Hant" class="text-sm font-medium text-slate-500">設計決策</p>
-                </div>
-                <ul class="mt-3 space-y-3">
-                  <li
-                    v-for="item in section.decisions"
-                    :key="item.en"
-                    class="rounded-xl bg-slate-50 p-4"
-                  >
-                    <p class="text-sm leading-7 text-slate-700">{{ item.en }}</p>
-                    <p lang="zh-Hant" class="mt-1 text-sm leading-7 text-slate-500">{{ item.zhTw }}</p>
-                  </li>
-                </ul>
-              </div>
-            </div>
-
-            <div class="rounded-2xl border border-slate-200 p-4">
-              <div class="space-y-1">
-                <p class="text-sm font-semibold text-slate-900">Trade-offs</p>
-                <p lang="zh-Hant" class="text-sm font-medium text-slate-500">取捨</p>
-              </div>
-              <ul class="mt-3 space-y-3">
-                <li
-                  v-for="item in section.tradeoffs"
-                  :key="item.en"
-                  class="rounded-xl bg-slate-50 p-4"
-                >
-                  <p class="text-sm leading-7 text-slate-700">{{ item.en }}</p>
-                  <p lang="zh-Hant" class="mt-1 text-sm leading-7 text-slate-500">{{ item.zhTw }}</p>
-                </li>
-              </ul>
-            </div>
-          </div>
-        </a-card>
-      </div>
-    </section>
-
-    <section
-      id="scaling"
-      class="space-y-4"
-    >
-      <div class="space-y-2">
-        <p class="text-sm font-semibold uppercase tracking-wide text-blue-600">Scaling / Decisions</p>
-        <h2 class="text-2xl font-semibold text-slate-900">Scale planning starts from the redirect path</h2>
-        <p class="max-w-4xl text-sm leading-7 text-slate-700">
-          This system is read-heavy, so scale planning begins with redirect traffic, cache hit rates, and static
-          asset delivery rather than with the QR image generator itself.
-        </p>
-        <p lang="zh-Hant" class="max-w-4xl text-sm leading-7 text-slate-500">
-          這個系統屬於讀多寫少，因此擴容思考要從 redirect 流量、快取命中率與靜態資產傳遞開始，而不是從產圖服務本身開始。
-        </p>
-      </div>
-
-      <a-card class="rounded-2xl shadow-sm">
-        <template #title>
-          <div class="space-y-1">
-            <p class="text-base font-semibold text-slate-900">Scaling / Key Decisions</p>
-            <p lang="zh-Hant" class="text-sm font-medium text-slate-500">擴充 / 關鍵決策</p>
-          </div>
-        </template>
-
-        <div class="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-          <div class="space-y-4">
-            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <div class="space-y-1">
-                <p class="text-sm font-semibold text-slate-900">Capacity Thinking</p>
-                <p lang="zh-Hant" class="text-sm font-medium text-slate-500">容量思考</p>
-              </div>
-              <p class="mt-3 text-sm leading-7 text-slate-700">{{ scalingContent.capacity.en }}</p>
-              <p lang="zh-Hant" class="mt-1 text-sm leading-7 text-slate-500">{{ scalingContent.capacity.zhTw }}</p>
-            </div>
-
-            <div class="overflow-x-auto rounded-2xl bg-slate-950 p-4 text-xs leading-6 text-slate-100">
-              <p class="mb-1 text-slate-300">Architecture Snapshot</p>
-              <p lang="zh-Hant" class="mb-2 text-slate-400">架構快照</p>
-              <pre>Client -> QR Image / CDN
-            -> https://myqrcode.com/{qr_token}
-            -> App Server (stateless)
-            -> Cache (hot mappings)
-            -> DB / Read Replicas
-            -> Original URL
-            -> 302 Redirect</pre>
-              <p class="mt-3 text-xs leading-6 text-slate-300">{{ scalingContent.snapshotNote.en }}</p>
-              <p lang="zh-Hant" class="text-xs leading-6 text-slate-400">{{ scalingContent.snapshotNote.zhTw }}</p>
-            </div>
-          </div>
-
-          <div class="rounded-2xl border border-slate-200 p-4">
-            <div class="space-y-1">
-              <p class="text-sm font-semibold text-slate-900">Key Takeaways</p>
-              <p lang="zh-Hant" class="text-sm font-medium text-slate-500">關鍵結論</p>
-            </div>
-            <ul class="mt-3 space-y-3">
-              <li
-                v-for="point in scalingContent.takeaways"
-                :key="point.en"
-                class="rounded-xl bg-slate-50 p-4"
-              >
-                <p class="text-sm leading-7 text-slate-700">{{ point.en }}</p>
-                <p lang="zh-Hant" class="mt-1 text-sm leading-7 text-slate-500">{{ point.zhTw }}</p>
-              </li>
-            </ul>
-          </div>
-        </div>
-      </a-card>
-    </section>
+    </div>
   </div>
 </template>
