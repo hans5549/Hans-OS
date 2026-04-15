@@ -128,9 +128,8 @@ if [[ -n "$missing_steps" ]]; then
   while IFS= read -r step; do
     [[ -z "$step" ]] && continue
     case "$step" in
-      simplifier) step_list="$step_list\n  [ ] Code Simplifier (@code-simplifier)" ;;
-      codeReviewer) step_list="$step_list\n  [ ] Code Review (@code-review)" ;;
-      securityReviewer) step_list="$step_list\n  [ ] Security Review (@security-scanner)" ;;
+      codeReview) step_list="$step_list\n  [ ] Combined Code Review (@code-simplifier + @code-review + @security-scanner)" ;;
+      linusReview) step_list="$step_list\n  [ ] Linus Review (@linus-reviewer)" ;;
     esac
   done <<< "$missing_steps"
 

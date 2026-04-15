@@ -33,9 +33,8 @@ if [[ -f "$STATE_FILE" ]]; then
   local_mod_count=$(echo "$state" | jq '.modifiedFiles | length')
   if [[ "$local_mod_count" -eq 0 ]]; then
     state=$(echo "$state" | jq '
-      .completedSteps.simplifier = false |
-      .completedSteps.codeReviewer = false |
-      .completedSteps.securityReviewer = false |
+      .completedSteps.codeReview = false |
+      .completedSteps.linusReview = false |
       .completedSteps.buildPassed = false |
       .lineChangeSinceReview = 0 |
       .buildRetryCount = 0
@@ -52,25 +51,17 @@ log "━━━━━━━━━━━━━━━━━━━━━━━━━
 log " WORKFLOW AUTOMATION ACTIVE"
 log "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 log ""
-log " Coding: Simplifier → [Code Review + Security] → Linus → Build → Commit"
+log " Coding: Combined Review → Linus → Build → Commit"
 log " Planning: CEO Review → Eng Review → Linus Review"
 log " Commands: workflow status | workflow reset | commit this | merge this"
 
-# ── Worktree detection ──────────────────────────────────────────────────────
+# ── Branch detection ─────────────────────────────────────────────────────────
 
 current_branch=$(git branch --show-current 2>/dev/null || echo "unknown")
-git_dir=$(git rev-parse --git-dir 2>/dev/null || echo "")
-is_worktree=false
-
-if echo "$git_dir" | grep -q "worktrees"; then
-  is_worktree=true
-fi
 
 if [[ "$current_branch" == "main" || "$current_branch" == "master" ]]; then
-  log " ⚠️  你在 main 分支上。程式變更請先建立 worktree："
-  log "    git worktree add ../Hans-OS-<branch> -b feature/<name>"
-elif [[ "$is_worktree" == "true" ]]; then
-  log " ✅ Worktree: $current_branch"
+  log " ⚠️  你在 main 分支上。程式變更請先建立 feature branch："
+  log "    git checkout -b feature/<name>"
 else
   log " 📌 Branch: $current_branch"
 fi
@@ -110,7 +101,7 @@ if [[ -f "$STATE_FILE" ]]; then
 
     done_steps=""
     pending_steps=""
-    for entry in "simplifier:Simplifier" "codeReviewer:Code Review" "securityReviewer:Security" "buildPassed:Build"; do
+    for entry in "codeReview:Combined Code Review" "linusReview:Linus Review" "buildPassed:Build"; do
       key="${entry%%:*}"
       name="${entry#*:}"
       val=$(echo "$state" | jq -r --arg k "$key" '.completedSteps[$k]')

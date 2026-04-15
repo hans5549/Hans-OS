@@ -98,44 +98,27 @@ try {
   // Mark buildPassed step complete for workflow status accuracy
   try { completeStep('buildPassed'); } catch { /* non-critical */ }
 
-  // Reset retry count on success + record edit history
+  // Reset retry count on success
   try {
     const state = getWorkflowState();
     if (state.buildRetryCount > 0) {
       state.buildRetryCount = 0;
+      setWorkflowState(state);
     }
-    // Record successful edit
-    if (!Array.isArray(state.editHistory)) state.editHistory = [];
-    state.editHistory.push({ file: filePath, time: Date.now(), buildOk: true });
-    if (state.editHistory.length > 10) state.editHistory = state.editHistory.slice(-10);
-    setWorkflowState(state);
   } catch { /* non-critical */ }
 } catch (err) {
   let output = (err.stdout || '') + (err.stderr || '');
   if (output.length > 600) output = output.substring(0, 600) + '...';
   log(`[Build] FAILED (${buildType}):\n${output}`);
 
-  // Increment retry count + Strike tracking
+  // Increment retry count + Strike warnings
   try {
     const state = getWorkflowState();
     state.buildRetryCount = (state.buildRetryCount || 0) + 1;
 
-    // Record failed edit
-    if (!Array.isArray(state.editHistory)) state.editHistory = [];
-    state.editHistory.push({ file: filePath, time: Date.now(), buildOk: false });
-    if (state.editHistory.length > 10) state.editHistory = state.editHistory.slice(-10);
-
-    // Count consecutive failures on the same file
-    const recentFails = [];
-    for (let i = state.editHistory.length - 1; i >= 0; i--) {
-      const entry = state.editHistory[i];
-      if (entry.file === filePath && !entry.buildOk) recentFails.push(entry);
-      else break;
-    }
-
-    if (recentFails.length === 3) {
+    if (state.buildRetryCount === 3) {
       log('');
-      log('━━━━ Strike 2: Same file failed build 3 times ━━━━');
+      log('━━━━ Strike 2: Build failed 3 times ━━━━');
       log('Current approach may have a fundamental problem:');
       log('  1. STOP — analyze why the fixes are not working');
       log('  2. Try a completely different approach');
@@ -143,9 +126,9 @@ try {
       log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     }
 
-    if (recentFails.length >= 5) {
+    if (state.buildRetryCount >= 5) {
       log('');
-      log('━━━━ Strike 3: Same file failed build 5+ times ━━━━');
+      log('━━━━ Strike 3: Build failed 5+ times ━━━━');
       log('Escalation threshold reached:');
       log('  1. STOP — do not retry the same direction');
       log('  2. Re-read relevant source (something may be missed)');
@@ -154,13 +137,6 @@ try {
     }
 
     setWorkflowState(state);
-
-    if (state.buildRetryCount >= 5) {
-      log('');
-      log('[Build] WARNING: Build has failed 5+ times consecutively.');
-      log('[Build] STOP retrying. Analyze the root cause and report to the user.');
-      log('');
-    }
   } catch { /* non-critical */ }
 } finally {
   try { rmdirSync(LOCK_DIR); } catch { /* ignore */ }

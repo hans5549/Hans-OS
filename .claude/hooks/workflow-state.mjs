@@ -33,20 +33,15 @@ function getDefaultState() {
       engReview: false,
       planLinusReview: false,
       // Coding phase
-      simplifier: false,
+      codeReview: false,
+      linusReview: false,
       buildPassed: false,
-      codeReviewer: false,
-      securityReviewer: false,
     },
     buildRetryCount: 0,
     lastModified: '',
     sessionId: '',
     currentPlanFile: '',
-    editHistory: [],
-    // Track cumulative line changes since last review
     lineChangeSinceReview: 0,
-    // Worktree merge-back flow
-    mergeBackPending: false,
   };
 }
 
@@ -88,10 +83,8 @@ export function getWorkflowState() {
     }
 
     // Ensure other fields exist
-    if (!Array.isArray(state.editHistory)) state.editHistory = [];
     if (state.currentPlanFile === undefined) state.currentPlanFile = '';
     if (state.lineChangeSinceReview === undefined) state.lineChangeSinceReview = 0;
-    if (state.mergeBackPending === undefined) state.mergeBackPending = false;
 
     return state;
   } catch {
@@ -143,21 +136,19 @@ export function addModifiedFile(filePath, lineCount = 0) {
   if (isCodeFile(filePath)) {
     state.lineChangeSinceReview = (state.lineChangeSinceReview || 0) + lineCount;
 
-    if (state.completedSteps.simplifier) {
-      // Simplifier already done → only reset post-simplifier steps
-      // Small changes (< 10 lines cumulative) → warn but don't reset
+    if (state.completedSteps.codeReview) {
+      // Code review done → small changes (< 10 lines) warn but preserve
       if (state.lineChangeSinceReview >= 10) {
-        state.completedSteps.codeReviewer = false;
-        state.completedSteps.securityReviewer = false;
+        state.completedSteps.codeReview = false;
+        state.completedSteps.linusReview = false;
         state.completedSteps.buildPassed = false;
         state.lineChangeSinceReview = 0;
       }
     } else {
-      // Simplifier not done → reset all coding review steps
-      state.completedSteps.simplifier = false;
+      // Code review not done → reset all coding steps
+      state.completedSteps.codeReview = false;
+      state.completedSteps.linusReview = false;
       state.completedSteps.buildPassed = false;
-      state.completedSteps.codeReviewer = false;
-      state.completedSteps.securityReviewer = false;
     }
   }
 
@@ -169,7 +160,7 @@ export function addModifiedFile(filePath, lineCount = 0) {
 
 const VALID_STEPS = [
   'planner', 'ceoReview', 'engReview', 'planLinusReview',
-  'simplifier', 'buildPassed', 'codeReviewer', 'securityReviewer',
+  'codeReview', 'linusReview', 'buildPassed',
 ];
 
 export function completeStep(stepName) {
@@ -179,7 +170,7 @@ export function completeStep(stepName) {
   const state = getWorkflowState();
   state.completedSteps[stepName] = true;
   // Reset cumulative line counter when review completes
-  if (['codeReviewer', 'securityReviewer'].includes(stepName)) {
+  if (stepName === 'codeReview') {
     state.lineChangeSinceReview = 0;
   }
   setWorkflowState(state);
@@ -206,7 +197,7 @@ export function resetWorkflowState() {
 
 export function getCodingMissingSteps() {
   const state = getWorkflowState();
-  const required = ['simplifier', 'codeReviewer', 'securityReviewer'];
+  const required = ['codeReview', 'linusReview'];
   return required.filter((step) => !state.completedSteps[step]);
 }
 
@@ -219,19 +210,6 @@ export function getPlanningMissingSteps() {
 export function hasCodeFiles() {
   const state = getWorkflowState();
   return state.modifiedFiles.some((f) => isCodeFile(f));
-}
-
-// ── Merge-back helpers ───────────────────────────────────────────────
-
-export function resetCodingStepsOnly() {
-  const state = getWorkflowState();
-  state.completedSteps.simplifier = false;
-  state.completedSteps.codeReviewer = false;
-  state.completedSteps.securityReviewer = false;
-  state.completedSteps.buildPassed = false;
-  state.lineChangeSinceReview = 0;
-  setWorkflowState(state);
-  return state;
 }
 
 // ── Display ────────────────────────────────────────────────────────────────
@@ -274,21 +252,14 @@ export function showWorkflowStatus() {
 
   log('  -- Coding Phase --');
   const codeSteps = [
-    { key: 'simplifier', name: 'Code Simplifier' },
+    { key: 'codeReview', name: 'Combined Code Review' },
+    { key: 'linusReview', name: 'Linus Review' },
     { key: 'buildPassed', name: 'Build Passed' },
-    { key: 'codeReviewer', name: 'Code Review' },
-    { key: 'securityReviewer', name: 'Security Review' },
   ];
   for (const { key, name } of codeSteps) {
     const done = state.completedSteps[key];
     const icon = done ? '[x]' : '[ ]';
     log(`  ${icon} ${name}`);
-  }
-
-  if (state.mergeBackPending) {
-    log('');
-    log('  -- Merge-Back --');
-    log('  [!] Merge-back pending — run "worktree merge-back" after reviews pass');
   }
 
   if (state.currentPlanFile) {

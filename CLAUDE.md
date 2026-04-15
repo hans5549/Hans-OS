@@ -111,28 +111,25 @@ Monorepo with backend API + frontend SPA. Full details in `.claude/ARCHITECTURE.
 
 ---
 
-## Workflow (Automated)
+## Workflow (Automated + Task-based TDD)
 
-Pipeline enforced by hooks. Not all changes need all phases — see skip rules below.
+Pipeline enforced by hooks. Code changes require feature branch + plan mode, actual execution is task-driven and test-first.
 
 ```
-接到需求 → 建立 Worktree → 腦力激盪 (optional) → 計畫模式 (required)
-  → 實作程式碼 → 審查管線 → 合併回主線 → 刪除 Worktree
+接到需求 → 建立 Feature Branch → 腦力激盪 (optional) → 計畫模式 (required)
+  → 依 phase 執行任務（TDD: RED → GREEN → REFACTOR）
+  → 任務審查管線 → 合併回主線（含 checkpoint 驗證）→ 刪除 Branch
 ```
 
-### Git Worktree (Required for Code Changes)
+### Git Branch (Required for Code Changes)
 
-程式變更**必須**在 git worktree 上開發，不可直接在 main 上作業。
+程式變更**不可**直接在 main 上作業，必須建立 feature branch。
 
 ```bash
-# 建立 feature branch 的 worktree
-git worktree add ../Hans-OS-<branch-name> -b <branch-name>
-cd ../Hans-OS-<branch-name>
+git checkout -b feature/<name>
 ```
 
 - 分支命名：`feature/add-xxx`、`fix/xxx-error`、`refactor/xxx`
-- Worktree 放在上層目錄，避免巢狀
-- 建立後自動執行 `dotnet restore` + `pnpm install`（hook 強制）
 
 ### Phase 1: Brainstorming (Skill, optional)
 
@@ -155,73 +152,82 @@ Dispatch all 3 **in parallel** (one message, multiple Agent tool calls).
 
 **Review Conflict Resolution**: When CEO review and Linus review conflict (e.g., CEO suggests expansion, Linus flags over-engineering), do NOT auto-resolve. Present both positions to the user for decision.
 
-### Phase 3: Coding Phase (hooks enforced)
+### Phase 3: Task Execution (TDD required)
+
+每個程式任務都必須依目前 phase 順序完成，不可跳到後續 phase，也不可把多個需求混在同一個 commit。
+
+1. 從 `plan.md`、track plan 或目前工作清單中選出當前 phase 的下一個 pending task
+2. 先把 task 標成進行中（例如 `[~]` 或 `in_progress`），再開始修改程式
+3. **RED**：先寫會失敗的測試。Bug fix 必須先重現 bug；重構必須先補 characterization tests
+4. **GREEN**：只寫讓測試通過所需的最小程式碼
+5. **REFACTOR**：在維持綠燈的前提下整理命名、抽取重複、降低巢狀與方法長度
+6. **Task Verification**：相關測試必須通過；若工具鏈支援，目標是變更模組覆蓋率 >= 80%；任何偏離計畫、額外依賴或 scope 變動都要回寫計畫
+
+只有純文件、純註解、純環境設定且不改 runtime 行為的變更，才可跳過 RED/GREEN；若是行為變更，必須有測試。
+
+### Phase 4: Task Review Pipeline (hooks enforced)
 
 ```
-Simplifier (gpt-5.4) → [Code Review + Security] parallel (gpt-5.4) → Linus (gpt-5.4) → Build → Commit
+[Combined Code Review] all 3 parallel (gpt-5.4) → Linus (gpt-5.4) → Build → Task Commit
 ```
 
-| Step | Agent | Model | Completion Signal |
-|------|-------|-------|-------------------|
-| Code Simplifier | `code-simplifier:code-simplifier` | `gpt-5.4` | auto-completed by hook |
-| Code Review | `code-review-specialist` | `gpt-5.4` | auto-completed by hook |
-| Security Review | `security-vuln-scanner` | `gpt-5.4` | auto-completed by hook |
-| Linus Review | `linus-reviewer` | `gpt-5.4` | after CR + Security |
+| Step | Agents | Model | Completion Signal |
+|------|--------|-------|-------------------|
+| Combined Code Review | `code-simplifier` + `code-review-specialist` + `security-vuln-scanner` | `gpt-5.4` | auto-completed by hook (any of the 3 agents marks step done) |
+| Linus Review | `linus-reviewer` | `gpt-5.4` | after Combined Code Review |
 | Build | Auto-verified on commit | — | Automatic |
 
-**Dispatch pattern**: After simplifier completes, dispatch Code Review + Security **in parallel** (one message, multiple Agent tool calls). After both complete, dispatch Linus Review. Do not dispatch sequentially.
+**Dispatch pattern**: Dispatch all 3 Code Review agents **in parallel** (one message, multiple Agent tool calls). After all complete, dispatch Linus Review. Do not dispatch sequentially.
 
-### Phase 4: Merge Back to Main
+**Task commit rule**: 單一 task 完成後才能 commit；commit 前要確認 TDD 步驟、review pipeline、build / typecheck / tests 都已完成，且 commit 內容只涵蓋目前 task。
 
-開發完成並通過所有審查後，使用 `merge this` 觸發合併流程：
+### Phase 5: Merge Back to Main
 
-1. 先把 main 合併到 feature branch，確保沒有衝突
-2. `dotnet build` + `dotnet test` + `pnpm check:type`
-3. 確認通過 → 切回 main 執行 `git merge --no-ff`
-4. `git worktree remove` + `git branch -d`
+開發完成後，使用 `merge this` 觸發合併流程。Merge 前自動進行 checkpoint 驗證：
+
+1. 整理自上個 checkpoint 以來的變更檔案與 task 清單
+2. 執行完整驗證：`dotnet test backend/HansOS.slnx`；若有前端型別變更，再執行 `cd frontend && pnpm check:type`
+3. 準備人工驗證清單（使用者流程、回歸風險、邊界案例）
+4. 明確等待使用者 approval，未核准前不可執行 merge
+5. `git merge main` → build/test → `git merge --no-ff` → `git branch -d feature/xxx`
 
 ### Skip Rules (Binary)
 
-| 變更類型 | 定義 | Plan Mode | Plan Review | Coding Phase |
-|----------|------|:---------:|:-----------:|:------------:|
-| 文字變更 | Doc extensions (`.md`, `.txt`, `.rst`, `.yml`, `.yaml`) | Skip | Skip | Skip |
-| 程式變更 | Code extensions (`.cs`, `.vue`, `.ts`, `.tsx`, `.json`, `.css`, `.js`, `.html`, `.csproj`, `.xml`) | Required | All 3 (CEO + Eng + Linus) | All (Simplifier + Code Review + Security + Linus + Build) |
+| 變更類型 | 定義 | Plan Mode | Plan Review | Task TDD | Review Pipeline | Merge |
+|----------|------|:---------:|:-----------:|:--------:|:---------------:|:-----:|
+| 文字變更 | Doc extensions (`.md`, `.txt`, `.rst`, `.yml`, `.yaml`) | Skip | Skip | Skip | Skip | Skip |
+| 程式變更 | Code extensions (`.cs`, `.vue`, `.ts`, `.tsx`, `.json`, `.css`, `.js`, `.html`, `.csproj`, `.xml`) | Required | All 3 (CEO + Eng + Linus) | Required | All (Combined Review + Linus + Build) | Required |
 
 No file-count tiers. Any code change = full pipeline.
 
 ### Smart Reset Rules
 
-- **Simplifier exemption**: After simplifier completes, subsequent code edits only reset post-simplifier steps (Code Review, Security, Linus), NOT simplifier itself.
-- **Small change tolerance**: Cumulative edits < 10 lines after review → warning only, reviews preserved. >= 10 lines → reset.
+- **Small change tolerance**: Cumulative edits < 10 lines after Combined Code Review → warning only, reviews preserved. >= 10 lines → reset all coding review steps.
+- **Code file edits** automatically reset review steps (with tolerance above)
 
 ### Agent Dispatch Rules (MANDATORY)
 
 - You MUST use the Agent tool to dispatch. Do NOT substitute with your own text analysis.
 - The `post-agent-verify` hook verifies Agent tool was actually called — text summaries will NOT mark steps complete.
 - All review agents produce: **concise summary** (max 300 tokens) to main conversation + **full report** to `.claude/reviews/`.
-- Use `/commit-this` or `/review-workflow` slash commands for guided workflow execution.
 
 ### Workflow Commands
 
 | Command | Description |
 |---------|-------------|
-| `workflow status` | View current workflow state and pending steps (含 worktree 資訊) |
+| `workflow status` | View current workflow state, pending steps, current task |
 | `workflow reset` | Reset all workflow state (start fresh) |
 | `workflow skip <step>` | Skip a specific step (not recommended) |
-| `code-review` | Run full review workflow without commit |
-| `commit this` | Run full workflow and create git commit |
-| `merge this` | Merge feature branch back to main and cleanup worktree |
-| `/commit-this` | Full workflow with guided Agent dispatch + git commit |
-| `/review-workflow` | Full review workflow without commit |
-| `/merge-this` | Guided merge flow |
-| `/brainstorming` | Start interactive brainstorming session |
+| `code-review` | Run full review workflow for current task without commit |
+| `commit this` | Run full workflow for current task and create git commit |
+| `merge this` | Merge feature branch back to main (includes checkpoint verification) |
 
 ### Workflow Rules
 
 - **Build FAIL** → fix → Build is automatically re-verified
-- **Code file edits** automatically reset review steps (with smart exemptions above)
+- **Code file edits** automatically reset review steps (with smart tolerance above)
 - Planning steps (CEO/Eng/Linus) auto-reset each new session
-- **Branch-scoped state**: Workflow state keyed by branch name — parallel worktrees have independent state
+- **Task-scoped commits**: 一個 commit 只解決一個 task；若變更跨多個 task，先拆分再提交
 
 ### Tracked File Types
 
@@ -233,32 +239,14 @@ Doc: `.md`, `.txt`, `.rst`, `.yml`, `.yaml` (skip build verification)
 | Rule | Description |
 |------|-------------|
 | Main branch protection | Cannot edit code files on `main`/`master` |
-| Worktree required | Code changes must be on a git worktree (session start detection) |
 | Merge gate | `git merge` to main requires all workflow steps complete + main merged to feature |
 | Protected files | `.github/hooks/` and workflow state files cannot be modified |
 | git add . blocked | Must stage specific files only |
 | Commit gating | Code changes require all review steps complete before commit |
 | Auto-build | `.cs` edits → `dotnet build`; `.vue`/`.ts` edits → `pnpm check:type` |
 | Build strike | 3 fails → warning, 5 fails → stop and report |
-| Auto-setup | `git worktree add` → auto `dotnet restore` + `pnpm install` |
 | Dependency auto-restore | `.csproj` edit → `dotnet restore`; `package.json` edit → `pnpm install` |
 | Migration safety | Cannot delete existing migration files; PascalCase naming enforced |
-
----
-
-## Build & Verification
-
-- After modifying .cs files -> `dotnet build --no-restore -v q`
-- After modifying .vue/.ts/.tsx files -> `cd frontend && pnpm check:type`
-- Build Self-Healing: max 5 retries, then stop and report (enforced by hook)
-- DLL lock -> retry with `--no-incremental`, then tell user which process to close
-
-### Related Skills
-- `/commit-this` — Execute full workflow and commit
-- `/review-workflow` — Execute review workflow without commit
-- `/execute-plan` — Execute a plan immediately
-- `/refactor-plan` — Phased refactoring
-- `/safe-cleanup` — Safe code cleanup
 
 ---
 

@@ -26,7 +26,7 @@ if [[ -f "$STATE_FILE" ]]; then
 
   if [[ "$file_count" -gt 0 ]]; then
     pending=""
-    for entry in "simplifier:Simplifier" "codeReviewer:Code Review" "securityReviewer:Security" "buildPassed:Build"; do
+    for entry in "codeReview:Combined Code Review" "linusReview:Linus Review" "buildPassed:Build"; do
       key="${entry%%:*}"
       name="${entry#*:}"
       val=$(echo "$state" | jq -r --arg k "$key" '.completedSteps[$k]')

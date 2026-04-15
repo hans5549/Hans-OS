@@ -67,9 +67,8 @@ if (existsSync(STATE_FILE)) {
 
     if (files.length > 0) {
       const stepNames = [
-        ['simplifier', 'Simplifier'],
-        ['codeReviewer', 'Review'],
-        ['securityReviewer', 'Security'],
+        ['codeReview', 'Review'],
+        ['linusReview', 'Linus'],
         ['buildPassed', 'Build'],
       ];
 

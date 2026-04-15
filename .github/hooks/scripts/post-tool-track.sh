@@ -3,9 +3,8 @@
 # post-tool-track.sh - postToolUse Hook: Modification Tracker + Smart Reset
 # ============================================================================
 # Tracks file modifications after tool use. Handles Smart Reset logic:
-# - Simplifier exemption: after simplifier done, edits only reset post-simplifier steps
-# - < 10 lines cumulative → warning only, reviews preserved
-# - >= 10 lines → reset codeReviewer + securityReviewer + buildPassed
+# - < 10 lines cumulative after review → warning only, reviews preserved
+# - >= 10 lines → reset codeReview + linusReview + buildPassed
 # ============================================================================
 
 set -euo pipefail

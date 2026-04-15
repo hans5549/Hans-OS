@@ -113,13 +113,6 @@ else
   # Build failed — increment retry count
   state=$(echo "$state" | jq '.buildRetryCount = (.buildRetryCount // 0) + 1')
 
-  # Record in editHistory
-  NOW=$(date +%s)000
-  state=$(echo "$state" | jq --arg f "$FILE_PATH" --argjson t "$NOW" '
-    .editHistory += [{"file": $f, "time": $t, "buildOk": false}] |
-    if (.editHistory | length) > 10 then .editHistory = .editHistory[-10:] else . end
-  ')
-
   # Strike system
   retry_count=$(echo "$state" | jq -r '.buildRetryCount // 0')
 

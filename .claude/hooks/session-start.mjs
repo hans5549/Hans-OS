@@ -39,12 +39,10 @@ if (existsSync(STATE_FILE)) {
       state.completedSteps.planLinusReview = false;
       state.currentPlanFile = '';
 
-      // Fix: Reset coding steps if previous session completed (modifiedFiles empty)
-      // Skip reset during merge-back flow (mergeBackPending preserves state)
-      if ((!state.modifiedFiles || state.modifiedFiles.length === 0) && !state.mergeBackPending) {
-        state.completedSteps.simplifier = false;
-        state.completedSteps.codeReviewer = false;
-        state.completedSteps.securityReviewer = false;
+      // Reset coding steps if previous session completed (modifiedFiles empty)
+      if (!state.modifiedFiles || state.modifiedFiles.length === 0) {
+        state.completedSteps.codeReview = false;
+        state.completedSteps.linusReview = false;
         state.completedSteps.buildPassed = false;
         state.lineChangeSinceReview = 0;
         state.buildRetryCount = 0;
@@ -63,33 +61,9 @@ log('━━━━━━━━━━━━━━━━━━━━━━━━━
 log(' WORKFLOW AUTOMATION ACTIVE');
 log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 log('');
-log(' Coding: Simplifier → Code Review + Security → Build → Commit');
+log(' Coding: Combined Review → Linus Review → Build → Commit');
 log(' Planning: CEO Review → Eng Review → Linus Review → ExitPlanMode');
-log(' Commands: workflow status | workflow reset | /resume | /reboot-check');
-
-// ── Worktree awareness ────────────────────────────────────────────────────
-try {
-  const wtOutput = execSync('git worktree list --porcelain', {
-    encoding: 'utf-8',
-    stdio: ['pipe', 'pipe', 'pipe'],
-    cwd: PROJECT_ROOT,
-  });
-  const worktreeCount = (wtOutput.match(/^worktree /gm) || []).length;
-  if (worktreeCount > 1) {
-    log(` [Worktree] ${worktreeCount - 1} additional worktree(s) active`);
-  }
-} catch { /* git not available */ }
-
-// ── Merge-back awareness ────────────────────────────────────────────────
-try {
-  if (existsSync(STATE_FILE)) {
-    const stateContent = readFileSync(STATE_FILE, 'utf-8');
-    const mbState = JSON.parse(stateContent);
-    if (mbState.mergeBackPending === true) {
-      log(' [!] MERGE-BACK PENDING — Run "worktree merge-back" after reviews');
-    }
-  }
-} catch { /* state file doesn't exist or parse error */ }
+log(' Commands: workflow status | workflow reset');
 
 // ── Auto-create findings.md and progress.md ─────────────────────────────
 
@@ -139,7 +113,7 @@ if (existsSync(progressPath)) {
       for (const line of lastSession.split('\n').slice(0, 5)) {
         log(`   ${line}`);
       }
-      log(' [Recovery] Use /resume for full recovery, or continue with a new task');
+      log(' [Recovery] Review progress.md for details, or continue with a new task');
     }
   } catch { /* ignore */ }
 }
@@ -158,9 +132,8 @@ if (existsSync(STATE_FILE)) {
       log(`     Tracked files: ${files.length}`);
 
       const stepNames = [
-        ['simplifier', 'Simplifier'],
-        ['codeReviewer', 'Code Review'],
-        ['securityReviewer', 'Security'],
+        ['codeReview', 'Code Review'],
+        ['linusReview', 'Linus Review'],
         ['buildPassed', 'Build'],
       ];
 
@@ -169,7 +142,7 @@ if (existsSync(STATE_FILE)) {
 
       if (done.length > 0) log(`     Done: ${done.join(', ')}`);
       if (pending.length > 0) log(`     Pending: ${pending.join(', ')}`);
-      log('     Use /resume to continue or workflow reset to start fresh');
+      log('     Use "workflow status" to review or "workflow reset" to start fresh');
     }
   } catch (err) {
     log(`[Hook] Failed to read workflow state: ${err.message}`);

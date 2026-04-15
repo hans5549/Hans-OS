@@ -112,125 +112,66 @@ Monorepo with backend API + frontend SPA. Full details in `.github/references/ar
 
 ---
 
-## Workflow (Automated via Hooks)
+## Workflow (Automated via Hooks + Task-based TDD)
 
-Pipeline enforced by `.github/hooks/`. Not all changes need all phases.
+Pipeline enforced by `.github/hooks/`. Code changes require feature branch + planning, actual execution is task-driven and test-first.
 
-```
-接到需求 → 建立 Worktree → 腦力激盪 (optional) → 計畫模式 (required)
-  → 實作程式碼 → 審查管線 → 合併回主線 → 刪除 Worktree
-```
-
-### Git Worktree (Required for Code Changes)
-
-程式變更**必須**在 git worktree 上開發，不可直接在 main 上作業。
-
-```bash
-git worktree add ../Hans-OS-<branch-name> -b <branch-name>
-cd ../Hans-OS-<branch-name>
-```
-
-- 分支命名：`feature/add-xxx`、`fix/xxx-error`、`refactor/xxx`
-- 建立後自動執行 `dotnet restore` + `pnpm install`
-
-### Phase 1: Brainstorming (optional)
-
-Invoke: `@brainstorming` (model: `claude-opus-4.6`)
-Output: Design spec document.
-
-### Phase 2: Planning (**required** for code changes)
-
-Invoke: `@planning-reviewer`
-Three-perspective review: CEO (scope), Engineering (execution), Linus (simplicity).
-CEO + Eng use model: `claude-opus-4.6`. Linus uses model: `gpt-5.4`.
-
-### Phase 3: Coding Phase (hooks enforced)
+**Full workflow details → see `CLAUDE.md`**
 
 ```
-Simplifier (gpt-5.4) → [Code Review + Security] parallel (gpt-5.4) → Linus (gpt-5.4) → Build & Commit
+接到需求 → 建立 Feature Branch → 腦力激盪 (optional) → 計畫模式 (required)
+  → 依 phase 執行任務（TDD: RED → GREEN → REFACTOR）
+  → 任務審查管線 → 合併回主線（含 checkpoint 驗證）→ 刪除 Branch
 ```
 
-| Step | Agent | Model | Purpose |
-|------|-------|-------|---------|
-| 1 | `@code-simplifier` | `gpt-5.4` | Simplify code (primary constructors, guard clauses, etc.) |
-| 2 | `@code-review` | `gpt-5.4` | Code quality, architecture, naming + SQL safety, race conditions, trust boundary |
-| 3 | `@security-scanner` | `gpt-5.4` | OWASP Top 10, injection, auth bypass |
-| 4 | `@linus-reviewer` | `gpt-5.4` | Good Taste, backward compatibility, simplicity |
-| 5 | Build & Commit | — | `dotnet build` + `pnpm check:type` + `dotnet test` + git commit |
+### Key Rules
 
-**Dispatch**: Step 2+3 平行 → Step 4 等 2+3 完成後才執行
-
-### Phase 4: Merge Back to Main
-
-使用 `merge this` 觸發合併流程：
-1. `git merge main` → build/test → `git merge --no-ff` → cleanup worktree
+- **Feature branch required**: `git checkout -b feature/<name>`
+- **Plan Mode** required for code changes (3 parallel plan reviewers gate ExitPlanMode)
+- **TDD**: RED → GREEN → REFACTOR for every task
+- **Review Pipeline** (3 steps): Combined Code Review (code-simplifier + code-review-specialist + security-vuln-scanner, all parallel) → Linus Review → Build
+- **Merge** includes checkpoint verification + user approval
 
 ### Workflow Commands
 
 | Command | Description |
 |---------|-------------|
-| `workflow status` | View current workflow state and pending steps |
-| `workflow reset` | Reset all workflow state (start fresh) |
-| `workflow skip <step>` | Skip a specific step (not recommended) |
-| `commit this` | Trigger full commit workflow |
-| `merge this` | Merge feature branch back to main and cleanup |
-| `code-review` | Run full review without commit |
-
-### Workflow Agents
-
-| Agent | Description |
-|-------|-------------|
-| `@commit-workflow` | Full 5-step commit pipeline (guided execution) |
-| `@review-workflow` | Full review pipeline without commit |
+| `workflow status` | View current workflow state |
+| `workflow reset` | Reset all workflow state |
+| `commit this` | Run full workflow + commit |
+| `code-review` | Run review without commit |
+| `merge this` | Merge feature branch to main |
 
 ### Skip Rules
 
-| Change Type | Definition | Coding Phase |
-|------------|------------|:------------:|
-| 文字變更 | `.md`, `.txt`, `.rst`, `.yml`, `.yaml` | Skip (hooks auto-detect) |
-| 程式變更 | `.cs`, `.vue`, `.ts`, `.tsx`, `.json`, `.css`, `.js`, `.html`, `.csproj`, `.xml` | Full pipeline |
-
-### Smart Reset Rules
-
-- **Simplifier exemption**: After simplifier completes, subsequent code edits only reset post-simplifier steps (Code Review, Security, Linus), NOT simplifier itself.
-- **Small change tolerance**: Cumulative edits < 10 lines after review → warning only, reviews preserved. >= 10 lines → reset.
+- **Doc changes** (`.md`, `.txt`, `.yml`): Skip all workflow steps
+- **Code changes**: Full pipeline required (plan + TDD + review + merge gate)
 
 ---
 
 ## Hooks System (Automatic)
 
-Hooks run automatically and enforce workflow rules. Defined in `.github/hooks/hooks.json`.
+Hooks run automatically. Defined in `.github/hooks/hooks.json`.
 
 | Hook | Script | Function |
 |------|--------|----------|
-| `sessionStart` | `session-start.sh` | Initialize workflow, show status, worktree detection |
-| `sessionEnd` | `session-end.sh` | Cleanup, write progress log |
-| `userPromptSubmitted` | `workflow-orchestrator.sh` | Detect commands, step completion, `merge this` |
-| `preToolUse` | `pre-edit-check.sh` | Main branch protection, file protection, migration safety |
-| `preToolUse` | `pre-bash-check.sh` | Block `git add .`, commit gating, merge gate |
-| `postToolUse` | `post-edit-build.sh` | Auto-build after code edits, dependency auto-restore |
+| `sessionStart` | `session-start.sh` | Initialize workflow, branch detection |
+| `sessionEnd` | `session-end.sh` | Cleanup, progress log |
+| `userPromptSubmitted` | `workflow-orchestrator.sh` | Detect commands, step completion, merge |
+| `preToolUse` | `pre-edit-check.sh` | Main branch protection, file tracking |
+| `preToolUse` | `pre-bash-check.sh` | Commit gating, merge gate |
+| `postToolUse` | `post-edit-build.sh` | Auto-build, dependency restore |
 | `postToolUse` | `post-tool-track.sh` | Track modifications, Smart Reset |
 | `errorOccurred` | `error-handler.sh` | Error logging |
 
 ### Auto-enforced Rules
-- **Main branch protection**: Cannot edit code files on `main`/`master` (workflow files OK)
-- **Worktree required**: Code changes must be on a git worktree (session start detection)
-- **Merge gate**: `git merge` to main requires all workflow steps complete
-- **Protected files**: `.github/hooks/` and workflow state files cannot be modified
-- **git add . blocked**: Must stage specific files only
-- **Commit gating**: Code changes require all workflow steps complete before `git commit`
-- **Auto-build**: `.cs` edits trigger `dotnet build`, `.vue`/`.ts` edits trigger `pnpm check:type`
-- **Build strike system**: 3 fails → warning, 5 fails → stop and report
-- **Dependency auto-restore**: `.csproj` → `dotnet restore`, `package.json` → `pnpm install`
-- **Migration safety**: Cannot delete existing migration files; PascalCase naming enforced
-
----
-
-## Build & Verification
-
-- After modifying .cs files → `dotnet build --no-restore -v q` (auto by hook)
-- After modifying .vue/.ts/.tsx files → `cd frontend && pnpm check:type` (auto by hook)
-- Build Self-Healing: max 5 retries, then stop and report
+- **Main branch protection**: Cannot edit code files on `main`/`master`
+- **Commit gating**: Code changes require all review steps complete
+- **Merge gate**: Requires all workflow steps + main merged to feature
+- **Protected files**: `.github/hooks/` cannot be modified
+- **git add . blocked**: Stage specific files only
+- **Auto-build**: `.cs` → `dotnet build`; `.vue`/`.ts` → `pnpm check:type`
+- **Migration safety**: Cannot delete existing migration files
 
 ---
 

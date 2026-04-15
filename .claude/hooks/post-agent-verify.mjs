@@ -25,10 +25,12 @@ const AGENT_STEP_MAP = [
   { pattern: /plan-ceo-review/i, step: 'ceoReview', name: 'CEO Review' },
   { pattern: /plan-eng-review/i, step: 'engReview', name: 'Eng Review' },
   { pattern: /plan-linus-review/i, step: 'planLinusReview', name: 'Plan Linus Review' },
-  // Coding phase agents
-  { pattern: /code-simplifier/i, step: 'simplifier', name: 'Code Simplifier' },
-  { pattern: /code-review-specialist/i, step: 'codeReviewer', name: 'Code Review' },
-  { pattern: /security-vuln-scanner/i, step: 'securityReviewer', name: 'Security Review' },
+  // Coding phase agents — all three map to combined codeReview step
+  { pattern: /code-simplifier/i, step: 'codeReview', name: 'Combined Code Review' },
+  { pattern: /code-review-specialist/i, step: 'codeReview', name: 'Combined Code Review' },
+  { pattern: /security-vuln-scanner/i, step: 'codeReview', name: 'Combined Code Review' },
+  // Linus coding review
+  { pattern: /linus-reviewer/i, step: 'linusReview', name: 'Linus Review' },
 ];
 
 for (const { pattern, step, name } of AGENT_STEP_MAP) {
