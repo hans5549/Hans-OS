@@ -47,6 +47,319 @@
     "chatgptTasks": "ChatGPT Tasks",
     "airbnbBooking": "Airbnb Booking Platform",
     "agodaAiSupport": "Agoda AI Support Agent",
-    "llmInferenceApi": "LLM Inference API Service"
+    "llmInferenceApi": "LLM Inference API Service",
+    "qrCodeGeneratorPage": {
+      "badges": {
+        "caseStudy": "Case Study",
+        "frontendOnly": "Frontend-only",
+        "basedOnPdf": "Based on PDF",
+        "readingTime": "10 min read"
+      },
+      "hero": {
+        "kicker": "System Design · QR Code Generator",
+        "title": "QR Code Generator",
+        "description": "From URL creation and token mapping to the 302 redirect path, this page breaks down the core trade-offs around uniqueness, caching, and scale in a QR Code service.",
+        "learnKicker": "What you'll learn",
+        "targetsTitle": "Design targets / assumptions",
+        "targetsNote": "Shown as case-study assumptions, not live production metrics",
+        "highlights": {
+          "bottleneck": {
+            "title": "The bottleneck is not the QR image",
+            "description": "See why token design, redirect behavior, and cache strategy together shape the user experience."
+          },
+          "apiSurface": {
+            "title": "Cut the API surface cleanly",
+            "description": "Understand the boundaries between create, image retrieval, original URL lookup, edit, and delete."
+          },
+          "scaling": {
+            "title": "Think in terms of 1B codes",
+            "description": "Learn why read-heavy systems eventually become an index, cache, CDN, and replica topology problem."
+          }
+        },
+        "visual": {
+          "kicker": "Primary visual",
+          "title": "QR → token → redirect",
+          "description": "This diagram is intentionally not a product mock. It foregrounds the request lifecycle and the hottest path first.",
+          "nodes": {
+            "input": {
+              "label": "Input URL",
+              "title": "Generate QR mapping"
+            },
+            "token": {
+              "label": "Unique token",
+              "title": "`qr_token` + UNIQUE index"
+            },
+            "redirect": {
+              "label": "Runtime path",
+              "title": "302 redirect to original URL"
+            }
+          },
+          "chips": {
+            "db": {
+              "label": "DB",
+              "value": "mapping"
+            },
+            "cache": {
+              "label": "Cache",
+              "value": "read path"
+            },
+            "cdn": {
+              "label": "CDN",
+              "value": "QR image"
+            }
+          }
+        },
+        "targets": {
+          "availability": {
+            "label": "Availability",
+            "value": "24/7",
+            "note": "Case-study assumption, not live monitoring"
+          },
+          "redirectLatency": {
+            "label": "Redirect latency",
+            "value": "< 100ms",
+            "note": "Should stay smooth under hot traffic"
+          },
+          "qrCodes": {
+            "label": "QR codes",
+            "value": "1B",
+            "note": "Capacity target used in the design exercise"
+          },
+          "users": {
+            "label": "Users",
+            "value": "100M",
+            "note": "Scale assumption from the source material"
+          }
+        }
+      },
+      "navigation": {
+        "progressLabel": "Reading progress",
+        "inPageLabel": "On this page",
+        "startReading": "Start reading",
+        "mobileTocAriaLabel": "QR Code Generator mobile table of contents",
+        "desktopTocAriaLabel": "QR Code Generator table of contents"
+      },
+      "sidebar": {
+        "currentSectionLabel": "Current section",
+        "difficultyLabel": "Difficulty",
+        "difficultyValue": "Intermediate",
+        "scopeLabel": "Scope",
+        "scopeValue": "Frontend content page",
+        "tocKicker": "On this page",
+        "tocTitle": "Sticky TOC"
+      },
+      "glossary": {
+        "kicker": "Glossary",
+        "title": "Quick terms",
+        "expandPattern": "Expand {label} definition",
+        "collapsePattern": "Collapse {label} definition",
+        "terms": {
+          "base62": {
+            "label": "Base62",
+            "description": "A 62-character alphabet [0-9A-Za-z] used to keep tokens short, readable, and easy to share."
+          },
+          "collision": {
+            "label": "Collision",
+            "description": "When different inputs accidentally produce the same token. A UNIQUE constraint plus retry logic is the usual fix."
+          },
+          "readHeavy": {
+            "label": "Read-heavy",
+            "description": "A traffic shape where reads far outnumber writes, making caching and indexing more important."
+          },
+          "cdn": {
+            "label": "CDN",
+            "description": "An edge delivery layer that serves static assets or hot results closer to users to cut regional latency."
+          }
+        }
+      },
+      "ui": {
+        "copyButton": "Copy",
+        "copyUnsupported": "This browser does not support copying to the clipboard.",
+        "copySuccess": "API snippet copied",
+        "copyFailure": "Copy failed. Please select the code manually.",
+        "requestLabel": "Request",
+        "responseLabel": "Response",
+        "copyApiAriaPattern": "Copy {label} API example"
+      },
+      "sections": {
+        "whyHard": {
+          "eyebrow": "Section 01",
+          "title": "Why this is hard",
+          "takeaway": "The hard part is not rendering the QR image. It is balancing token uniqueness, redirect freshness, and read-heavy traffic."
+        },
+        "requirements": {
+          "eyebrow": "Section 02",
+          "title": "Requirements",
+          "takeaway": "The system must create, manage, and redirect, which means both the data model and the experience have to stay editable."
+        },
+        "apiSurface": {
+          "eyebrow": "Section 03",
+          "title": "API surface",
+          "takeaway": "The API surface should clearly separate create, image retrieval, edit, delete, and original-URL lookup responsibilities."
+        },
+        "lifecycle": {
+          "eyebrow": "Section 04",
+          "title": "Lifecycle",
+          "takeaway": "Create and retrieve flows bottleneck in different places: token writes on one side, caching and redirect on the other."
+        },
+        "scaling": {
+          "eyebrow": "Section 05",
+          "title": "Scaling",
+          "takeaway": "Once traffic grows, indexes, caches, CDNs, and read replicas become the real stars, not the QR image itself."
+        },
+        "tradeOffs": {
+          "eyebrow": "Section 06",
+          "title": "Trade-offs",
+          "takeaway": "The core design move is to admit the trade-offs: 302 over 301, UNIQUE index over optimistic guessing, simple DB before distribution."
+        }
+      },
+      "tensions": {
+        "uniqueness": {
+          "title": "Uniqueness vs. token length",
+          "description": "The token must stay short enough to share easily while still being globally unique and recoverable after collisions."
+        },
+        "freshness": {
+          "title": "Freshness vs. caching",
+          "description": "A QR mapping can be edited or deleted later, so the redirect path cannot be cached forever."
+        },
+        "readHeavy": {
+          "title": "Read-heavy traffic vs. simple architecture",
+          "description": "When reads dominate writes, cache hit rate and edge delivery matter more than the write path itself."
+        }
+      },
+      "requirements": {
+        "functional": {
+          "title": "Functional requirements",
+          "item1": "Users can submit a URL and receive a generated QR Code.",
+          "item2": "Authenticated users can manage the QR Codes they created, with ownership derived from JWT claims.",
+          "item3": "Scanning a QR Code redirects to the original URL."
+        },
+        "nonFunctional": {
+          "title": "Non-functional requirements",
+          "item1": "The service should remain highly available 24/7.",
+          "item2": "Redirection latency should stay below 100ms.",
+          "item3": "The design should reason about 1B QR codes and 100M users."
+        }
+      },
+      "api": {
+        "create": {
+          "title": "Create a QR Code",
+          "description": "Create a new QR Code mapping and return the resulting qr_token."
+        },
+        "image": {
+          "title": "Get QR image",
+          "description": "Retrieve the QR image location by qr_token and optional styling parameters."
+        },
+        "edit": {
+          "title": "Edit a QR Code",
+          "description": "Update the original URL behind an existing mapping."
+        },
+        "delete": {
+          "title": "Delete a QR Code",
+          "description": "Delete an existing QR Code mapping."
+        },
+        "lookup": {
+          "title": "Get original URL",
+          "description": "Read the original URL behind a token for inspection or downstream flows."
+        }
+      },
+      "flow": {
+        "create": {
+          "label": "Create flow",
+          "steps": {
+            "receive": {
+              "title": "1. Receive the create request",
+              "description": "The client sends a URL to POST /v1/qr_code."
+            },
+            "validate": {
+              "title": "2. Validate the URL and generate a token",
+              "description": "The backend validates the URL and then generates a globally unique qr_token."
+            },
+            "write": {
+              "title": "3. Write to the database",
+              "description": "Persist the mapping in the QrCodes table and rely on the UNIQUE constraint for collision handling."
+            },
+            "return": {
+              "title": "4. Return the result",
+              "description": "Return the qr_token to the client. The image can be produced later through another API."
+            }
+          }
+        },
+        "retrieve": {
+          "label": "Retrieve / redirect flow",
+          "steps": {
+            "enter": {
+              "title": "1. Enter the read path",
+              "description": "The client uses qr_token to fetch the image, resolve the original URL, or scan directly into the redirect flow."
+            },
+            "cache": {
+              "title": "2. Check cache / edge first",
+              "description": "Hot requests should hit cache or CDN first so they avoid the database whenever possible."
+            },
+            "lookup": {
+              "title": "3. Fall back to origin lookup",
+              "description": "When a fallback is needed, the backend looks up the mapping through the qr_token index."
+            },
+            "redirect": {
+              "title": "4. Execute the 302 redirect",
+              "description": "Use a 302 redirect so that mapping updates still reach the latest target."
+            }
+          }
+        }
+      },
+      "scaling": {
+        "indexing": {
+          "title": "Indexing",
+          "item1": "qr_token needs an index to avoid full table scans.",
+          "item2": "The UNIQUE constraint also doubles as collision detection."
+        },
+        "caching": {
+          "title": "Caching",
+          "item1": "This is a read-heavy service, with write:read around 1:100.",
+          "item2": "Only hit the database on cache miss, and invalidate on delete."
+        },
+        "cdn": {
+          "title": "CDN",
+          "item1": "QR images are natural static assets for edge delivery.",
+          "item2": "Popular QR Codes can be served directly from the CDN to cut cross-region latency."
+        },
+        "replicas": {
+          "title": "Replicas & cleanup",
+          "item1": "A single DB instance is enough for the foreseeable future, but read replicas should be planned.",
+          "item2": "Idle mappings can be cleaned up with cron jobs to avoid long-term bloat."
+        }
+      },
+      "tradeOffs": {
+        "redirect": {
+          "decision": "Use 302 instead of 301",
+          "reason": "This avoids permanent browser caching so edits and deletes still resolve to the latest mapping state."
+        },
+        "token": {
+          "decision": "Use hash + nonce + Base62 instead of a purely deterministic hash",
+          "reason": "This avoids giving identical inputs identical tokens forever and preserves more entropy and flexibility."
+        },
+        "database": {
+          "decision": "Start with one primary DB and extend with read replicas",
+          "reason": "At roughly 200GB of data, the architecture can stay simple first and push complexity to when it is truly needed."
+        },
+        "edge": {
+          "decision": "Push QR images and hot mappings to CDN / cache",
+          "reason": "The hottest path is read and redirect, not write. Edge hits cut latency dramatically."
+        }
+      },
+      "footer": {
+        "takeawaysKicker": "Key takeaways",
+        "takeawaysTitle": "Three ideas worth carrying forward",
+        "takeaways": {
+          "item1": "The heart of a QR Code generator is not drawing text as an image. It is turning URL mapping into a readable, editable, cacheable service.",
+          "item2": "302 redirects, UNIQUE indexes, and cache / CDN hit rates are the three main design levers in this case study.",
+          "item3": "This page presents the system-design thinking, not a live tool wired to a backend."
+        },
+        "relatedKicker": "Series",
+        "relatedTitle": "Related case studies",
+        "relatedComingSoon": "Coming soon",
+        "sourceNote": "This page reorganizes the user-provided PDF into a Hans-OS system-design reading experience."
+      }
+    }
   }
 }
