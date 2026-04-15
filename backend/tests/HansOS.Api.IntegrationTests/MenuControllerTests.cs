@@ -30,9 +30,7 @@ public class MenuControllerTests(HansOsWebApplicationFactory factory)
         await SeedPreservedMenuAsync();
         var token = await LoginAndGetTokenAsync();
 
-        var request = new HttpRequestMessage(HttpMethod.Get, "/menu/all");
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        var response = await _client.SendAsync(request);
+        var response = await _client.SendAsync(CreateAuthorizedGetRequest(token));
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();
@@ -81,6 +79,12 @@ public class MenuControllerTests(HansOsWebApplicationFactory factory)
 
         await db.SaveChangesAsync();
     }
+
+    private static HttpRequestMessage CreateAuthorizedGetRequest(string token) =>
+        new(HttpMethod.Get, "/menu/all")
+        {
+            Headers = { Authorization = new AuthenticationHeaderValue("Bearer", token) }
+        };
 
     private async Task<string> LoginAndGetTokenAsync(
         string username = "hans",
