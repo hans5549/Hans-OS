@@ -235,4 +235,38 @@ public class UserServiceTests
 
         result.HomePath.Should().Be("/index");
     }
+
+    [Theory]
+    [InlineData("/system-design/qr-code-generator", "/system-design/real-world-apps/qr-code-generator")]
+    [InlineData("/system-design/earthquake-notification", "/system-design/real-world-apps/earthquake-notification")]
+    [InlineData("/system-design/polymarket", "/system-design/real-world-apps/polymarket")]
+    [InlineData("/system-design/amazon-price-tracking", "/system-design/real-world-apps/amazon-price-tracking")]
+    [InlineData("/system-design/tesla-robo-taxi", "/system-design/real-world-apps/tesla-robo-taxi")]
+    [InlineData("/system-design/spotify-trending-songs", "/system-design/real-world-apps/spotify-trending-songs")]
+    [InlineData("/system-design/messenger", "/system-design/real-world-apps/messenger")]
+    [InlineData("/system-design/webhook-platform", "/system-design/real-world-apps/webhook-platform")]
+    [InlineData("/system-design/google-docs", "/system-design/real-world-apps/google-docs")]
+    [InlineData("/system-design/youtube", "/system-design/real-world-apps/youtube")]
+    [InlineData("/system-design/chatgpt-tasks", "/system-design/real-world-apps/chatgpt-tasks")]
+    [InlineData("/system-design/airbnb-booking", "/system-design/real-world-apps/airbnb-booking")]
+    [InlineData("/system-design/agoda-ai-support", "/system-design/real-world-apps/agoda-ai-support")]
+    [InlineData("/system-design/llm-inference-api", "/system-design/real-world-apps/llm-inference-api")]
+    public async Task GetUserInfo_LegacySystemDesignHomePath_NormalizesToReorganizedPath(
+        string legacyHomePath,
+        string expectedHomePath)
+    {
+        var user = new ApplicationUser
+        {
+            Id = "legacy-system-design-user",
+            UserName = "legacy-system-design",
+            HomePath = legacyHomePath,
+            IsActive = true,
+        };
+        _userManager.FindByIdAsync("legacy-system-design-user").Returns(user);
+        _userManager.GetRolesAsync(user).Returns(new List<string>());
+
+        var result = await _sut.GetUserInfoAsync("legacy-system-design-user");
+
+        result.HomePath.Should().Be(expectedHomePath);
+    }
 }
