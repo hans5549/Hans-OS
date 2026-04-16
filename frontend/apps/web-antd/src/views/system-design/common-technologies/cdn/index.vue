@@ -1,9 +1,14 @@
-<script lang="ts" setup>
-import { Fallback } from '@vben/common-ui';
+<script setup lang="ts">
+import SystemDesignDocPage from '../../_shared/SystemDesignDocPage.vue';
+import { content } from './content';
 
 defineOptions({ name: 'CdnPage' });
 </script>
 
 <template>
-  <Fallback status="coming-soon" />
+  <SystemDesignDocPage
+    :content="content"
+    category="常用技術"
+    category-key="common-technologies"
+  />
 </template>
