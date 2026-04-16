@@ -1,0 +1,47 @@
+import type { SystemDesignContent } from '../../_shared/types';
+
+export const content: SystemDesignContent = {
+  title: 'Database Indexing',
+  sections: [
+    {
+      id: 'database-indexing',
+      title: 'Database Indexing',
+      blocks: [
+        { type: 'subheading', text: '什麼是 Indexing (索引)?' },
+        { type: 'paragraph', text: '在資料庫中,索引(Index)就像書本的目錄。' },
+        { type: 'paragraph', text: '它能讓你快速找到需要的資料,而不用從頭到尾把整本「書」(資料表)翻一遍。' },
+        { type: 'subheading', text: '為什麼需要索引?' },
+        { type: 'paragraph', text: '加快查詢速度:像 SELECT ... WHERE  或 JOIN  時能快速定位資料。' },
+        { type: 'paragraph', text: '減少掃描整張表的成本(避免 Full Table Scan)。' },
+        { type: 'paragraph', text: '提升排序與搜尋效率,例如 ORDER BY  或 Prefix Search LIKE \'abc%\' 。' },
+        { type: 'paragraph', text: '沒有索引的情況' },
+        { type: 'paragraph', text: '假設有一張 users 資料表:' },
+        { type: 'paragraph', text: 'CREATE TABLE users ( id INT PRIMARY KEY, name VARCHAR(100), email VARCHAR(100), age INT );' },
+        { type: 'paragraph', text: '如果我們常常查詢:' },
+        { type: 'paragraph', text: 'SELECT * FROM users WHERE email = \'bohr@example.com\';' },
+        { type: 'paragraph', text: '因為 email 欄位沒有索引,資料庫必須 Full Table Scan (全表掃描),逐筆比對 email,效率會隨資料筆數增加而下降(O(n))。' },
+        { type: 'paragraph', text: '建立索引後' },
+        { type: 'paragraph', text: '我們可以在 email  欄位上建立索引:' },
+        { type: 'paragraph', text: 'CREATE INDEX idx_email ON users(email);' },
+        { type: 'paragraph', text: '再次執行:' },
+        { type: 'paragraph', text: 'SELECT * FROM users WHERE email = \'bohr@example.com\';' },
+        { type: 'paragraph', text: '這次資料庫會透過索引快速定位到對應的資料(像查目錄找頁碼),不用掃描整張 表,查詢時間大幅縮短(接近 O(log n))。' },
+        { type: 'subheading', text: '索引的缺點' },
+        { type: 'paragraph', text: '佔用額外儲存空間。' },
+        { type: 'paragraph', text: '寫入(INSERT/UPDATE/DELETE)會變慢,因為要更新索引。' },
+        { type: 'paragraph', text: '建太多索引會反而拖累效能。' },
+        { type: 'subheading', text: '常見索引種類' },
+        { type: 'paragraph', text: 'B-Tree Index' },
+        { type: 'paragraph', text: 'LSM Tree' },
+        { type: 'paragraph', text: 'Hash Index' },
+        { type: 'paragraph', text: 'Geospatial Index' },
+        { type: 'paragraph', text: 'Inverted Index' },
+      ],
+    },
+  ],
+  selfTest: [
+    { question: '沒有索引的情況下,資料庫如何查詢?建立索引後呢?', answer: '• 沒有索引:資料庫必須 Full Table Scan(全表掃描),逐筆比對,時間複雜度 O(n)。 • 有索引:透過索引快速定位資料(像查目錄找頁碼),時間複雜度接近 O(log n)。' },
+    { question: '索引有哪些缺點?', answer: '佔用額外儲存空間。寫入(INSERT/UPDATE/DELETE)會變慢,因為每次寫入都 要更新索引。建太多索引反而拖累效能。' },
+    { question: '索引能加速哪些操作?', answer: '• WHERE  條件查詢 • JOIN  操作 • ORDER BY  排序 • 前綴搜尋 LIKE \'abc%\'' },
+  ],
+};

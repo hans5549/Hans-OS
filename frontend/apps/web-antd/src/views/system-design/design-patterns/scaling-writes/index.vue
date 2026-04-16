@@ -1,9 +1,14 @@
-<script lang="ts" setup>
-import { Fallback } from '@vben/common-ui';
+<script setup lang="ts">
+import SystemDesignDocPage from '../../_shared/SystemDesignDocPage.vue';
+import { content } from './content';
 
 defineOptions({ name: 'ScalingWritesPage' });
 </script>
 
 <template>
-  <Fallback status="coming-soon" />
+  <SystemDesignDocPage
+    :content="content"
+    category="設計模式"
+    category-key="design-patterns"
+  />
 </template>
