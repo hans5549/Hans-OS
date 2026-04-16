@@ -66,7 +66,6 @@ tools: ["read", "search", "edit", "execute", "agent"]
    - 將 task 標記為完成 `[x]`
    - 記錄 implementation commit 的 short SHA
    - 將 plan 更新獨立成另一個 docs commit
-9. 若當前 phase 的所有 task 都完成，提醒使用者進入合併驗證
 
 ## 重要規則
 

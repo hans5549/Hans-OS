@@ -84,23 +84,6 @@ if echo "$PROMPT_LOWER" | grep -qE 'commit\s+this'; then
   exit 0
 fi
 
-# merge this - trigger merge flow
-if echo "$PROMPT_LOWER" | grep -qE 'merge\s+this'; then
-  log ""
-  log "<user-prompt-submit-hook>"
-  log "MERGE WORKFLOW TRIGGERED."
-  log ""
-  log "Steps:"
-  log "  1. Validate all workflow steps complete"
-  log "  2. git merge main (into feature branch)"
-  log "  3. dotnet build + dotnet test + pnpm check:type"
-  log "  4. git merge --no-ff back to main"
-  log "  5. git branch -d feature/xxx"
-  log "</user-prompt-submit-hook>"
-  log ""
-  exit 0
-fi
-
 # code-review / review this - run review without commit
 if echo "$PROMPT_LOWER" | grep -qE '^(code-review|review\s+this)$'; then
   log ""

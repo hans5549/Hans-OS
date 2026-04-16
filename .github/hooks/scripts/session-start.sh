@@ -53,7 +53,7 @@ log "━━━━━━━━━━━━━━━━━━━━━━━━━
 log ""
 log " Coding: Combined Review → Linus → Build → Commit"
 log " Planning: CEO Review → Eng Review → Linus Review"
-log " Commands: workflow status | workflow reset | commit this | merge this"
+log " Commands: workflow status | workflow reset | commit this"
 
 # ── Branch detection ─────────────────────────────────────────────────────────
 

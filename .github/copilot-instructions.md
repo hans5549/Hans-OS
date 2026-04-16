@@ -121,7 +121,7 @@ Pipeline enforced by `.github/hooks/`. Code changes require feature branch + pla
 ```
 接到需求 → 建立 Feature Branch → 腦力激盪 (optional) → 計畫模式 (required)
   → 依 phase 執行任務（TDD: RED → GREEN → REFACTOR）
-  → 任務審查管線 → 合併回主線（含 checkpoint 驗證）→ 刪除 Branch
+  → 任務審查管線 → Commit
 ```
 
 ### Key Rules
@@ -130,7 +130,6 @@ Pipeline enforced by `.github/hooks/`. Code changes require feature branch + pla
 - **Plan Mode** required for code changes (3 parallel plan reviewers gate ExitPlanMode)
 - **TDD**: RED → GREEN → REFACTOR for every task
 - **Review Pipeline** (3 steps): Combined Code Review (code-simplifier + code-review-specialist + security-vuln-scanner, all parallel) → Linus Review → Build
-- **Merge** includes checkpoint verification + user approval
 
 ### Workflow Commands
 
@@ -140,7 +139,6 @@ Pipeline enforced by `.github/hooks/`. Code changes require feature branch + pla
 | `workflow reset` | Reset all workflow state |
 | `commit this` | Run full workflow + commit |
 | `code-review` | Run review without commit |
-| `merge this` | Merge feature branch to main |
 
 ### Skip Rules
 
@@ -167,7 +165,6 @@ Hooks run automatically. Defined in `.github/hooks/hooks.json`.
 ### Auto-enforced Rules
 - **Main branch protection**: Cannot edit code files on `main`/`master`
 - **Commit gating**: Code changes require all review steps complete
-- **Merge gate**: Requires all workflow steps + main merged to feature
 - **Protected files**: `.github/hooks/` cannot be modified
 - **git add . blocked**: Stage specific files only
 - **Auto-build**: `.cs` → `dotnet build`; `.vue`/`.ts` → `pnpm check:type`

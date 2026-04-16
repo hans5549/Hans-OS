@@ -118,7 +118,7 @@ Pipeline enforced by hooks. Code changes require feature branch + plan mode, act
 ```
 接到需求 → 建立 Feature Branch → 腦力激盪 (optional) → 計畫模式 (required)
   → 依 phase 執行任務（TDD: RED → GREEN → REFACTOR）
-  → 任務審查管線 → 合併回主線（含 checkpoint 驗證）→ 刪除 Branch
+  → 任務審查管線 → Commit
 ```
 
 ### Git Branch (Required for Code Changes)
@@ -181,22 +181,12 @@ Dispatch all 3 **in parallel** (one message, multiple Agent tool calls).
 
 **Task commit rule**: 單一 task 完成後才能 commit；commit 前要確認 TDD 步驟、review pipeline、build / typecheck / tests 都已完成，且 commit 內容只涵蓋目前 task。
 
-### Phase 5: Merge Back to Main
-
-開發完成後，使用 `merge this` 觸發合併流程。Merge 前自動進行 checkpoint 驗證：
-
-1. 整理自上個 checkpoint 以來的變更檔案與 task 清單
-2. 執行完整驗證：`dotnet test backend/HansOS.slnx`；若有前端型別變更，再執行 `cd frontend && pnpm check:type`
-3. 準備人工驗證清單（使用者流程、回歸風險、邊界案例）
-4. 明確等待使用者 approval，未核准前不可執行 merge
-5. `git merge main` → build/test → `git merge --no-ff` → `git branch -d feature/xxx`
-
 ### Skip Rules (Binary)
 
-| 變更類型 | 定義 | Plan Mode | Plan Review | Task TDD | Review Pipeline | Merge |
-|----------|------|:---------:|:-----------:|:--------:|:---------------:|:-----:|
-| 文字變更 | Doc extensions (`.md`, `.txt`, `.rst`, `.yml`, `.yaml`) | Skip | Skip | Skip | Skip | Skip |
-| 程式變更 | Code extensions (`.cs`, `.vue`, `.ts`, `.tsx`, `.json`, `.css`, `.js`, `.html`, `.csproj`, `.xml`) | Required | All 3 (CEO + Eng + Linus) | Required | All (Combined Review + Linus + Build) | Required |
+| 變更類型 | 定義 | Plan Mode | Plan Review | Task TDD | Review Pipeline |
+|----------|------|:---------:|:-----------:|:--------:|:---------------:|
+| 文字變更 | Doc extensions (`.md`, `.txt`, `.rst`, `.yml`, `.yaml`) | Skip | Skip | Skip | Skip |
+| 程式變更 | Code extensions (`.cs`, `.vue`, `.ts`, `.tsx`, `.json`, `.css`, `.js`, `.html`, `.csproj`, `.xml`) | Required | All 3 (CEO + Eng + Linus) | Required | All (Combined Review + Linus + Build) |
 
 No file-count tiers. Any code change = full pipeline.
 
@@ -220,7 +210,6 @@ No file-count tiers. Any code change = full pipeline.
 | `workflow skip <step>` | Skip a specific step (not recommended) |
 | `code-review` | Run full review workflow for current task without commit |
 | `commit this` | Run full workflow for current task and create git commit |
-| `merge this` | Merge feature branch back to main (includes checkpoint verification) |
 
 ### Workflow Rules
 
@@ -239,7 +228,6 @@ Doc: `.md`, `.txt`, `.rst`, `.yml`, `.yaml` (skip build verification)
 | Rule | Description |
 |------|-------------|
 | Main branch protection | Cannot edit code files on `main`/`master` |
-| Merge gate | `git merge` to main requires all workflow steps complete + main merged to feature |
 | Protected files | `.github/hooks/` and workflow state files cannot be modified |
 | git add . blocked | Must stage specific files only |
 | Commit gating | Code changes require all review steps complete before commit |
