@@ -12,6 +12,11 @@ public class MenuMigrationTests
     private const string AnalyticsMenuId = "d1e2f3a4-0000-0000-0000-000000000002";
     private const string WorkspaceMenuId = "d1e2f3a4-0000-0000-0000-000000000003";
     private const string TodoMenuId = "d1e2f3a4-0000-0000-0000-000000000010";
+    private const string SystemDesignParentId = "c0000001-0000-0000-0000-000000000001";
+    private const string FundamentalsId = "c0000002-0000-0000-0000-000000000001";
+    private const string NetworkingEssentialsId = "c0000002-0000-0000-0000-000000000101";
+    private const string RealWorldAppsId = "c0000002-0000-0000-0000-000000000005";
+    private const string QrCodeGeneratorId = "c0000001-0000-0000-0000-000000000002";
 
     [Fact]
     public void AddTodoMenuItem_Up_EmitsTodoMenuSeedSql()
@@ -150,6 +155,100 @@ public class MenuMigrationTests
             sql.Contains("WHERE \"HomePath\" = '/index'"));
     }
 
+    [Fact]
+    public void ReorganizeSystemDesignMenus_Up_EmitsReorganizedMenuSql()
+    {
+        var migration = new ReorganizeSystemDesignMenusAccessor();
+        var migrationBuilder = new MigrationBuilder("Npgsql.EntityFrameworkCore.PostgreSQL");
+
+        migration.ApplyUp(migrationBuilder);
+
+        var sqlOperations = migrationBuilder.Operations
+            .OfType<SqlOperation>()
+            .Select(operation => operation.Sql)
+            .ToArray();
+
+        sqlOperations.Should().Contain(sql =>
+            sql.Contains("INSERT INTO \"Menus\"") &&
+            sql.Contains($"'{FundamentalsId}'") &&
+            sql.Contains("'Fundamentals'") &&
+            sql.Contains("'/system-design/fundamentals'") &&
+            sql.Contains("'/system-design/fundamentals/networking-essentials'") &&
+            sql.Contains("'基本觀念'"));
+
+        sqlOperations.Should().Contain(sql =>
+            sql.Contains("INSERT INTO \"Menus\"") &&
+            sql.Contains($"'{NetworkingEssentialsId}'") &&
+            sql.Contains("'NetworkingEssentials'") &&
+            sql.Contains("'/system-design/fundamentals/networking-essentials/index'") &&
+            sql.Contains("'Networking Essentials | 網路基本原理'"));
+
+        sqlOperations.Should().Contain(sql =>
+            sql.Contains("UPDATE \"Menus\"") &&
+            sql.Contains($"'{QrCodeGeneratorId}'") &&
+            sql.Contains($"'{RealWorldAppsId}'") &&
+            sql.Contains("'/system-design/real-world-apps/qr-code-generator'") &&
+            sql.Contains("'/system-design/real-world-apps/qr-code-generator/index'"));
+
+        sqlOperations.Should().Contain(sql =>
+            sql.Contains("UPDATE \"Menus\"") &&
+            sql.Contains($"'{SystemDesignParentId}'") &&
+            sql.Contains("'/system-design/fundamentals/networking-essentials'"));
+
+        sqlOperations.Should().Contain(sql =>
+            sql.Contains("UPDATE \"AspNetUsers\"") &&
+            sql.Contains("SET \"HomePath\" = '/system-design/real-world-apps/qr-code-generator'") &&
+            sql.Contains("WHERE \"HomePath\" = '/system-design/qr-code-generator'"));
+
+        sqlOperations.Should().Contain(sql =>
+            sql.Contains("INSERT INTO \"RoleMenus\"") &&
+            sql.Contains($"'{AdminRoleId}'") &&
+            sql.Contains($"'{FundamentalsId}'") &&
+            sql.Contains($"'{NetworkingEssentialsId}'"));
+    }
+
+    [Fact]
+    public void ReorganizeSystemDesignMenus_Down_EmitsRollbackSql()
+    {
+        var migration = new ReorganizeSystemDesignMenusAccessor();
+        var migrationBuilder = new MigrationBuilder("Npgsql.EntityFrameworkCore.PostgreSQL");
+
+        migration.ApplyDown(migrationBuilder);
+
+        var sqlOperations = migrationBuilder.Operations
+            .OfType<SqlOperation>()
+            .Select(operation => operation.Sql)
+            .ToArray();
+
+        sqlOperations.Should().Contain(sql =>
+            sql.Contains("DELETE FROM \"RoleMenus\"") &&
+            sql.Contains($"'{FundamentalsId}'") &&
+            sql.Contains($"'{NetworkingEssentialsId}'"));
+
+        sqlOperations.Should().Contain(sql =>
+            sql.Contains("UPDATE \"Menus\"") &&
+            sql.Contains($"'{QrCodeGeneratorId}'") &&
+            sql.Contains($"'{SystemDesignParentId}'") &&
+            sql.Contains("'/system-design/qr-code-generator'") &&
+            sql.Contains("'/system-design/qr-code-generator/index'"));
+
+        sqlOperations.Should().Contain(sql =>
+            sql.Contains("UPDATE \"Menus\"") &&
+            sql.Contains($"'{SystemDesignParentId}'") &&
+            sql.Contains("'/system-design/qr-code-generator'"));
+
+        sqlOperations.Should().Contain(sql =>
+            sql.Contains("UPDATE \"AspNetUsers\"") &&
+            sql.Contains("SET \"HomePath\" = '/system-design/qr-code-generator'") &&
+            sql.Contains("WHERE \"HomePath\" = '/system-design/real-world-apps/qr-code-generator'"));
+
+        sqlOperations.Should().Contain(sql =>
+            sql.Contains("DELETE FROM \"Menus\"") &&
+            sql.Contains($"'{FundamentalsId}'") &&
+            sql.Contains($"'{NetworkingEssentialsId}'") &&
+            sql.Contains($"'{RealWorldAppsId}'"));
+    }
+
     private sealed class AddTodoMenuItemAccessor : AddTodoMenuItem
     {
         public void ApplyUp(MigrationBuilder migrationBuilder)
@@ -164,6 +263,19 @@ public class MenuMigrationTests
     }
 
     private sealed class RemoveDashboardMenusAndResetHomePathAccessor : RemoveDashboardMenusAndResetHomePath
+    {
+        public void ApplyUp(MigrationBuilder migrationBuilder)
+        {
+            Up(migrationBuilder);
+        }
+
+        public void ApplyDown(MigrationBuilder migrationBuilder)
+        {
+            Down(migrationBuilder);
+        }
+    }
+
+    private sealed class ReorganizeSystemDesignMenusAccessor : ReorganizeSystemDesignMenus
     {
         public void ApplyUp(MigrationBuilder migrationBuilder)
         {
