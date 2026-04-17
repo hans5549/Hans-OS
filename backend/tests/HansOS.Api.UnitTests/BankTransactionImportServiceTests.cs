@@ -31,7 +31,7 @@ public class BankTransactionImportServiceTests : IDisposable
     {
         var sut = new BankTransactionImportService(_db, Substitute.For<ILogger<BankTransactionImportService>>());
 
-        sut.Should().NotBeNull();
+        Assert.NotNull(sut);
     }
 
     public void Dispose()

@@ -13,6 +13,8 @@ public class BankTransactionServiceTests : IDisposable
 {
     private readonly ApplicationDbContext _db;
     private readonly BankTransactionService _sut;
+    private readonly BankTransactionExcelExportService _excelSut;
+    private readonly BankTransactionReceiptService _receiptSut;
 
     public BankTransactionServiceTests()
     {
@@ -21,6 +23,8 @@ public class BankTransactionServiceTests : IDisposable
             .Options;
         _db = new ApplicationDbContext(dbOptions);
         _sut = new BankTransactionService(_db);
+        _excelSut = new BankTransactionExcelExportService(_sut);
+        _receiptSut = new BankTransactionReceiptService(_db);
     }
 
     // ── GetTransactionsAsync ────────────────────────
@@ -101,7 +105,7 @@ public class BankTransactionServiceTests : IDisposable
 
         // 驗證已存入資料庫
         var saved = await _db.BankTransactions.FindAsync(result.Id);
-        saved.Should().NotBeNull();
+        Assert.NotNull(saved);
     }
 
     [Fact]
@@ -293,7 +297,7 @@ public class BankTransactionServiceTests : IDisposable
         await _sut.DeleteTransactionAsync(id);
 
         var deleted = await _db.BankTransactions.FindAsync(id);
-        deleted.Should().BeNull();
+        Assert.Null(deleted);
     }
 
     [Fact]
@@ -311,7 +315,7 @@ public class BankTransactionServiceTests : IDisposable
     {
         await SeedTransactionAsync("上海銀行", TransactionType.Income, new DateOnly(2026, 7, 1), 10000, "收入");
 
-        var result = await _sut.ExportToExcelAsync("上海銀行", 2026, 7);
+        var result = await _excelSut.ExportAsync("上海銀行", 2026, 7);
 
         result.Should().NotBeEmpty();
         // XLSX magic bytes: PK (50 4B)
@@ -322,7 +326,7 @@ public class BankTransactionServiceTests : IDisposable
     [Fact]
     public async Task ExportToExcel_NoTransactions_ReturnsValidExcel()
     {
-        var result = await _sut.ExportToExcelAsync("上海銀行", 2026, 12);
+        var result = await _excelSut.ExportAsync("上海銀行", 2026, 12);
 
         result.Should().NotBeEmpty();
         result[0].Should().Be(0x50);
@@ -367,7 +371,7 @@ public class BankTransactionServiceTests : IDisposable
     {
         await SeedTransactionAsync("上海銀行", TransactionType.Income, new DateOnly(2027, 3, 1), 10000, "收入");
 
-        var result = await _sut.ExportToExcelAsync("上海銀行", 2027, 3);
+        var result = await _excelSut.ExportAsync("上海銀行", 2027, 3);
 
         result.Should().NotBeEmpty();
         using var stream = new MemoryStream(result);
@@ -385,7 +389,7 @@ public class BankTransactionServiceTests : IDisposable
     {
         await SeedTransactionAsync("上海銀行", TransactionType.Expense, new DateOnly(2027, 4, 1), 3000, "支出");
 
-        var result = await _sut.ExportToExcelAsync("上海銀行", 2027, 4);
+        var result = await _excelSut.ExportAsync("上海銀行", 2027, 4);
 
         result.Should().NotBeEmpty();
         using var stream = new MemoryStream(result);
@@ -451,7 +455,7 @@ public class BankTransactionServiceTests : IDisposable
             new DateOnly(2030, 1, 10), 1000, "未處理收據",
             receiptCollected: false, receiptMailed: false);
 
-        var result = await _sut.GetReceiptTrackingAsync(2030, 1);
+        var result = await _receiptSut.GetReceiptTrackingAsync(2030, 1);
 
         result.TotalCount.Should().Be(1);
         result.Items.Should().ContainSingle(i => i.Description == "未處理收據");
@@ -465,7 +469,7 @@ public class BankTransactionServiceTests : IDisposable
             new DateOnly(2030, 2, 10), 1000, "已處理完成",
             receiptCollected: true, receiptMailed: true);
 
-        var result = await _sut.GetReceiptTrackingAsync(2030, 2);
+        var result = await _receiptSut.GetReceiptTrackingAsync(2030, 2);
 
         result.TotalCount.Should().Be(0);
         result.Items.Should().BeEmpty();
@@ -479,7 +483,7 @@ public class BankTransactionServiceTests : IDisposable
             new DateOnly(2030, 3, 10), 2000, "未領取收據",
             receiptCollected: false, receiptMailed: true);
 
-        var result = await _sut.GetReceiptTrackingAsync(2030, 3);
+        var result = await _receiptSut.GetReceiptTrackingAsync(2030, 3);
 
         result.TotalCount.Should().Be(1);
         result.NotCollectedCount.Should().Be(1);
@@ -494,7 +498,7 @@ public class BankTransactionServiceTests : IDisposable
             new DateOnly(2030, 4, 10), 3000, "未寄送收據",
             receiptCollected: true, receiptMailed: false);
 
-        var result = await _sut.GetReceiptTrackingAsync(2030, 4);
+        var result = await _receiptSut.GetReceiptTrackingAsync(2030, 4);
 
         result.TotalCount.Should().Be(1);
         result.NotMailedCount.Should().Be(1);
@@ -509,7 +513,7 @@ public class BankTransactionServiceTests : IDisposable
             new DateOnly(2030, 6, 10), 5000, "收入交易",
             receiptCollected: false, receiptMailed: false);
 
-        var result = await _sut.GetReceiptTrackingAsync(2030, 6);
+        var result = await _receiptSut.GetReceiptTrackingAsync(2030, 6);
 
         result.TotalCount.Should().Be(0);
         result.Items.Should().BeEmpty();
@@ -543,7 +547,7 @@ public class BankTransactionServiceTests : IDisposable
         await SeedTransactionAsync("上海銀行", TransactionType.Income,
             new DateOnly(2030, 5, 20), 5000, "收入交易");
 
-        var result = await _sut.GetReceiptTrackingAsync(2030, 5);
+        var result = await _receiptSut.GetReceiptTrackingAsync(2030, 5);
 
         result.TotalCount.Should().Be(3);
         result.NotCollectedCount.Should().Be(2);

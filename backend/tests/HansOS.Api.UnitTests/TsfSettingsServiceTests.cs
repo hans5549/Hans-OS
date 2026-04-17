@@ -52,7 +52,7 @@ public class TsfSettingsServiceTests : IDisposable
         result.Note.Should().Be("羽球相關活動");
 
         var saved = await _db.SportsDepartments.FindAsync(result.Id);
-        saved.Should().NotBeNull();
+        Assert.NotNull(saved);
     }
 
     [Fact]
@@ -101,7 +101,7 @@ public class TsfSettingsServiceTests : IDisposable
         await _sut.DeleteDepartmentAsync(id);
 
         var deleted = await _db.SportsDepartments.FindAsync(id);
-        deleted.Should().BeNull();
+        Assert.Null(deleted);
     }
 
     [Fact]
@@ -176,7 +176,7 @@ public class TsfSettingsServiceTests : IDisposable
 
         result.Name.Should().HaveLength(100);
         var saved = await _db.SportsDepartments.FindAsync(result.Id);
-        saved.Should().NotBeNull();
+        Assert.NotNull(saved);
         saved!.Name.Should().Be(name100);
     }
 

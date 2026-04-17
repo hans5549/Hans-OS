@@ -42,7 +42,7 @@ public class AnnualBudgetServiceTests : IDisposable
         result.Departments[0].DepartmentName.Should().Be("體育組");
 
         var budgetInDb = await _db.AnnualBudgets.FirstOrDefaultAsync(b => b.Year == 2025);
-        budgetInDb.Should().NotBeNull();
+        Assert.NotNull(budgetInDb);
     }
 
     [Fact]

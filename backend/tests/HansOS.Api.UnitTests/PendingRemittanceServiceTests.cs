@@ -169,7 +169,7 @@ public class PendingRemittanceServiceTests : IDisposable
         var result = await _sut.CreateAsync(request);
 
         var saved = await _db.PendingRemittances.FindAsync(result.Id);
-        saved.Should().NotBeNull();
+        Assert.NotNull(saved);
         saved!.Description.Should().Be("存入資料庫測試");
         saved.Amount.Should().Be(8000m);
     }
@@ -317,7 +317,7 @@ public class PendingRemittanceServiceTests : IDisposable
         await _sut.DeleteAsync(id);
 
         var deleted = await _db.PendingRemittances.FindAsync(id);
-        deleted.Should().BeNull();
+        Assert.Null(deleted);
     }
 
     [Fact]

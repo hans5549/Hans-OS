@@ -1,12 +1,16 @@
 using System.Text;
 using HansOS.Api.Common;
+using HansOS.Api.Common.Observability;
 using HansOS.Api.Data;
 using HansOS.Api.Data.Entities;
+using HansOS.Api.Data.Seeding;
 using HansOS.Api.Options;
 using HansOS.Api.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Serilog;
@@ -24,8 +28,12 @@ var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<Jw
 var frontendOptions = builder.Configuration.GetSection(FrontendOptions.SectionName).Get<FrontendOptions>()!;
 
 // ── EF Core + Identity ───────────────────────────
-builder.Services.AddDbContext<ApplicationDbContext>(opt =>
-    opt.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddSingleton<SlowQueryInterceptor>();
+builder.Services.AddDbContext<ApplicationDbContext>((sp, opt) =>
+{
+    opt.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
+    opt.AddInterceptors(sp.GetRequiredService<SlowQueryInterceptor>());
+});
 
 builder.Services.AddIdentityCore<ApplicationUser>(opt =>
     {
@@ -78,6 +86,8 @@ builder.Services.AddScoped<IMenuService, MenuService>();
 builder.Services.AddScoped<ITsfSettingsService, TsfSettingsService>();
 builder.Services.AddScoped<IBankTransactionService, BankTransactionService>();
 builder.Services.AddScoped<IBankTransactionImportService, BankTransactionImportService>();
+builder.Services.AddScoped<IBankTransactionExcelExportService, BankTransactionExcelExportService>();
+builder.Services.AddScoped<IBankTransactionReceiptService, BankTransactionReceiptService>();
 builder.Services.AddScoped<IAnnualBudgetService, AnnualBudgetService>();
 builder.Services.AddScoped<IBudgetImportService, BudgetImportService>();
 builder.Services.AddScoped<IBudgetShareService, BudgetShareService>();
@@ -86,8 +96,10 @@ builder.Services.AddScoped<IPendingRemittanceService, PendingRemittanceService>(
 builder.Services.AddScoped<IFinanceAccountService, FinanceAccountService>();
 builder.Services.AddScoped<ITransactionCategoryService, TransactionCategoryService>();
 builder.Services.AddScoped<IFinanceTransactionService, FinanceTransactionService>();
+builder.Services.AddScoped<IFinanceTransactionAnalyticsService, FinanceTransactionAnalyticsService>();
 builder.Services.AddScoped<IStockTransactionService, StockTransactionService>();
-builder.Services.AddScoped<IArticleCollectionService, ArticleCollectionService>();
+builder.Services.AddScoped<IArticleBookmarkService, ArticleBookmarkService>();
+builder.Services.AddScoped<IArticleBookmarkGroupService, ArticleBookmarkGroupService>();
 
 // ── Controllers + Swagger ────────────────────────
 builder.Services.AddControllers();
@@ -121,8 +133,12 @@ builder.Services.AddSwaggerGen(opt =>
 });
 
 // ── Health Checks ────────────────────────────────
+// liveness (/healthz)  = process alive; no dependencies
+// readiness (/readyz)  = DbContext reachable
+// legacy   (/health)   = all checks (backward compat)
 builder.Services.AddHealthChecks()
-    .AddDbContextCheck<ApplicationDbContext>();
+    .AddCheck("self", () => HealthCheckResult.Healthy(), tags: ["live"])
+    .AddDbContextCheck<ApplicationDbContext>("database", tags: ["ready"]);
 
 // ── Exception Handler ────────────────────────────
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
@@ -138,27 +154,9 @@ using (var scope = app.Services.CreateScope())
         await db.Database.MigrateAsync();
     else
         await db.Database.EnsureCreatedAsync();
-
-    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-
-    if (!await roleManager.RoleExistsAsync("admin"))
-        await roleManager.CreateAsync(new IdentityRole("admin"));
-
-    if (await userManager.FindByNameAsync("hans") is null)
-    {
-        var user = new ApplicationUser
-        {
-            UserName = "hans",
-            RealName = "Hans",
-            Email = "hans@hans-os.dev",
-            IsActive = true,
-            HomePath = "/index"
-        };
-        await userManager.CreateAsync(user, "H@ns19951204");
-        await userManager.AddToRoleAsync(user, "admin");
-    }
 }
+
+await IdentitySeeder.SeedAsync(app.Services);
 
 // ── Middleware Pipeline ──────────────────────────
 app.UseExceptionHandler(_ => { });
@@ -174,7 +172,15 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapControllers();
-app.MapHealthChecks("/health");
+app.MapHealthChecks("/healthz", new HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("live"),
+});
+app.MapHealthChecks("/readyz", new HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("ready"),
+});
+app.MapHealthChecks("/health"); // 保留給既有監控腳本，執行所有檢查
 
 app.Run();
 

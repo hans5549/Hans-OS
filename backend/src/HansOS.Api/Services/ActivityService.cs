@@ -100,7 +100,7 @@ public class ActivityService(ApplicationDbContext db) : IActivityService
     public async Task<ActivityDetailResponse> CreateAsync(
         CreateActivityRequest request, CancellationToken ct = default)
     {
-        await ValidateDepartmentExistsAsync(request.DepartmentId, ct);
+        await db.EnsureDepartmentExistsAsync(request.DepartmentId, ct);
         await ValidateBudgetItemsAsync(request.DepartmentId, request.Year, request.Groups, request.Expenses, ct);
 
         var now = DateTime.UtcNow;
@@ -216,17 +216,6 @@ public class ActivityService(ApplicationDbContext db) : IActivityService
         await db.SaveChangesAsync(ct);
     }
 
-    // ── Private Helpers ──────────────────────────────
-
-    private async Task ValidateDepartmentExistsAsync(Guid departmentId, CancellationToken ct)
-    {
-        var exists = await db.SportsDepartments
-            .AsNoTracking()
-            .AnyAsync(d => d.Id == departmentId, ct);
-
-        if (!exists)
-            throw new ArgumentException("指定的部門不存在");
-    }
 
     private async Task<int> GetNextSequenceAsync(
         Guid departmentId, int year, int month, CancellationToken ct)
