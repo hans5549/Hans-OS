@@ -32,7 +32,7 @@ public class ApiEnvelopeTests
         var envelope = ApiEnvelope<object>.Fail("something went wrong");
 
         envelope.Code.Should().Be(-1);
-        envelope.Data.Should().BeNull();
+        Assert.Null(envelope.Data);
         envelope.Error.Should().Be("something went wrong");
         envelope.Message.Should().Be("something went wrong");
     }

@@ -12,7 +12,9 @@ namespace HansOS.Api.Controllers;
 [Authorize]
 public class BankTransactionController(
     IBankTransactionService transactionService,
-    IBankTransactionImportService importService) : ControllerBase
+    IBankTransactionImportService importService,
+    IBankTransactionExcelExportService excelExportService,
+    IBankTransactionReceiptService receiptService) : ControllerBase
 {
     [HttpGet("{bankName}")]
     public async Task<ApiEnvelope<List<BankTransactionResponse>>> GetTransactions(
@@ -59,7 +61,7 @@ public class BankTransactionController(
     public async Task<IActionResult> ExportToExcel(
         string bankName, [FromQuery] int year, [FromQuery] int? month, CancellationToken ct)
     {
-        var bytes = await transactionService.ExportToExcelAsync(bankName, year, month, ct);
+        var bytes = await excelExportService.ExportAsync(bankName, year, month, ct);
         var periodLabel = GetPeriodLabel(year, month);
         var fileName = $"{bankName}收支表_{periodLabel}.xlsx";
         return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
@@ -69,13 +71,13 @@ public class BankTransactionController(
     public async Task<ApiEnvelope<ReceiptTrackingSummaryResponse>> GetReceiptTracking(
         [FromQuery] int year, [FromQuery] int? month, CancellationToken ct) =>
         ApiEnvelope<ReceiptTrackingSummaryResponse>.Success(
-            await transactionService.GetReceiptTrackingAsync(year, month, ct));
+            await receiptService.GetReceiptTrackingAsync(year, month, ct));
 
     [HttpPatch("{id:guid}/receipt-status")]
     public async Task<ApiEnvelope<object?>> PatchReceiptStatus(
         Guid id, [FromBody] PatchReceiptStatusRequest request, CancellationToken ct)
     {
-        await transactionService.PatchReceiptStatusAsync(id, request, ct);
+        await receiptService.PatchReceiptStatusAsync(id, request, ct);
         return ApiEnvelope<object?>.Success(null);
     }
 

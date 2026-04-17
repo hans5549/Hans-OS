@@ -87,7 +87,7 @@ public class ActivityServiceTests : IDisposable
         result.TotalAmount.Should().Be(4500m);
 
         var saved = await _db.Activities.FindAsync(result.Id);
-        saved.Should().NotBeNull();
+        Assert.NotNull(saved);
     }
 
     [Fact]
@@ -209,7 +209,7 @@ public class ActivityServiceTests : IDisposable
         await _sut.DeleteAsync(activityId);
 
         var deleted = await _db.Activities.FindAsync(activityId);
-        deleted.Should().BeNull();
+        Assert.Null(deleted);
     }
 
     [Fact]

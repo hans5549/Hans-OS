@@ -11,7 +11,9 @@ namespace HansOS.Api.Controllers;
 [ApiController]
 [Route("finance/transactions")]
 [Authorize]
-public class FinanceTransactionController(IFinanceTransactionService transactionService) : ControllerBase
+public class FinanceTransactionController(
+    IFinanceTransactionService transactionService,
+    IFinanceTransactionAnalyticsService analyticsService) : ControllerBase
 {
     private string CurrentUserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
@@ -27,7 +29,7 @@ public class FinanceTransactionController(IFinanceTransactionService transaction
     public async Task<ApiEnvelope<MonthlySummaryResponse>> GetMonthlySummary(
         [FromQuery] int year, [FromQuery] int month, CancellationToken ct)
         => ApiEnvelope<MonthlySummaryResponse>.Success(
-            await transactionService.GetMonthlySummaryAsync(CurrentUserId, year, month, ct));
+            await analyticsService.GetMonthlySummaryAsync(CurrentUserId, year, month, ct));
 
     /// <summary>取得跨月收支趨勢（最多 12 個月）</summary>
     [HttpGet("trends")]
@@ -36,7 +38,7 @@ public class FinanceTransactionController(IFinanceTransactionService transaction
         [FromQuery] int endYear, [FromQuery] int endMonth,
         CancellationToken ct)
         => ApiEnvelope<TrendResponse>.Success(
-            await transactionService.GetTrendAsync(CurrentUserId, startYear, startMonth, endYear, endMonth, ct));
+            await analyticsService.GetTrendAsync(CurrentUserId, startYear, startMonth, endYear, endMonth, ct));
 
     /// <summary>取得月度分類佔比</summary>
     [HttpGet("category-breakdown")]
@@ -44,7 +46,7 @@ public class FinanceTransactionController(IFinanceTransactionService transaction
         [FromQuery] int year, [FromQuery] int month, [FromQuery] string type,
         CancellationToken ct)
         => ApiEnvelope<CategoryBreakdownResponse>.Success(
-            await transactionService.GetCategoryBreakdownAsync(CurrentUserId, year, month, type, ct));
+            await analyticsService.GetCategoryBreakdownAsync(CurrentUserId, year, month, type, ct));
 
     /// <summary>新增交易</summary>
     [HttpPost]
