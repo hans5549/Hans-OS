@@ -13,7 +13,9 @@ export interface DocSection {
 }
 
 export type ContentBlock =
+  | CalloutBlock
   | CodeBlock
+  | KeyValueBlock
   | ListBlock
   | ParagraphBlock
   | SubHeadingBlock
@@ -45,6 +47,24 @@ export interface CodeBlock {
   type: 'code';
   language: string;
   code: string;
+}
+
+export interface CalloutBlock {
+  type: 'callout';
+  variant: 'info' | 'tip' | 'warning';
+  title?: string;
+  text: string;
+}
+
+export interface KeyValueItem {
+  icon?: string;
+  label: string;
+  value: string;
+}
+
+export interface KeyValueBlock {
+  type: 'keyvalue';
+  items: KeyValueItem[];
 }
 
 export interface SelfTestItem {

@@ -54,6 +54,15 @@ function getBlockTextLength(block: ContentBlock): number {
     case 'subheading': {
       return block.text.length;
     }
+    case 'callout': {
+      return block.text.length + (block.title?.length ?? 0);
+    }
+    case 'keyvalue': {
+      return block.items.reduce(
+        (sum, item) => sum + item.label.length + item.value.length,
+        0,
+      );
+    }
     case 'table': {
       return (
         block.headers.reduce((sum, h) => sum + h.length, 0) +
