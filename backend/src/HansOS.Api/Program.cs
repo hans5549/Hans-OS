@@ -93,6 +93,8 @@ builder.Services.AddScoped<IBudgetImportService, BudgetImportService>();
 builder.Services.AddScoped<IBudgetShareService, BudgetShareService>();
 builder.Services.AddScoped<IActivityService, ActivityService>();
 builder.Services.AddScoped<IPendingRemittanceService, PendingRemittanceService>();
+builder.Services.AddScoped<IFinanceTaskService, FinanceTaskService>();
+builder.Services.AddScoped<IUnifiedTaskService, UnifiedTaskService>();
 builder.Services.AddScoped<IFinanceAccountService, FinanceAccountService>();
 builder.Services.AddScoped<ITransactionCategoryService, TransactionCategoryService>();
 builder.Services.AddScoped<IFinanceTransactionService, FinanceTransactionService>();

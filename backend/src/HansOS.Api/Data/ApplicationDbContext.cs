@@ -28,6 +28,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<ArticleBookmarkGroup> ArticleBookmarkGroups => Set<ArticleBookmarkGroup>();
     public DbSet<ArticleBookmark> ArticleBookmarks => Set<ArticleBookmark>();
     public DbSet<BudgetShareToken> BudgetShareTokens => Set<BudgetShareToken>();
+    public DbSet<FinanceTask> FinanceTasks => Set<FinanceTask>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

@@ -100,7 +100,7 @@ async function handleCreateRemittance() {
       departmentId: props.activity.departmentId,
       activityExpenseId: pendingExpenseId,
     });
-    message.success('待匯款已建立，請至「活動費待匯款」頁面處理');
+    message.success('待匯款已建立，請至「統一任務清單」頁面處理');
     remittanceModalVisible.value = false;
     emit('remittanceCreated');
   } finally {

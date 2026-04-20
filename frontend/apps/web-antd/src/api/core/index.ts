@@ -12,3 +12,4 @@ export * from './finance-accounts';
 export * from './finance-categories';
 export * from './finance-transactions';
 export * from './finance-stocks';
+export * from './finance-tasks';
