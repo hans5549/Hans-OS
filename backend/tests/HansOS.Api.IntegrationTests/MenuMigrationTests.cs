@@ -7,11 +7,18 @@ namespace HansOS.Api.IntegrationTests;
 
 public class MenuMigrationTests
 {
+    private const string NpgsqlProvider = "Npgsql.EntityFrameworkCore.PostgreSQL";
     private const string AdminRoleId = "a1b2c3d4-0000-0000-0000-000000000001";
     private const string DashboardMenuId = "d1e2f3a4-0000-0000-0000-000000000001";
     private const string AnalyticsMenuId = "d1e2f3a4-0000-0000-0000-000000000002";
     private const string WorkspaceMenuId = "d1e2f3a4-0000-0000-0000-000000000003";
     private const string TodoMenuId = "d1e2f3a4-0000-0000-0000-000000000010";
+    private const string FinanceBookkeepingId = "b0000001-0000-0000-0000-000000000001";
+    private const string FinanceReportsId = "b0000001-0000-0000-0000-000000000006";
+    private const string ZhongyuanMissionId = "d1e2f3a4-0000-0000-0000-000000000006";
+    private const string ZmActivityRecordsId = "a0000003-0000-0000-0000-000000000001";
+    private const string TodoListId = "e0000001-0000-0000-0000-000000000001";
+    private const string TodoListIndexId = "e0000001-0000-0000-0000-000000000002";
     private const string SystemDesignParentId = "c0000001-0000-0000-0000-000000000001";
     private const string FundamentalsId = "c0000002-0000-0000-0000-000000000001";
     private const string NetworkingEssentialsId = "c0000002-0000-0000-0000-000000000101";
@@ -22,14 +29,7 @@ public class MenuMigrationTests
     public void AddTodoMenuItem_Up_EmitsTodoMenuSeedSql()
     {
         var migration = new AddTodoMenuItemAccessor();
-        var migrationBuilder = new MigrationBuilder("Npgsql.EntityFrameworkCore.PostgreSQL");
-
-        migration.ApplyUp(migrationBuilder);
-
-        var sqlOperations = migrationBuilder.Operations
-            .OfType<SqlOperation>()
-            .Select(operation => operation.Sql)
-            .ToArray();
+        var sqlOperations = GetSqlOperations(migration.ApplyUp);
 
         sqlOperations.Should().Contain(sql =>
             sql.Contains("'Todo'") &&
@@ -56,14 +56,7 @@ public class MenuMigrationTests
     public void AddTodoMenuItem_Down_EmitsTodoMenuRollbackSql()
     {
         var migration = new AddTodoMenuItemAccessor();
-        var migrationBuilder = new MigrationBuilder("Npgsql.EntityFrameworkCore.PostgreSQL");
-
-        migration.ApplyDown(migrationBuilder);
-
-        var sqlOperations = migrationBuilder.Operations
-            .OfType<SqlOperation>()
-            .Select(operation => operation.Sql)
-            .ToArray();
+        var sqlOperations = GetSqlOperations(migration.ApplyDown);
 
         sqlOperations.Should().Contain(sql =>
             sql.Contains("DELETE FROM \"RoleMenus\"") &&
@@ -78,14 +71,7 @@ public class MenuMigrationTests
     public void RemoveDashboardMenusAndResetHomePath_Up_EmitsCleanupSql()
     {
         var migration = new RemoveDashboardMenusAndResetHomePathAccessor();
-        var migrationBuilder = new MigrationBuilder("Npgsql.EntityFrameworkCore.PostgreSQL");
-
-        migration.ApplyUp(migrationBuilder);
-
-        var sqlOperations = migrationBuilder.Operations
-            .OfType<SqlOperation>()
-            .Select(operation => operation.Sql)
-            .ToArray();
+        var sqlOperations = GetSqlOperations(migration.ApplyUp);
 
         sqlOperations.Should().Contain(sql =>
             sql.Contains("DELETE FROM \"RoleMenus\"") &&
@@ -114,14 +100,7 @@ public class MenuMigrationTests
     public void RemoveDashboardMenusAndResetHomePath_Down_RecreatesMenuTreeAndHomePath()
     {
         var migration = new RemoveDashboardMenusAndResetHomePathAccessor();
-        var migrationBuilder = new MigrationBuilder("Npgsql.EntityFrameworkCore.PostgreSQL");
-
-        migration.ApplyDown(migrationBuilder);
-
-        var sqlOperations = migrationBuilder.Operations
-            .OfType<SqlOperation>()
-            .Select(operation => operation.Sql)
-            .ToArray();
+        var sqlOperations = GetSqlOperations(migration.ApplyDown);
 
         sqlOperations.Should().Contain(sql =>
             sql.Contains("'Dashboard'") &&
@@ -159,14 +138,7 @@ public class MenuMigrationTests
     public void ReorganizeSystemDesignMenus_Up_EmitsReorganizedMenuSql()
     {
         var migration = new ReorganizeSystemDesignMenusAccessor();
-        var migrationBuilder = new MigrationBuilder("Npgsql.EntityFrameworkCore.PostgreSQL");
-
-        migration.ApplyUp(migrationBuilder);
-
-        var sqlOperations = migrationBuilder.Operations
-            .OfType<SqlOperation>()
-            .Select(operation => operation.Sql)
-            .ToArray();
+        var sqlOperations = GetSqlOperations(migration.ApplyUp);
 
         sqlOperations.Should().Contain(sql =>
             sql.Contains("INSERT INTO \"Menus\"") &&
@@ -211,14 +183,7 @@ public class MenuMigrationTests
     public void ReorganizeSystemDesignMenus_Down_EmitsRollbackSql()
     {
         var migration = new ReorganizeSystemDesignMenusAccessor();
-        var migrationBuilder = new MigrationBuilder("Npgsql.EntityFrameworkCore.PostgreSQL");
-
-        migration.ApplyDown(migrationBuilder);
-
-        var sqlOperations = migrationBuilder.Operations
-            .OfType<SqlOperation>()
-            .Select(operation => operation.Sql)
-            .ToArray();
+        var sqlOperations = GetSqlOperations(migration.ApplyDown);
 
         sqlOperations.Should().Contain(sql =>
             sql.Contains("DELETE FROM \"RoleMenus\"") &&
@@ -249,42 +214,106 @@ public class MenuMigrationTests
             sql.Contains($"'{RealWorldAppsId}'"));
     }
 
+    [Fact]
+    public void RemoveFinanceAndMissionMenusAddTodoMenu_Up_EmitsMenuToggleAndTodoSeedSql()
+    {
+        var migration = new RemoveFinanceAndMissionMenusAddTodoMenuAccessor();
+        var sqlOperations = GetSqlOperations(migration.ApplyUp);
+
+        sqlOperations.Should().Contain(sql =>
+            sql.Contains("UPDATE \"Menus\"") &&
+            sql.Contains("\"IsActive\" = false") &&
+            sql.Contains($"'{FinanceBookkeepingId}'") &&
+            sql.Contains($"'{FinanceReportsId}'") &&
+            sql.Contains($"'{ZhongyuanMissionId}'") &&
+            sql.Contains($"'{ZmActivityRecordsId}'"));
+
+        sqlOperations.Should().Contain(sql =>
+            sql.Contains("INSERT INTO \"Menus\"") &&
+            sql.Contains($"'{TodoListId}'") &&
+            sql.Contains("'TodoList'") &&
+            sql.Contains("'/todo'") &&
+            sql.Contains("'BasicLayout'") &&
+            sql.Contains("'/todo/index'") &&
+            sql.Contains("'代辦清單'") &&
+            sql.Contains("'lucide:list-todo'"));
+
+        sqlOperations.Should().Contain(sql =>
+            sql.Contains("INSERT INTO \"Menus\"") &&
+            sql.Contains($"'{TodoListIndexId}'") &&
+            sql.Contains("'TodoListIndex'") &&
+            sql.Contains("'/todo/index'") &&
+            sql.Contains("'/dashboard/todo/index'") &&
+            sql.Contains("'代辦清單'"));
+
+        sqlOperations.Should().Contain(sql =>
+            sql.Contains("INSERT INTO \"RoleMenus\"") &&
+            sql.Contains($"'{AdminRoleId}'") &&
+            sql.Contains($"'{TodoListId}'") &&
+            sql.Contains($"'{TodoListIndexId}'"));
+    }
+
+    [Fact]
+    public void RemoveFinanceAndMissionMenusAddTodoMenu_Down_EmitsRollbackSql()
+    {
+        var migration = new RemoveFinanceAndMissionMenusAddTodoMenuAccessor();
+        var sqlOperations = GetSqlOperations(migration.ApplyDown);
+
+        sqlOperations.Should().Contain(sql =>
+            sql.Contains("DELETE FROM \"RoleMenus\"") &&
+            sql.Contains($"'{TodoListId}'") &&
+            sql.Contains($"'{TodoListIndexId}'"));
+
+        sqlOperations.Should().Contain(sql =>
+            sql.Contains("DELETE FROM \"Menus\"") &&
+            sql.Contains($"'{TodoListId}'") &&
+            sql.Contains($"'{TodoListIndexId}'"));
+
+        sqlOperations.Should().Contain(sql =>
+            sql.Contains("UPDATE \"Menus\"") &&
+            sql.Contains("\"IsActive\" = true") &&
+            sql.Contains($"'{FinanceBookkeepingId}'") &&
+            sql.Contains($"'{FinanceReportsId}'") &&
+            sql.Contains($"'{ZhongyuanMissionId}'") &&
+            sql.Contains($"'{ZmActivityRecordsId}'"));
+    }
+
+    private static string[] GetSqlOperations(Action<MigrationBuilder> applyMigration)
+    {
+        var migrationBuilder = new MigrationBuilder(NpgsqlProvider);
+        applyMigration(migrationBuilder);
+
+        return migrationBuilder.Operations
+            .OfType<SqlOperation>()
+            .Select(operation => operation.Sql)
+            .ToArray();
+    }
+
     private sealed class AddTodoMenuItemAccessor : AddTodoMenuItem
     {
-        public void ApplyUp(MigrationBuilder migrationBuilder)
-        {
-            Up(migrationBuilder);
-        }
+        public void ApplyUp(MigrationBuilder migrationBuilder) => Up(migrationBuilder);
 
-        public void ApplyDown(MigrationBuilder migrationBuilder)
-        {
-            Down(migrationBuilder);
-        }
+        public void ApplyDown(MigrationBuilder migrationBuilder) => Down(migrationBuilder);
     }
 
     private sealed class RemoveDashboardMenusAndResetHomePathAccessor : RemoveDashboardMenusAndResetHomePath
     {
-        public void ApplyUp(MigrationBuilder migrationBuilder)
-        {
-            Up(migrationBuilder);
-        }
+        public void ApplyUp(MigrationBuilder migrationBuilder) => Up(migrationBuilder);
 
-        public void ApplyDown(MigrationBuilder migrationBuilder)
-        {
-            Down(migrationBuilder);
-        }
+        public void ApplyDown(MigrationBuilder migrationBuilder) => Down(migrationBuilder);
     }
 
     private sealed class ReorganizeSystemDesignMenusAccessor : ReorganizeSystemDesignMenus
     {
-        public void ApplyUp(MigrationBuilder migrationBuilder)
-        {
-            Up(migrationBuilder);
-        }
+        public void ApplyUp(MigrationBuilder migrationBuilder) => Up(migrationBuilder);
 
-        public void ApplyDown(MigrationBuilder migrationBuilder)
-        {
-            Down(migrationBuilder);
-        }
+        public void ApplyDown(MigrationBuilder migrationBuilder) => Down(migrationBuilder);
+    }
+
+    private sealed class RemoveFinanceAndMissionMenusAddTodoMenuAccessor : RemoveFinanceAndMissionMenusAddTodoMenu
+    {
+        public void ApplyUp(MigrationBuilder migrationBuilder) => Up(migrationBuilder);
+
+        public void ApplyDown(MigrationBuilder migrationBuilder) => Down(migrationBuilder);
     }
 }
