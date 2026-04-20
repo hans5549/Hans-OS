@@ -102,6 +102,9 @@ builder.Services.AddScoped<IFinanceTransactionAnalyticsService, FinanceTransacti
 builder.Services.AddScoped<IStockTransactionService, StockTransactionService>();
 builder.Services.AddScoped<IArticleBookmarkService, ArticleBookmarkService>();
 builder.Services.AddScoped<IArticleBookmarkGroupService, ArticleBookmarkGroupService>();
+builder.Services.AddScoped<ITodoCategoryService, TodoCategoryService>();
+builder.Services.AddScoped<ITodoTagService, TodoTagService>();
+builder.Services.AddScoped<ITodoItemService, TodoItemService>();
 
 // ── Controllers + Swagger ────────────────────────
 builder.Services.AddControllers();
