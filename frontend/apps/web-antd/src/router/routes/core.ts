@@ -112,17 +112,6 @@ const coreRoutes: RouteRecordRaw[] = [
           title: 'Legacy Workspace Redirect',
         },
       },
-      {
-        name: 'LegacyTodo',
-        path: '/todo',
-        redirect: preferences.app.defaultHomePath,
-        meta: {
-          hideInBreadcrumb: true,
-          hideInMenu: true,
-          hideInTab: true,
-          title: 'Legacy Todo Redirect',
-        },
-      },
       createLegacyRedirectRoute(
         'LegacySystemDesignQrCodeGenerator',
         '/system-design/qr-code-generator',
