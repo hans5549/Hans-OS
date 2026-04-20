@@ -30,6 +30,13 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<BudgetShareToken> BudgetShareTokens => Set<BudgetShareToken>();
     public DbSet<FinanceTask> FinanceTasks => Set<FinanceTask>();
 
+    // Todo 模組
+    public DbSet<TodoItem> TodoItems => Set<TodoItem>();
+    public DbSet<TodoCategory> TodoCategories => Set<TodoCategory>();
+    public DbSet<TodoTag> TodoTags => Set<TodoTag>();
+    public DbSet<TodoChecklistItem> TodoChecklistItems => Set<TodoChecklistItem>();
+    public DbSet<TodoItemRelation> TodoItemRelations => Set<TodoItemRelation>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
