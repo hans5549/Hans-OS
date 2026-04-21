@@ -489,7 +489,7 @@ onMounted(() => {
                   <div class="truncate font-medium">
                     {{ record.customTitle || record.title }}
                   </div>
-                  <div class="truncate text-xs text-gray-400">
+                  <div class="truncate text-xs text-muted-foreground">
                     {{ record.url || record.sourceId || '—' }}
                   </div>
                 </div>
@@ -508,7 +508,7 @@ onMounted(() => {
               <template v-else-if="column.dataIndex === 'tags'">
                 <div class="flex flex-wrap gap-1">
                   <Tag v-for="tag in record.tags" :key="tag">{{ tag }}</Tag>
-                  <span v-if="record.tags.length === 0" class="text-gray-400">
+                  <span v-if="record.tags.length === 0" class="text-muted-foreground">
                     —
                   </span>
                 </div>
@@ -575,7 +575,7 @@ onMounted(() => {
             </template>
 
             <template #emptyText>
-              <div class="py-8 text-center text-gray-400">
+              <div class="py-8 text-center text-muted-foreground">
                 尚無收藏資料，請點擊「新增收藏」開始建立
               </div>
             </template>
@@ -620,7 +620,7 @@ onMounted(() => {
             </template>
 
             <template #emptyText>
-              <div class="py-8 text-center text-gray-400">
+              <div class="py-8 text-center text-muted-foreground">
                 尚無群組資料，請點擊「新增群組」建立
               </div>
             </template>

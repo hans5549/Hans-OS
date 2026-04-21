@@ -78,14 +78,14 @@ const priorityOptions: { color: string; label: string; value: TodoPriority }[] =
 
 <template>
   <div
-    class="flex h-full flex-col border-l border-slate-200 bg-white"
+    class="flex h-full flex-col border-l border-border bg-background"
     @keydown.esc.stop="emit('close')"
   >
     <!-- Header -->
-    <div class="flex items-center justify-between border-b border-slate-200 px-4 py-3">
-      <span class="text-sm font-medium text-slate-600">任務詳情</span>
+    <div class="flex items-center justify-between border-b border-border px-4 py-3">
+      <span class="text-sm font-medium text-muted-foreground">任務詳情</span>
       <button
-        class="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+        class="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
         type="button"
         @click="emit('close')"
       >
@@ -100,7 +100,7 @@ const priorityOptions: { color: string; label: string; value: TodoPriority }[] =
       <!-- Title -->
       <textarea
         v-model="title"
-        class="w-full resize-none border-0 bg-transparent text-base font-medium text-slate-800 outline-none placeholder-slate-400"
+        class="w-full resize-none border-0 bg-transparent text-base font-medium text-foreground outline-none placeholder:text-muted-foreground"
         placeholder="任務標題"
         rows="2"
         @input="markDirty"
@@ -109,7 +109,7 @@ const priorityOptions: { color: string; label: string; value: TodoPriority }[] =
       <!-- Description -->
       <textarea
         v-model="description"
-        class="w-full resize-none rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-sm text-slate-700 outline-none placeholder-slate-400 focus:border-blue-300 focus:bg-white"
+        class="glass-input w-full resize-none rounded-lg border border-border p-2.5 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-primary"
         :placeholder="$t('page.todo.description')"
         rows="4"
         @input="markDirty"
@@ -117,12 +117,12 @@ const priorityOptions: { color: string; label: string; value: TodoPriority }[] =
 
       <!-- Due Date -->
       <div>
-        <label class="mb-1 block text-xs font-medium text-slate-500">
+        <label class="mb-1 block text-xs font-medium text-muted-foreground">
           {{ $t('page.todo.dueDate') }}
         </label>
         <input
           v-model="dueDate"
-          class="rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-700 outline-none focus:border-blue-400"
+          class="rounded-lg border border-border bg-transparent px-3 py-1.5 text-sm text-foreground outline-none focus:border-primary"
           type="date"
           @change="markDirty"
         />
@@ -130,7 +130,7 @@ const priorityOptions: { color: string; label: string; value: TodoPriority }[] =
 
       <!-- Priority -->
       <div>
-        <label class="mb-2 block text-xs font-medium text-slate-500">
+        <label class="mb-2 block text-xs font-medium text-muted-foreground">
           {{ $t('page.todo.priority') }}
         </label>
         <div class="flex gap-2">
@@ -150,28 +150,28 @@ const priorityOptions: { color: string; label: string; value: TodoPriority }[] =
 
       <!-- Project -->
       <div v-if="item.projectName">
-        <label class="mb-1 block text-xs font-medium text-slate-500">專案</label>
+        <label class="mb-1 block text-xs font-medium text-muted-foreground">專案</label>
         <div class="flex items-center gap-2">
           <span
             class="size-3 rounded-full"
             :style="{ backgroundColor: item.projectColor ?? '#94A3B8' }"
           />
-          <span class="text-sm text-slate-700">{{ item.projectName }}</span>
+          <span class="text-sm text-foreground">{{ item.projectName }}</span>
         </div>
       </div>
     </div>
 
     <!-- Footer -->
-    <div class="border-t border-slate-200 px-4 py-3 flex justify-between items-center">
+    <div class="flex items-center justify-between border-t border-border px-4 py-3">
       <button
-        class="text-xs font-medium text-red-500 hover:text-red-700"
+        class="text-xs font-medium text-red-500 hover:text-red-400"
         type="button"
         @click="confirmDelete"
       >
         {{ $t('page.todo.delete') }}
       </button>
       <button
-        class="rounded-lg bg-blue-500 px-4 py-1.5 text-xs font-medium text-white hover:bg-blue-600 disabled:opacity-40"
+        class="rounded-lg bg-primary px-4 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary-hover disabled:opacity-40"
         :disabled="!isDirty || store.loading.saving"
         type="button"
         @click="save"

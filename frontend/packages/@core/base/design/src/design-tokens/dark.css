@@ -2,10 +2,10 @@
 .dark[data-theme='custom'],
 .dark[data-theme='default'] {
   /* Default background color of <body />...etc */
-  --background: 222.34deg 10.43% 12.27%;
+  --background: 222deg 16% 11%;
 
-  /* 主体区域背景色 */
-  --background-deep: 220deg 13.06% 9%;
+  /* 主体区域背景色 — deep navy for tech gradient base */
+  --background-deep: 222deg 50% 6%;
   --foreground: 0 0% 95%;
 
   /* Background color for <Card /> */
@@ -97,12 +97,13 @@
 
   /* =============component & UI============= */
 
-  --sidebar: 222.34deg 10.43% 12.27%;
-  --sidebar-deep: 220deg 13.06% 9%;
+  /* semi-transparent for glassmorphism effect */
+  --sidebar: 222deg 16% 14% / 0.85;
+  --sidebar-deep: 222deg 50% 6%;
   --menu: var(--sidebar);
 
-  /* header */
-  --header: 222.34deg 10.43% 12.27%;
+  /* header — semi-transparent glass */
+  --header: 222deg 16% 14% / 0.82;
 
   color-scheme: dark;
 }

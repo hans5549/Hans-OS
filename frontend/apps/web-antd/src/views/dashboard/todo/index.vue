@@ -45,7 +45,7 @@ function handleKeydown(e: KeyboardEvent) {
 </script>
 
 <template>
-  <div class="flex h-full overflow-hidden bg-slate-50">
+  <div class="flex h-full overflow-hidden bg-background">
     <TodoSidebar />
     <TodoList class="flex-1" />
     <Transition name="slide-right">

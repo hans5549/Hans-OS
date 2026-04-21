@@ -38,7 +38,7 @@ function handleRowClick() {
   <div
     class="group flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 transition-colors duration-150"
     :class="[
-      isSelected ? 'bg-blue-50' : 'hover:bg-slate-50',
+      isSelected ? 'bg-primary/10' : 'hover:bg-accent/50',
       item.status === 'Done' ? 'opacity-50' : '',
     ]"
     @click="handleRowClick"
@@ -49,7 +49,7 @@ function handleRowClick() {
       :class="[
         item.status === 'Done'
           ? 'border-green-500 bg-green-500'
-          : 'border-slate-300 hover:border-blue-400',
+          : 'border-border hover:border-primary',
         isAnimating ? 'scale-75' : 'scale-100',
       ]"
       type="button"
@@ -69,8 +69,8 @@ function handleRowClick() {
 
     <!-- Title -->
     <span
-      class="flex-1 truncate text-sm text-slate-700 transition-all duration-200"
-      :class="item.status === 'Done' ? 'line-through text-slate-400' : ''"
+      class="flex-1 truncate text-sm text-foreground transition-all duration-200"
+      :class="item.status === 'Done' ? 'line-through text-muted-foreground' : ''"
     >
       {{ item.title }}
     </span>

@@ -40,11 +40,11 @@ const completedItems = computed(() => store.items.filter((i) => i.status === 'Do
 const emptyConfig = computed(() => {
   const view = store.currentView;
   if (view === 'today' && store.todayProgress.done > 0 && store.todayProgress.total === store.todayProgress.done) {
-    return { icon: '✅', title: $t('page.todo.emptyTodayDone'), description: '' };
+    return { iconPath: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z', title: $t('page.todo.emptyTodayDone'), description: '' };
   }
-  if (view === 'today') return { icon: '📅', title: $t('page.todo.emptyToday'), description: '' };
-  if (view === 'inbox') return { icon: '📭', title: $t('page.todo.emptyInbox'), description: '' };
-  return { icon: '📁', title: $t('page.todo.emptyProject'), description: '' };
+  if (view === 'today') return { iconPath: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z', title: $t('page.todo.emptyToday'), description: '' };
+  if (view === 'inbox') return { iconPath: 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z', title: $t('page.todo.emptyInbox'), description: '' };
+  return { iconPath: 'M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z', title: $t('page.todo.emptyProject'), description: '' };
 });
 
 function openAddForm() {
@@ -58,11 +58,11 @@ onUnmounted(() => document.removeEventListener('todo:add', openAddForm));
 <template>
   <div class="flex h-full flex-1 flex-col overflow-hidden">
     <!-- Header -->
-    <div class="border-b border-slate-200 bg-white px-6 py-4">
+    <div class="border-b border-border bg-background px-6 py-4">
       <div class="flex items-center justify-between">
-        <h1 class="text-xl font-bold text-slate-800">{{ viewTitle }}</h1>
+        <h1 class="text-xl font-bold text-foreground">{{ viewTitle }}</h1>
         <button
-          class="flex items-center gap-1.5 rounded-lg bg-blue-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-600"
+          class="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary-hover"
           type="button"
           @click="openAddForm"
         >
@@ -75,21 +75,20 @@ onUnmounted(() => document.removeEventListener('todo:add', openAddForm));
 
       <!-- Today Progress Bar -->
       <div v-if="showProgress && store.todayProgress.total > 0" class="mt-3">
-        <div class="mb-1 flex items-center justify-between text-xs text-slate-500">
+        <div class="mb-1 flex items-center justify-between text-xs text-muted-foreground">
           <span>{{ store.todayProgress.done }} / {{ store.todayProgress.total }} {{ $t('page.todo.completed') }}</span>
           <span>{{ progress }}%</span>
         </div>
-        <div class="h-1.5 overflow-hidden rounded-full bg-slate-200">
+        <div class="h-1.5 overflow-hidden rounded-full bg-border">
           <div
-            class="h-full rounded-full bg-blue-500 transition-all duration-500"
+            class="h-full rounded-full bg-primary transition-all duration-500 tech-glow"
             :style="{ width: `${progress}%` }"
           />
         </div>
       </div>
     </div>
 
-    <!-- Content -->
-    <div class="flex-1 overflow-y-auto bg-slate-50 p-4">
+    <div class="flex-1 overflow-y-auto bg-background p-4">
       <!-- Add Form (inline) -->
       <div v-if="isAddFormOpen" class="mb-3">
         <TodoAddForm
@@ -101,7 +100,7 @@ onUnmounted(() => document.removeEventListener('todo:add', openAddForm));
       <!-- Empty state (no pending items and form not open) -->
       <TodoEmptyState
         v-if="pendingItems.length === 0 && !isAddFormOpen"
-        :icon="emptyConfig.icon"
+        :icon-path="emptyConfig.iconPath"
         :title="emptyConfig.title"
         :description="emptyConfig.description"
       />
@@ -109,7 +108,7 @@ onUnmounted(() => document.removeEventListener('todo:add', openAddForm));
       <!-- Pending items -->
       <div
         v-else
-        class="space-y-0.5 rounded-xl bg-white p-2 shadow-sm"
+        class="glass-card space-y-0.5 p-2"
       >
         <TransitionGroup name="item">
           <TodoItemRow
@@ -124,10 +123,10 @@ onUnmounted(() => document.removeEventListener('todo:add', openAddForm));
       <!-- Completed items (collapsible) -->
       <div v-if="completedItems.length > 0" class="mt-4">
         <details class="group">
-          <summary class="cursor-pointer select-none text-sm text-slate-500 hover:text-slate-700 mb-2">
+          <summary class="mb-2 cursor-pointer select-none text-sm text-muted-foreground hover:text-foreground">
             ✓ {{ completedItems.length }} {{ $t('page.todo.completed') }}
           </summary>
-          <div class="space-y-0.5 rounded-xl bg-white p-2 shadow-sm">
+          <div class="glass-card space-y-0.5 p-2">
             <TodoItemRow
               v-for="item in completedItems"
               :key="item.id"
