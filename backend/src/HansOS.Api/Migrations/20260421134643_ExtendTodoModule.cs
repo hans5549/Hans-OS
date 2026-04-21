@@ -11,6 +11,13 @@ namespace HansOS.Api.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            // NOTE: This migration was rewritten to work from the AddTodoEntities schema state.
+            // AddTodoEntities (20260421072520) ran first in production and already:
+            //   - Dropped the old TodoModule tables (TodoChecklistItems, TodoItemRelations,
+            //     TodoItemTodoTag, TodoItems, TodoTags, TodoCategories)
+            //   - Created new TodoProjects and simplified TodoItems (no ParentId/CategoryId FK)
+            // This migration adds the delta to reach the final desired schema.
+
             migrationBuilder.DropForeignKey(
                 name: "FK_ArticleBookmarks_ArticleBookmarkGroups_GroupId",
                 table: "ArticleBookmarks");
@@ -19,47 +26,7 @@ namespace HansOS.Api.Migrations
                 name: "FK_FinanceTasks_SportsDepartments_DepartmentId",
                 table: "FinanceTasks");
 
-            migrationBuilder.DropForeignKey(
-                name: "FK_TodoItems_TodoItems_ParentId",
-                table: "TodoItems");
 
-            migrationBuilder.DropForeignKey(
-                name: "FK_TodoItems_TodoItems_RecurrenceSourceId",
-                table: "TodoItems");
-
-            migrationBuilder.DropTable(
-                name: "TodoItemRelations");
-
-            migrationBuilder.DropTable(
-                name: "TodoItemTodoTag");
-
-            migrationBuilder.DropIndex(
-                name: "IX_TodoItems_UserId_ArchivedAt",
-                table: "TodoItems");
-
-            migrationBuilder.DropIndex(
-                name: "IX_TodoItems_UserId_CategoryId",
-                table: "TodoItems");
-
-            migrationBuilder.DropIndex(
-                name: "IX_TodoItems_UserId_ParentId_SortOrder",
-                table: "TodoItems");
-
-            migrationBuilder.DropIndex(
-                name: "IX_TodoItems_UserId_ReminderAt",
-                table: "TodoItems");
-
-            migrationBuilder.DropIndex(
-                name: "IX_TodoItems_UserId_Status_DueDate",
-                table: "TodoItems");
-
-            migrationBuilder.DropIndex(
-                name: "IX_TodoChecklistItems_TodoItemId_SortOrder",
-                table: "TodoChecklistItems");
-
-            migrationBuilder.DropIndex(
-                name: "IX_TodoCategories_UserId_SortOrder",
-                table: "TodoCategories");
 
             migrationBuilder.DropIndex(
                 name: "IX_FinanceTasks_CreatedAt",
@@ -101,130 +68,57 @@ namespace HansOS.Api.Migrations
                 name: "IX_ArticleBookmarkGroups_UserId_SortOrder",
                 table: "ArticleBookmarkGroups");
 
-            migrationBuilder.DropColumn(
-                name: "ReminderAt",
-                table: "TodoItems");
-
-            migrationBuilder.RenameColumn(
-                name: "SortOrder",
+            // Add columns missing from AddTodoEntities' simplified TodoItems schema
+            migrationBuilder.AddColumn<DateTime>(
+                name: "ArchivedAt",
                 table: "TodoItems",
-                newName: "Order");
+                type: "timestamp with time zone",
+                nullable: true);
 
-            migrationBuilder.RenameColumn(
-                name: "RecurrenceSourceId",
+            migrationBuilder.AddColumn<Guid>(
+                name: "CategoryId",
                 table: "TodoItems",
-                newName: "ProjectId");
+                type: "uuid",
+                nullable: true);
 
-            migrationBuilder.RenameIndex(
-                name: "IX_TodoItems_RecurrenceSourceId",
+            migrationBuilder.AddColumn<DateTime>(
+                name: "DeletedAt",
                 table: "TodoItems",
-                newName: "IX_TodoItems_ProjectId");
+                type: "timestamp with time zone",
+                nullable: true);
 
-            migrationBuilder.RenameColumn(
-                name: "SortOrder",
-                table: "TodoChecklistItems",
-                newName: "Order");
-
-            migrationBuilder.AlterColumn<string>(
-                name: "Title",
-                table: "TodoItems",
-                type: "character varying(500)",
-                maxLength: 500,
-                nullable: false,
-                oldClrType: typeof(string),
-                oldType: "character varying(200)",
-                oldMaxLength: 200);
-
-            migrationBuilder.AlterColumn<int>(
-                name: "Status",
-                table: "TodoItems",
-                type: "integer",
-                nullable: false,
-                oldClrType: typeof(string),
-                oldType: "character varying(20)",
-                oldMaxLength: 20);
-
-            migrationBuilder.AlterColumn<int>(
-                name: "RecurrencePattern",
-                table: "TodoItems",
-                type: "integer",
-                nullable: false,
-                defaultValue: 0,
-                oldClrType: typeof(string),
-                oldType: "character varying(20)",
-                oldMaxLength: 20,
-                oldNullable: true);
-
-            migrationBuilder.AlterColumn<int>(
-                name: "Priority",
-                table: "TodoItems",
-                type: "integer",
-                nullable: false,
-                oldClrType: typeof(string),
-                oldType: "character varying(20)",
-                oldMaxLength: 20);
-
-            migrationBuilder.AlterColumn<int>(
+            migrationBuilder.AddColumn<int>(
                 name: "Difficulty",
                 table: "TodoItems",
                 type: "integer",
                 nullable: false,
-                oldClrType: typeof(string),
-                oldType: "character varying(20)",
-                oldMaxLength: 20);
+                defaultValue: 0);
 
-            migrationBuilder.AlterColumn<string>(
-                name: "Description",
+            migrationBuilder.AddColumn<Guid>(
+                name: "ParentId",
                 table: "TodoItems",
-                type: "character varying(2000)",
-                maxLength: 2000,
-                nullable: true,
-                oldClrType: typeof(string),
-                oldType: "character varying(10000)",
-                oldMaxLength: 10000,
-                oldNullable: true);
+                type: "uuid",
+                nullable: true);
 
-            migrationBuilder.AlterColumn<string>(
-                name: "Title",
-                table: "TodoChecklistItems",
-                type: "character varying(500)",
-                maxLength: 500,
+            migrationBuilder.AddColumn<int>(
+                name: "RecurrenceInterval",
+                table: "TodoItems",
+                type: "integer",
                 nullable: false,
-                oldClrType: typeof(string),
-                oldType: "character varying(200)",
-                oldMaxLength: 200);
+                defaultValue: 1);
 
-            migrationBuilder.AddColumn<DateTime>(
-                name: "CreatedAt",
-                table: "TodoChecklistItems",
-                type: "timestamp with time zone",
+            migrationBuilder.AddColumn<int>(
+                name: "RecurrencePattern",
+                table: "TodoItems",
+                type: "integer",
                 nullable: false,
-                defaultValue: new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified));
+                defaultValue: 0);
 
-            migrationBuilder.AddColumn<DateTime>(
-                name: "UpdatedAt",
-                table: "TodoChecklistItems",
-                type: "timestamp with time zone",
-                nullable: false,
-                defaultValue: new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified));
-
-            migrationBuilder.AlterColumn<string>(
-                name: "Icon",
-                table: "TodoCategories",
-                type: "character varying(100)",
-                maxLength: 100,
-                nullable: true,
-                oldClrType: typeof(string),
-                oldType: "character varying(200)",
-                oldMaxLength: 200,
-                oldNullable: true);
-
-            migrationBuilder.AddColumn<DateTime>(
-                name: "UpdatedAt",
-                table: "TodoCategories",
-                type: "timestamp with time zone",
-                nullable: false,
-                defaultValue: new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified));
+            migrationBuilder.AddColumn<DateOnly>(
+                name: "ScheduledDate",
+                table: "TodoItems",
+                type: "date",
+                nullable: true);
 
             migrationBuilder.AlterColumn<string>(
                 name: "Tags",
@@ -409,6 +303,52 @@ namespace HansOS.Api.Migrations
                 oldType: "character varying(100)",
                 oldMaxLength: 100);
 
+            // Recreate tables dropped by AddTodoEntities (needed for final schema)
+            migrationBuilder.CreateTable(
+                name: "TodoCategories",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    UserId = table.Column<string>(type: "text", nullable: false),
+                    Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    Color = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
+                    Icon = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    SortOrder = table.Column<int>(type: "integer", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_TodoCategories", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_TodoCategories_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "TodoTags",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    UserId = table.Column<string>(type: "text", nullable: false),
+                    Name = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    Color = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_TodoTags", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_TodoTags_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
             migrationBuilder.CreateTable(
                 name: "TodoItemTag",
                 columns: table => new
@@ -434,54 +374,59 @@ namespace HansOS.Api.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "TodoProjects",
+                name: "TodoChecklistItems",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    UserId = table.Column<string>(type: "text", nullable: false),
-                    Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
-                    Color = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false, defaultValue: "#3B82F6"),
+                    TodoItemId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Title = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
+                    IsCompleted = table.Column<bool>(type: "boolean", nullable: false),
                     Order = table.Column<int>(type: "integer", nullable: false),
-                    IsArchived = table.Column<bool>(type: "boolean", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_TodoProjects", x => x.Id);
+                    table.PrimaryKey("PK_TodoChecklistItems", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_TodoProjects_AspNetUsers_UserId",
-                        column: x => x.UserId,
-                        principalTable: "AspNetUsers",
+                        name: "FK_TodoChecklistItems_TodoItems_TodoItemId",
+                        column: x => x.TodoItemId,
+                        principalTable: "TodoItems",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_TodoItems_UserId_DueDate",
+                name: "IX_TodoItems_ParentId",
                 table: "TodoItems",
-                columns: new[] { "UserId", "DueDate" });
+                column: "ParentId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_TodoItems_UserId_ProjectId",
+                name: "IX_TodoItems_CategoryId",
                 table: "TodoItems",
-                columns: new[] { "UserId", "ProjectId" });
+                column: "CategoryId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_TodoItems_UserId_Status",
+                name: "IX_TodoItems_UserId_DeletedAt",
                 table: "TodoItems",
-                columns: new[] { "UserId", "Status" });
-
-            migrationBuilder.CreateIndex(
-                name: "IX_TodoChecklistItems_TodoItemId",
-                table: "TodoChecklistItems",
-                column: "TodoItemId");
+                columns: new[] { "UserId", "DeletedAt" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_TodoCategories_UserId_Name",
                 table: "TodoCategories",
                 columns: new[] { "UserId", "Name" },
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_TodoTags_UserId_Name",
+                table: "TodoTags",
+                columns: new[] { "UserId", "Name" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_TodoChecklistItems_TodoItemId",
+                table: "TodoChecklistItems",
+                column: "TodoItemId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ArticleBookmarks_UserId",
@@ -497,11 +442,6 @@ namespace HansOS.Api.Migrations
                 name: "IX_TodoItemTag_TodoTagId",
                 table: "TodoItemTag",
                 column: "TodoTagId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_TodoProjects_UserId_Order",
-                table: "TodoProjects",
-                columns: new[] { "UserId", "Order" });
 
             migrationBuilder.AddForeignKey(
                 name: "FK_ArticleBookmarks_ArticleBookmarkGroups_GroupId",
@@ -526,10 +466,10 @@ namespace HansOS.Api.Migrations
                 onDelete: ReferentialAction.Restrict);
 
             migrationBuilder.AddForeignKey(
-                name: "FK_TodoItems_TodoProjects_ProjectId",
+                name: "FK_TodoItems_TodoCategories_CategoryId",
                 table: "TodoItems",
-                column: "ProjectId",
-                principalTable: "TodoProjects",
+                column: "CategoryId",
+                principalTable: "TodoCategories",
                 principalColumn: "Id",
                 onDelete: ReferentialAction.SetNull);
         }
@@ -550,34 +490,32 @@ namespace HansOS.Api.Migrations
                 table: "TodoItems");
 
             migrationBuilder.DropForeignKey(
-                name: "FK_TodoItems_TodoProjects_ProjectId",
+                name: "FK_TodoItems_TodoCategories_CategoryId",
                 table: "TodoItems");
 
             migrationBuilder.DropTable(
                 name: "TodoItemTag");
 
             migrationBuilder.DropTable(
-                name: "TodoProjects");
+                name: "TodoChecklistItems");
+
+            migrationBuilder.DropTable(
+                name: "TodoTags");
+
+            migrationBuilder.DropTable(
+                name: "TodoCategories");
 
             migrationBuilder.DropIndex(
-                name: "IX_TodoItems_UserId_DueDate",
+                name: "IX_TodoItems_ParentId",
                 table: "TodoItems");
 
             migrationBuilder.DropIndex(
-                name: "IX_TodoItems_UserId_ProjectId",
+                name: "IX_TodoItems_CategoryId",
                 table: "TodoItems");
 
             migrationBuilder.DropIndex(
-                name: "IX_TodoItems_UserId_Status",
+                name: "IX_TodoItems_UserId_DeletedAt",
                 table: "TodoItems");
-
-            migrationBuilder.DropIndex(
-                name: "IX_TodoChecklistItems_TodoItemId",
-                table: "TodoChecklistItems");
-
-            migrationBuilder.DropIndex(
-                name: "IX_TodoCategories_UserId_Name",
-                table: "TodoCategories");
 
             migrationBuilder.DropIndex(
                 name: "IX_ArticleBookmarks_UserId",
@@ -588,120 +526,36 @@ namespace HansOS.Api.Migrations
                 table: "ArticleBookmarkGroups");
 
             migrationBuilder.DropColumn(
-                name: "CreatedAt",
-                table: "TodoChecklistItems");
+                name: "ArchivedAt",
+                table: "TodoItems");
 
             migrationBuilder.DropColumn(
-                name: "UpdatedAt",
-                table: "TodoChecklistItems");
+                name: "CategoryId",
+                table: "TodoItems");
 
             migrationBuilder.DropColumn(
-                name: "UpdatedAt",
-                table: "TodoCategories");
+                name: "DeletedAt",
+                table: "TodoItems");
 
-            migrationBuilder.RenameColumn(
-                name: "ProjectId",
-                table: "TodoItems",
-                newName: "RecurrenceSourceId");
-
-            migrationBuilder.RenameColumn(
-                name: "Order",
-                table: "TodoItems",
-                newName: "SortOrder");
-
-            migrationBuilder.RenameIndex(
-                name: "IX_TodoItems_ProjectId",
-                table: "TodoItems",
-                newName: "IX_TodoItems_RecurrenceSourceId");
-
-            migrationBuilder.RenameColumn(
-                name: "Order",
-                table: "TodoChecklistItems",
-                newName: "SortOrder");
-
-            migrationBuilder.AlterColumn<string>(
-                name: "Title",
-                table: "TodoItems",
-                type: "character varying(200)",
-                maxLength: 200,
-                nullable: false,
-                oldClrType: typeof(string),
-                oldType: "character varying(500)",
-                oldMaxLength: 500);
-
-            migrationBuilder.AlterColumn<string>(
-                name: "Status",
-                table: "TodoItems",
-                type: "character varying(20)",
-                maxLength: 20,
-                nullable: false,
-                oldClrType: typeof(int),
-                oldType: "integer");
-
-            migrationBuilder.AlterColumn<string>(
-                name: "RecurrencePattern",
-                table: "TodoItems",
-                type: "character varying(20)",
-                maxLength: 20,
-                nullable: true,
-                oldClrType: typeof(int),
-                oldType: "integer");
-
-            migrationBuilder.AlterColumn<string>(
-                name: "Priority",
-                table: "TodoItems",
-                type: "character varying(20)",
-                maxLength: 20,
-                nullable: false,
-                oldClrType: typeof(int),
-                oldType: "integer");
-
-            migrationBuilder.AlterColumn<string>(
+            migrationBuilder.DropColumn(
                 name: "Difficulty",
-                table: "TodoItems",
-                type: "character varying(20)",
-                maxLength: 20,
-                nullable: false,
-                oldClrType: typeof(int),
-                oldType: "integer");
+                table: "TodoItems");
 
-            migrationBuilder.AlterColumn<string>(
-                name: "Description",
-                table: "TodoItems",
-                type: "character varying(10000)",
-                maxLength: 10000,
-                nullable: true,
-                oldClrType: typeof(string),
-                oldType: "character varying(2000)",
-                oldMaxLength: 2000,
-                oldNullable: true);
+            migrationBuilder.DropColumn(
+                name: "ParentId",
+                table: "TodoItems");
 
-            migrationBuilder.AddColumn<DateTime>(
-                name: "ReminderAt",
-                table: "TodoItems",
-                type: "timestamp with time zone",
-                nullable: true);
+            migrationBuilder.DropColumn(
+                name: "RecurrenceInterval",
+                table: "TodoItems");
 
-            migrationBuilder.AlterColumn<string>(
-                name: "Title",
-                table: "TodoChecklistItems",
-                type: "character varying(200)",
-                maxLength: 200,
-                nullable: false,
-                oldClrType: typeof(string),
-                oldType: "character varying(500)",
-                oldMaxLength: 500);
+            migrationBuilder.DropColumn(
+                name: "RecurrencePattern",
+                table: "TodoItems");
 
-            migrationBuilder.AlterColumn<string>(
-                name: "Icon",
-                table: "TodoCategories",
-                type: "character varying(200)",
-                maxLength: 200,
-                nullable: true,
-                oldClrType: typeof(string),
-                oldType: "character varying(100)",
-                oldMaxLength: 100,
-                oldNullable: true);
+            migrationBuilder.DropColumn(
+                name: "ScheduledDate",
+                table: "TodoItems");
 
             migrationBuilder.AlterColumn<string>(
                 name: "Tags",
@@ -886,92 +740,6 @@ namespace HansOS.Api.Migrations
                 oldClrType: typeof(string),
                 oldType: "text");
 
-            migrationBuilder.CreateTable(
-                name: "TodoItemRelations",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    SourceItemId = table.Column<Guid>(type: "uuid", nullable: false),
-                    TargetItemId = table.Column<Guid>(type: "uuid", nullable: false),
-                    RelationType = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_TodoItemRelations", x => x.Id);
-                    table.CheckConstraint("CK_TodoItemRelation_NoSelfReference", "\"SourceItemId\" != \"TargetItemId\"");
-                    table.ForeignKey(
-                        name: "FK_TodoItemRelations_TodoItems_SourceItemId",
-                        column: x => x.SourceItemId,
-                        principalTable: "TodoItems",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_TodoItemRelations_TodoItems_TargetItemId",
-                        column: x => x.TargetItemId,
-                        principalTable: "TodoItems",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "TodoItemTodoTag",
-                columns: table => new
-                {
-                    TagsId = table.Column<Guid>(type: "uuid", nullable: false),
-                    TodoItemsId = table.Column<Guid>(type: "uuid", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_TodoItemTodoTag", x => new { x.TagsId, x.TodoItemsId });
-                    table.ForeignKey(
-                        name: "FK_TodoItemTodoTag_TodoItems_TodoItemsId",
-                        column: x => x.TodoItemsId,
-                        principalTable: "TodoItems",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_TodoItemTodoTag_TodoTags_TagsId",
-                        column: x => x.TagsId,
-                        principalTable: "TodoTags",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateIndex(
-                name: "IX_TodoItems_UserId_ArchivedAt",
-                table: "TodoItems",
-                columns: new[] { "UserId", "ArchivedAt" });
-
-            migrationBuilder.CreateIndex(
-                name: "IX_TodoItems_UserId_CategoryId",
-                table: "TodoItems",
-                columns: new[] { "UserId", "CategoryId" });
-
-            migrationBuilder.CreateIndex(
-                name: "IX_TodoItems_UserId_ParentId_SortOrder",
-                table: "TodoItems",
-                columns: new[] { "UserId", "ParentId", "SortOrder" });
-
-            migrationBuilder.CreateIndex(
-                name: "IX_TodoItems_UserId_ReminderAt",
-                table: "TodoItems",
-                columns: new[] { "UserId", "ReminderAt" });
-
-            migrationBuilder.CreateIndex(
-                name: "IX_TodoItems_UserId_Status_DueDate",
-                table: "TodoItems",
-                columns: new[] { "UserId", "Status", "DueDate" });
-
-            migrationBuilder.CreateIndex(
-                name: "IX_TodoChecklistItems_TodoItemId_SortOrder",
-                table: "TodoChecklistItems",
-                columns: new[] { "TodoItemId", "SortOrder" });
-
-            migrationBuilder.CreateIndex(
-                name: "IX_TodoCategories_UserId_SortOrder",
-                table: "TodoCategories",
-                columns: new[] { "UserId", "SortOrder" });
-
             migrationBuilder.CreateIndex(
                 name: "IX_FinanceTasks_CreatedAt",
                 table: "FinanceTasks",
@@ -1027,22 +795,6 @@ namespace HansOS.Api.Migrations
                 table: "ArticleBookmarkGroups",
                 columns: new[] { "UserId", "SortOrder" });
 
-            migrationBuilder.CreateIndex(
-                name: "IX_TodoItemRelations_SourceItemId_TargetItemId_RelationType",
-                table: "TodoItemRelations",
-                columns: new[] { "SourceItemId", "TargetItemId", "RelationType" },
-                unique: true);
-
-            migrationBuilder.CreateIndex(
-                name: "IX_TodoItemRelations_TargetItemId",
-                table: "TodoItemRelations",
-                column: "TargetItemId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_TodoItemTodoTag_TodoItemsId",
-                table: "TodoItemTodoTag",
-                column: "TodoItemsId");
-
             migrationBuilder.AddForeignKey(
                 name: "FK_ArticleBookmarks_ArticleBookmarkGroups_GroupId",
                 table: "ArticleBookmarks",
@@ -1056,22 +808,6 @@ namespace HansOS.Api.Migrations
                 table: "FinanceTasks",
                 column: "DepartmentId",
                 principalTable: "SportsDepartments",
-                principalColumn: "Id",
-                onDelete: ReferentialAction.SetNull);
-
-            migrationBuilder.AddForeignKey(
-                name: "FK_TodoItems_TodoItems_ParentId",
-                table: "TodoItems",
-                column: "ParentId",
-                principalTable: "TodoItems",
-                principalColumn: "Id",
-                onDelete: ReferentialAction.SetNull);
-
-            migrationBuilder.AddForeignKey(
-                name: "FK_TodoItems_TodoItems_RecurrenceSourceId",
-                table: "TodoItems",
-                column: "RecurrenceSourceId",
-                principalTable: "TodoItems",
                 principalColumn: "Id",
                 onDelete: ReferentialAction.SetNull);
         }
