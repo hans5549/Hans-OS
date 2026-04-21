@@ -159,23 +159,28 @@ namespace HansOS.Api.Migrations
                 oldType: "character varying(200)",
                 oldMaxLength: 200);
 
-            migrationBuilder.AlterColumn<int>(
-                name: "Status",
-                table: "FinanceTasks",
-                type: "integer",
-                nullable: false,
-                oldClrType: typeof(string),
-                oldType: "character varying(20)",
-                oldMaxLength: 20);
+            // PostgreSQL cannot auto-cast varchar → integer; use CASE expression via USING.
+            migrationBuilder.Sql("""
+                ALTER TABLE "FinanceTasks"
+                ALTER COLUMN "Status" TYPE integer
+                USING CASE "Status"
+                    WHEN 'Pending'    THEN 0
+                    WHEN 'InProgress' THEN 1
+                    WHEN 'Completed'  THEN 2
+                    ELSE 0
+                END;
+                """);
 
-            migrationBuilder.AlterColumn<int>(
-                name: "Priority",
-                table: "FinanceTasks",
-                type: "integer",
-                nullable: false,
-                oldClrType: typeof(string),
-                oldType: "character varying(20)",
-                oldMaxLength: 20);
+            migrationBuilder.Sql("""
+                ALTER TABLE "FinanceTasks"
+                ALTER COLUMN "Priority" TYPE integer
+                USING CASE "Priority"
+                    WHEN 'High'   THEN 0
+                    WHEN 'Medium' THEN 1
+                    WHEN 'Low'    THEN 2
+                    ELSE 1
+                END;
+                """);
 
             migrationBuilder.AlterColumn<string>(
                 name: "Description",

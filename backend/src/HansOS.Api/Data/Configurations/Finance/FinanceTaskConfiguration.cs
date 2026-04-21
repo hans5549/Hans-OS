@@ -11,12 +11,6 @@ public class FinanceTaskConfiguration : IEntityTypeConfiguration<FinanceTask>
         e.HasKey(t => t.Id);
         e.Property(t => t.Title).HasMaxLength(200).IsRequired();
         e.Property(t => t.Description).HasMaxLength(1000);
-        e.Property(t => t.Priority)
-         .HasConversion<string>()
-         .HasMaxLength(20);
-        e.Property(t => t.Status)
-         .HasConversion<string>()
-         .HasMaxLength(20);
 
         e.HasOne(t => t.Department)
          .WithMany()
