@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
+import { useRouter } from 'vue-router';
 
 import { $t } from '#/locales';
 import { useTodoStore } from '#/store/todo';
@@ -7,12 +8,14 @@ import { useTodoStore } from '#/store/todo';
 import TodoProjectModal from './TodoProjectModal.vue';
 
 const store = useTodoStore();
+const router = useRouter();
 const isProjectModalOpen = ref(false);
 
 type SmartFilter = {
   countKey: 'all' | 'inbox' | 'today' | 'upcoming';
   iconPath: string;
   label: string;
+  path: string;
   view: 'all' | 'inbox' | 'today' | 'upcoming';
 };
 
@@ -20,35 +23,39 @@ const smartFilters: SmartFilter[] = [
   {
     view: 'inbox',
     label: 'page.todo.inbox',
+    path: '/todo/inbox',
     iconPath: 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',
     countKey: 'inbox',
   },
   {
     view: 'today',
     label: 'page.todo.today',
+    path: '/todo/today',
     iconPath: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',
     countKey: 'today',
   },
   {
     view: 'upcoming',
     label: 'page.todo.upcoming',
+    path: '/todo/upcoming',
     iconPath: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
     countKey: 'upcoming',
   },
   {
     view: 'all',
     label: 'page.todo.all',
+    path: '/todo/all',
     iconPath: 'M4 6h16M4 10h16M4 14h16M4 18h16',
     countKey: 'all',
   },
 ];
 
-function handleFilterClick(view: 'all' | 'inbox' | 'today' | 'upcoming') {
-  store.setView(view);
+function handleFilterClick(filter: SmartFilter) {
+  router.push(filter.path);
 }
 
 function handleProjectClick(projectId: string) {
-  store.setView('project', projectId);
+  router.push(`/todo/project/${projectId}`);
 }
 </script>
 
@@ -67,7 +74,7 @@ function handleProjectClick(projectId: string) {
               : 'text-slate-700 hover:bg-slate-100'
           "
           type="button"
-          @click="handleFilterClick(filter.view)"
+          @click="handleFilterClick(filter)"
         >
           <svg class="size-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path :d="filter.iconPath" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" />

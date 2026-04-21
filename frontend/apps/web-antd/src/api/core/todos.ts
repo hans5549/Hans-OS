@@ -105,7 +105,9 @@ export const updateItemApi = (id: string, data: UpdateItemRequest) =>
 
 /** 切換完成狀態 */
 export const toggleCompleteApi = (id: string) =>
-  requestClient.request<TodoItem>('patch', `/todo/items/${id}/complete`);
+  requestClient.request<TodoItem>(`/todo/items/${id}/complete`, {
+    method: 'PATCH',
+  });
 
 /** 刪除任務 */
 export const deleteItemApi = (id: string) =>

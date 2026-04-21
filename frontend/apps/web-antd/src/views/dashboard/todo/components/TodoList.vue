@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 
 import { $t } from '#/locales';
 import { useTodoStore } from '#/store/todo';
@@ -50,6 +50,9 @@ const emptyConfig = computed(() => {
 function openAddForm() {
   isAddFormOpen.value = true;
 }
+
+onMounted(() => document.addEventListener('todo:add', openAddForm));
+onUnmounted(() => document.removeEventListener('todo:add', openAddForm));
 </script>
 
 <template>

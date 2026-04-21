@@ -226,11 +226,7 @@ public class TodoControllerTests(HansOsWebApplicationFactory factory)
         var token = await LoginAndGetTokenAsync();
         var itemId = await CreateItemAndGetIdAsync(token, "切換完成測試");
 
-        var response = await _client.SendAsync(new HttpRequestMessage(
-            new HttpMethod("PATCH"), $"/todo/items/{itemId}/complete")
-        {
-            Headers = { Authorization = new AuthenticationHeaderValue("Bearer", token) }
-        });
+        var response = await AuthorizedPatchAsync($"/todo/items/{itemId}/complete", token);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var data = (await ReadBodyAsync(response)).GetProperty("data");
@@ -246,18 +242,10 @@ public class TodoControllerTests(HansOsWebApplicationFactory factory)
         var itemId = await CreateItemAndGetIdAsync(token, "雙向切換測試");
 
         // First toggle → Done
-        await _client.SendAsync(new HttpRequestMessage(
-            new HttpMethod("PATCH"), $"/todo/items/{itemId}/complete")
-        {
-            Headers = { Authorization = new AuthenticationHeaderValue("Bearer", token) }
-        });
+        await AuthorizedPatchAsync($"/todo/items/{itemId}/complete", token);
 
         // Second toggle → Pending
-        var response = await _client.SendAsync(new HttpRequestMessage(
-            new HttpMethod("PATCH"), $"/todo/items/{itemId}/complete")
-        {
-            Headers = { Authorization = new AuthenticationHeaderValue("Bearer", token) }
-        });
+        var response = await AuthorizedPatchAsync($"/todo/items/{itemId}/complete", token);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var data = (await ReadBodyAsync(response)).GetProperty("data");
@@ -350,6 +338,9 @@ public class TodoControllerTests(HansOsWebApplicationFactory factory)
 
     private Task<HttpResponseMessage> AuthorizedDeleteAsync(string url, string token)
         => _client.SendAsync(CreateAuthorizedRequest(HttpMethod.Delete, url, token));
+
+    private Task<HttpResponseMessage> AuthorizedPatchAsync(string url, string token)
+        => _client.SendAsync(CreateAuthorizedRequest(HttpMethod.Patch, url, token));
 
     private static HttpRequestMessage CreateAuthorizedRequest(
         HttpMethod method,

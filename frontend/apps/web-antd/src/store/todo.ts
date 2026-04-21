@@ -132,10 +132,9 @@ export const useTodoStore = defineStore('todo', () => {
   async function createItem(data: CreateItemRequest) {
     loading.value.saving = true;
     try {
-      const item = await createItemApi(data);
-      items.value.push(item);
+      await createItemApi(data);
+      await refreshCurrentView();
       await fetchCounts();
-      return item;
     } finally {
       loading.value.saving = false;
     }
@@ -192,6 +191,13 @@ export const useTodoStore = defineStore('todo', () => {
   }
 
   // ── UI State ───────────────────────────────────────
+
+  function refreshCurrentView() {
+    if (currentView.value === 'project' && currentProjectId.value) {
+      return fetchItems(undefined, currentProjectId.value);
+    }
+    return fetchItems(currentView.value as TodoViewFilter);
+  }
 
   function setView(view: 'all' | 'project' | TodoViewFilter, projectId?: string) {
     currentView.value = view;

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { TodoItem } from '#/api/core/todos';
 
-import { ref } from 'vue';
+import { onUnmounted, ref } from 'vue';
 
 import { useTodoStore } from '#/store/todo';
 
@@ -15,14 +15,19 @@ const props = defineProps<{
 
 const store = useTodoStore();
 const isAnimating = ref(false);
+let animationTimer: ReturnType<typeof setTimeout> | null = null;
 
 async function handleToggle() {
   isAnimating.value = true;
   await store.toggleComplete(props.item.id);
-  setTimeout(() => {
+  animationTimer = setTimeout(() => {
     isAnimating.value = false;
   }, 300);
 }
+
+onUnmounted(() => {
+  if (animationTimer !== null) clearTimeout(animationTimer);
+});
 
 function handleRowClick() {
   store.selectItem(props.item.id);

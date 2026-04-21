@@ -10,21 +10,13 @@ public class TodoProjectService(ApplicationDbContext db) : ITodoProjectService
 {
     /// <inheritdoc />
     public async Task<List<ProjectResponse>> GetProjectsAsync(string userId, CancellationToken ct = default)
-    {
-        return await db.TodoProjects
+        => await db.TodoProjects
             .AsNoTracking()
             .Where(p => p.UserId == userId)
             .OrderBy(p => p.Order)
             .ThenBy(p => p.CreatedAt)
-            .Select(p => new ProjectResponse(
-                p.Id,
-                p.Name,
-                p.Color,
-                p.Order,
-                p.IsArchived,
-                p.Items.Count(i => i.Status != TodoStatus.Done)))
+            .Select(p => ToProjectResponse(p, p.Items.Count(i => i.Status != TodoStatus.Done)))
             .ToListAsync(ct);
-    }
 
     /// <inheritdoc />
     public async Task<ProjectResponse> CreateProjectAsync(
@@ -35,6 +27,7 @@ public class TodoProjectService(ApplicationDbContext db) : ITodoProjectService
             .Select(p => (int?)p.Order)
             .MaxAsync(ct) ?? -1;
 
+        var utcNow = DateTime.UtcNow;
         var project = new TodoProject
         {
             Id = Guid.NewGuid(),
@@ -42,23 +35,21 @@ public class TodoProjectService(ApplicationDbContext db) : ITodoProjectService
             Name = request.Name,
             Color = request.Color,
             Order = maxOrder + 1,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow,
+            CreatedAt = utcNow,
+            UpdatedAt = utcNow,
         };
 
         db.TodoProjects.Add(project);
         await db.SaveChangesAsync(ct);
 
-        return new ProjectResponse(project.Id, project.Name, project.Color, project.Order, project.IsArchived, 0);
+        return ToProjectResponse(project, 0);
     }
 
     /// <inheritdoc />
     public async Task<ProjectResponse> UpdateProjectAsync(
         string userId, Guid projectId, UpdateProjectRequest request, CancellationToken ct = default)
     {
-        var project = await db.TodoProjects
-            .FirstOrDefaultAsync(p => p.Id == projectId && p.UserId == userId, ct)
-            ?? throw new KeyNotFoundException("找不到指定的專案");
+        var project = await GetUserProjectAsync(userId, projectId, ct);
 
         project.Name = request.Name;
         project.Color = request.Color;
@@ -68,19 +59,31 @@ public class TodoProjectService(ApplicationDbContext db) : ITodoProjectService
         await db.SaveChangesAsync(ct);
 
         var itemCount = await db.TodoItems
-            .CountAsync(i => i.ProjectId == projectId && i.Status != TodoStatus.Done, ct);
+            .CountAsync(i => i.UserId == userId && i.ProjectId == projectId && i.Status != TodoStatus.Done, ct);
 
-        return new ProjectResponse(project.Id, project.Name, project.Color, project.Order, project.IsArchived, itemCount);
+        return ToProjectResponse(project, itemCount);
     }
 
     /// <inheritdoc />
     public async Task DeleteProjectAsync(string userId, Guid projectId, CancellationToken ct = default)
     {
-        var project = await db.TodoProjects
-            .FirstOrDefaultAsync(p => p.Id == projectId && p.UserId == userId, ct)
-            ?? throw new KeyNotFoundException("找不到指定的專案");
+        var project = await GetUserProjectAsync(userId, projectId, ct);
 
         db.TodoProjects.Remove(project);
         await db.SaveChangesAsync(ct);
     }
+
+    private async Task<TodoProject> GetUserProjectAsync(string userId, Guid projectId, CancellationToken ct)
+        => await db.TodoProjects
+            .FirstOrDefaultAsync(p => p.Id == projectId && p.UserId == userId, ct)
+            ?? throw new KeyNotFoundException("找不到指定的專案");
+
+    private static ProjectResponse ToProjectResponse(TodoProject project, int itemCount)
+        => new(
+            project.Id,
+            project.Name,
+            project.Color,
+            project.Order,
+            project.IsArchived,
+            itemCount);
 }

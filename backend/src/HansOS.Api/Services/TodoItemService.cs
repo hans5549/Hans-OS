@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using HansOS.Api.Data;
 using HansOS.Api.Data.Entities;
 using HansOS.Api.Models.Todos;
@@ -17,39 +18,16 @@ public class TodoItemService(ApplicationDbContext db) : ITodoItemService
         TodoViewFilter? view = null,
         Guid? projectId = null,
         CancellationToken ct = default)
-    {
-        var query = db.TodoItems
-            .AsNoTracking()
-            .Where(i => i.UserId == userId);
-
-        query = view switch
-        {
-            TodoViewFilter.Inbox => query.Where(i => i.ProjectId == null && i.Status != TodoStatus.Done),
-            TodoViewFilter.Today => query.Where(i => i.DueDate == Today && i.Status != TodoStatus.Done),
-            TodoViewFilter.Upcoming => query.Where(i => i.DueDate > Today && i.DueDate <= UpcomingEnd && i.Status != TodoStatus.Done),
-            TodoViewFilter.All => query,
-            _ when projectId.HasValue => query.Where(i => i.ProjectId == projectId),
-            _ => query,
-        };
-
-        return await query
+        => await ApplyViewFilter(
+                db.TodoItems
+                    .AsNoTracking()
+                    .Where(i => i.UserId == userId),
+                view,
+                projectId)
             .OrderBy(i => i.Order)
             .ThenBy(i => i.CreatedAt)
-            .Select(i => new ItemResponse(
-                i.Id,
-                i.Title,
-                i.Description,
-                i.Priority.ToString(),
-                i.Status.ToString(),
-                i.DueDate,
-                i.ProjectId,
-                i.Project != null ? i.Project.Name : null,
-                i.Project != null ? i.Project.Color : null,
-                i.Order,
-                i.CreatedAt,
-                i.CompletedAt))
+            .Select(ToItemResponse())
             .ToListAsync(ct);
-    }
 
     /// <inheritdoc />
     public async Task<TodoCountsResponse> GetCountsAsync(string userId, CancellationToken ct = default)
@@ -76,34 +54,16 @@ public class TodoItemService(ApplicationDbContext db) : ITodoItemService
     public async Task<ItemResponse> CreateItemAsync(
         string userId, CreateItemRequest request, CancellationToken ct = default)
     {
-        if (!Enum.TryParse<TodoPriority>(request.Priority, ignoreCase: true, out var priority))
-        {
-            priority = TodoPriority.None;
-        }
+        var projectId = await ValidateProjectOwnershipAsync(userId, request.ProjectId, ct);
 
         var maxOrder = await db.TodoItems
-            .Where(i => i.UserId == userId && i.ProjectId == request.ProjectId)
+            .Where(i => i.UserId == userId && i.ProjectId == projectId)
             .Select(i => (int?)i.Order)
             .MaxAsync(ct) ?? -1;
 
-        var item = new TodoItem
-        {
-            Id = Guid.NewGuid(),
-            UserId = userId,
-            ProjectId = request.ProjectId,
-            Title = request.Title,
-            Description = request.Description,
-            Priority = priority,
-            Status = TodoStatus.Pending,
-            DueDate = request.DueDate,
-            Order = maxOrder + 1,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow,
-        };
-
+        var item = CreateItem(userId, request, projectId, maxOrder + 1, DateTime.UtcNow);
         db.TodoItems.Add(item);
         await db.SaveChangesAsync(ct);
-
         return await GetItemResponseAsync(item.Id, userId, ct);
     }
 
@@ -111,37 +71,16 @@ public class TodoItemService(ApplicationDbContext db) : ITodoItemService
     public async Task<ItemResponse> UpdateItemAsync(
         string userId, Guid itemId, UpdateItemRequest request, CancellationToken ct = default)
     {
-        var item = await db.TodoItems
-            .FirstOrDefaultAsync(i => i.Id == itemId && i.UserId == userId, ct)
-            ?? throw new KeyNotFoundException("找不到指定的任務");
-
-        if (!Enum.TryParse<TodoPriority>(request.Priority, ignoreCase: true, out var priority))
-        {
-            priority = TodoPriority.None;
-        }
-
-        if (!Enum.TryParse<TodoStatus>(request.Status, ignoreCase: true, out var status))
-        {
-            status = TodoStatus.Pending;
-        }
-
+        var item = await GetUserItemAsync(userId, itemId, ct);
+        var projectId = await ValidateProjectOwnershipAsync(userId, request.ProjectId, ct);
+        var utcNow = DateTime.UtcNow;
         item.Title = request.Title;
         item.Description = request.Description;
-        item.Priority = priority;
+        item.Priority = ParsePriority(request.Priority);
         item.DueDate = request.DueDate;
-        item.ProjectId = request.ProjectId;
-        item.UpdatedAt = DateTime.UtcNow;
-
-        if (status == TodoStatus.Done && item.Status != TodoStatus.Done)
-        {
-            item.Status = TodoStatus.Done;
-            item.CompletedAt = DateTime.UtcNow;
-        }
-        else if (status != TodoStatus.Done)
-        {
-            item.Status = status;
-            item.CompletedAt = null;
-        }
+        item.ProjectId = projectId;
+        item.UpdatedAt = utcNow;
+        SetItemStatus(item, ParseStatus(request.Status), utcNow);
 
         await db.SaveChangesAsync(ct);
 
@@ -152,11 +91,107 @@ public class TodoItemService(ApplicationDbContext db) : ITodoItemService
     public async Task<ItemResponse> ToggleCompleteAsync(
         string userId, Guid itemId, CancellationToken ct = default)
     {
-        var item = await db.TodoItems
+        var item = await GetUserItemAsync(userId, itemId, ct);
+        ToggleCompletedState(item, DateTime.UtcNow);
+        await db.SaveChangesAsync(ct);
+        return await GetItemResponseAsync(itemId, userId, ct);
+    }
+
+    /// <inheritdoc />
+    public async Task DeleteItemAsync(string userId, Guid itemId, CancellationToken ct = default)
+    {
+        var item = await GetUserItemAsync(userId, itemId, ct);
+
+        db.TodoItems.Remove(item);
+        await db.SaveChangesAsync(ct);
+    }
+
+    private async Task<ItemResponse> GetItemResponseAsync(Guid itemId, string userId, CancellationToken ct)
+        => await db.TodoItems
+            .AsNoTracking()
+            .Where(i => i.Id == itemId && i.UserId == userId)
+            .Select(ToItemResponse())
+            .FirstAsync(ct);
+
+    private IQueryable<TodoItem> ApplyViewFilter(
+        IQueryable<TodoItem> query,
+        TodoViewFilter? view,
+        Guid? projectId)
+        => view switch
+        {
+            TodoViewFilter.Inbox => query.Where(i => i.ProjectId == null && i.Status != TodoStatus.Done),
+            TodoViewFilter.Today => query.Where(i => i.DueDate == Today && i.Status != TodoStatus.Done),
+            TodoViewFilter.Upcoming => query.Where(i => i.DueDate > Today && i.DueDate <= UpcomingEnd && i.Status != TodoStatus.Done),
+            TodoViewFilter.All => query,
+            _ when projectId.HasValue => query.Where(i => i.ProjectId == projectId),
+            _ => query,
+        };
+
+    private async Task<Guid?> ValidateProjectOwnershipAsync(string userId, Guid? projectId, CancellationToken ct)
+    {
+        if (projectId is null) return null;
+
+        var exists = await db.TodoProjects
+            .AsNoTracking()
+            .AnyAsync(p => p.Id == projectId && p.UserId == userId, ct);
+
+        return exists
+            ? projectId
+            : throw new KeyNotFoundException("找不到指定的專案");
+    }
+
+    private async Task<TodoItem> GetUserItemAsync(string userId, Guid itemId, CancellationToken ct)
+        => await db.TodoItems
             .FirstOrDefaultAsync(i => i.Id == itemId && i.UserId == userId, ct)
             ?? throw new KeyNotFoundException("找不到指定的任務");
 
-        if (item.Status == TodoStatus.Done)
+    private static TodoPriority ParsePriority(string priority)
+        => Enum.TryParse<TodoPriority>(priority, ignoreCase: true, out var parsedPriority)
+            ? parsedPriority
+            : TodoPriority.None;
+
+    private static TodoStatus ParseStatus(string status)
+        => Enum.TryParse<TodoStatus>(status, ignoreCase: true, out var parsedStatus)
+            ? parsedStatus
+            : TodoStatus.Pending;
+
+    private static TodoItem CreateItem(string userId, CreateItemRequest request, Guid? projectId, int order, DateTime utcNow)
+        => new()
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            ProjectId = projectId,
+            Title = request.Title,
+            Description = request.Description,
+            Priority = ParsePriority(request.Priority),
+            Status = TodoStatus.Pending,
+            DueDate = request.DueDate,
+            Order = order,
+            CreatedAt = utcNow,
+            UpdatedAt = utcNow,
+        };
+
+    private static void SetItemStatus(TodoItem item, TodoStatus status, DateTime utcNow)
+    {
+        if (status is TodoStatus.Done)
+        {
+            if (item.Status is TodoStatus.Done)
+            {
+                return;
+            }
+
+            item.Status = TodoStatus.Done;
+            item.CompletedAt = utcNow;
+            return;
+        }
+
+        item.Status = status;
+        item.CompletedAt = null;
+    }
+
+    private static void ToggleCompletedState(TodoItem item, DateTime utcNow)
+    {
+        if (item.Status is TodoStatus.Done)
         {
             item.Status = TodoStatus.Pending;
             item.CompletedAt = null;
@@ -164,44 +199,24 @@ public class TodoItemService(ApplicationDbContext db) : ITodoItemService
         else
         {
             item.Status = TodoStatus.Done;
-            item.CompletedAt = DateTime.UtcNow;
+            item.CompletedAt = utcNow;
         }
 
-        item.UpdatedAt = DateTime.UtcNow;
-        await db.SaveChangesAsync(ct);
-
-        return await GetItemResponseAsync(itemId, userId, ct);
+        item.UpdatedAt = utcNow;
     }
 
-    /// <inheritdoc />
-    public async Task DeleteItemAsync(string userId, Guid itemId, CancellationToken ct = default)
-    {
-        var item = await db.TodoItems
-            .FirstOrDefaultAsync(i => i.Id == itemId && i.UserId == userId, ct)
-            ?? throw new KeyNotFoundException("找不到指定的任務");
-
-        db.TodoItems.Remove(item);
-        await db.SaveChangesAsync(ct);
-    }
-
-    private async Task<ItemResponse> GetItemResponseAsync(Guid itemId, string userId, CancellationToken ct)
-    {
-        return await db.TodoItems
-            .AsNoTracking()
-            .Where(i => i.Id == itemId && i.UserId == userId)
-            .Select(i => new ItemResponse(
-                i.Id,
-                i.Title,
-                i.Description,
-                i.Priority.ToString(),
-                i.Status.ToString(),
-                i.DueDate,
-                i.ProjectId,
-                i.Project != null ? i.Project.Name : null,
-                i.Project != null ? i.Project.Color : null,
-                i.Order,
-                i.CreatedAt,
-                i.CompletedAt))
-            .FirstAsync(ct);
-    }
+    private static Expression<Func<TodoItem, ItemResponse>> ToItemResponse()
+        => i => new ItemResponse(
+            i.Id,
+            i.Title,
+            i.Description,
+            i.Priority.ToString(),
+            i.Status.ToString(),
+            i.DueDate,
+            i.ProjectId,
+            i.Project == null ? null : i.Project.Name,
+            i.Project == null ? null : i.Project.Color,
+            i.Order,
+            i.CreatedAt,
+            i.CompletedAt);
 }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue';
+import { onMounted, onUnmounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 
 import { useTodoStore } from '#/store/todo';
@@ -13,32 +13,35 @@ defineOptions({ name: 'TodoPage' });
 const store = useTodoStore();
 const route = useRoute();
 
-onMounted(async () => {
-  await store.init();
-
-  const path = route.path;
+function syncViewFromRoute(path: string) {
   if (path.includes('/todo/inbox')) store.setView('inbox');
   else if (path.includes('/todo/upcoming')) store.setView('upcoming');
   else if (path.includes('/todo/all')) store.setView('all');
-  else if (path.includes('/todo/project/')) {
+  else if (path.match(/\/todo\/project\/(.+)/)) {
     const id = route.params['id'] as string;
     store.setView('project', id);
-  }
-});
-
-function handleKeydown(e: KeyboardEvent) {
-  const tag = (e.target as HTMLElement).tagName;
-  const isInputFocused = ['INPUT', 'TEXTAREA'].includes(tag);
-  if (!isInputFocused && e.key === 'n') {
-    document.dispatchEvent(new CustomEvent('todo:add'));
-  }
-  if (e.key === 'Escape') {
-    store.closeDetail();
+  } else {
+    store.setView('today');
   }
 }
 
-onMounted(() => document.addEventListener('keydown', handleKeydown));
+watch(() => route.fullPath, syncViewFromRoute);
+
+onMounted(async () => {
+  await store.init();
+  syncViewFromRoute(route.path);
+  document.addEventListener('keydown', handleKeydown);
+});
 onUnmounted(() => document.removeEventListener('keydown', handleKeydown));
+
+function handleKeydown(e: KeyboardEvent) {
+  const tag = (e.target as HTMLElement).tagName;
+  if (['INPUT', 'TEXTAREA'].includes(tag)) return;
+  if (e.key === 'n' || e.key === 'N') {
+    document.dispatchEvent(new CustomEvent('todo:add'));
+  }
+  if (e.key === 'Escape') store.closeDetail();
+}
 </script>
 
 <template>

@@ -55,19 +55,8 @@ public class TodoController(
         [FromQuery] string? view,
         [FromQuery] Guid? projectId,
         CancellationToken ct)
-    {
-        TodoViewFilter? viewFilter = view?.ToLower() switch
-        {
-            "inbox" => TodoViewFilter.Inbox,
-            "today" => TodoViewFilter.Today,
-            "upcoming" => TodoViewFilter.Upcoming,
-            "all" => TodoViewFilter.All,
-            _ => null,
-        };
-
-        return ApiEnvelope<List<ItemResponse>>.Success(
-            await itemService.GetItemsAsync(CurrentUserId, viewFilter, projectId, ct));
-    }
+        => ApiEnvelope<List<ItemResponse>>.Success(
+            await itemService.GetItemsAsync(CurrentUserId, ParseViewFilter(view), projectId, ct));
 
     /// <summary>取得各視圖待辦數量</summary>
     [HttpGet("counts")]
@@ -102,4 +91,14 @@ public class TodoController(
         await itemService.DeleteItemAsync(CurrentUserId, id, ct);
         return ApiEnvelope<object?>.Success(null);
     }
+
+    private static TodoViewFilter? ParseViewFilter(string? view)
+        => view?.ToLowerInvariant() switch
+        {
+            "inbox" => TodoViewFilter.Inbox,
+            "today" => TodoViewFilter.Today,
+            "upcoming" => TodoViewFilter.Upcoming,
+            "all" => TodoViewFilter.All,
+            _ => null,
+        };
 }
