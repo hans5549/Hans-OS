@@ -195,7 +195,7 @@ const updateNote = (index: number, note: string) =>
     </template>
 
     <template #emptyText>
-      <div class="py-8 text-center text-gray-400">
+      <div class="py-8 text-center text-muted-foreground">
         <template v-if="editable">
           尚無預算項目，請點擊「新增項目」開始編列
         </template>

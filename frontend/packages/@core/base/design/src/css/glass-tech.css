@@ -1,0 +1,111 @@
+/**
+ * Glass Tech Design System
+ * Glassmorphism + Dark Tech aesthetic — applies on top of existing design tokens
+ */
+
+/* ── CSS Custom Properties ── */
+:root {
+  --glass-card-bg: rgba(255, 255, 255, 0.68);
+  --glass-card-border: rgba(148, 163, 184, 0.25);
+  --glass-card-bg-hover: rgba(255, 255, 255, 0.80);
+  --glass-blur: 12px;
+}
+
+.dark {
+  --glass-card-bg: rgba(255, 255, 255, 0.05);
+  --glass-card-border: rgba(255, 255, 255, 0.10);
+  --glass-card-bg-hover: rgba(255, 255, 255, 0.08);
+}
+
+/* ── Tech Gradient Background (body layer) ── */
+/* Provides the visual layer that the glass sidebar/header blurs against */
+body {
+  background:
+    radial-gradient(ellipse at 15% 15%, rgba(59, 130, 246, 0.04) 0%, transparent 50%),
+    radial-gradient(ellipse at 85% 80%, rgba(139, 92, 246, 0.03) 0%, transparent 50%),
+    hsl(var(--background-deep));
+}
+
+.dark body {
+  background:
+    radial-gradient(ellipse at 15% 15%, rgba(59, 130, 246, 0.15) 0%, transparent 52%),
+    radial-gradient(ellipse at 82% 82%, rgba(139, 92, 246, 0.10) 0%, transparent 52%),
+    hsl(var(--background-deep));
+}
+
+/* ── Sidebar & Header Glass Effect ── */
+/* backdrop-filter blurs the tech gradient visible through the semi-transparent bg-sidebar / bg-header */
+.bg-sidebar {
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.bg-header {
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+/* ── Glass Card (content area utility) ── */
+.glass-card {
+  background: var(--glass-card-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-card-border);
+  border-radius: var(--radius-lg, 0.5rem);
+  transition: background 200ms ease;
+}
+
+.glass-card:hover,
+.glass-card-hover:hover {
+  background: var(--glass-card-bg-hover);
+}
+
+/* ── Glass Input ── */
+.glass-input {
+  background: rgba(255, 255, 255, 0.60);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(148, 163, 184, 0.30);
+  transition: background 150ms ease, border-color 150ms ease;
+}
+
+.dark .glass-input {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+/* ── Tech Badge ── */
+.tech-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.125rem 0.625rem;
+  border-radius: 9999px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: hsl(var(--primary) / 0.12);
+  color: hsl(var(--primary));
+  border: 1px solid hsl(var(--primary) / 0.25);
+}
+
+/* ── Tech Glow ── */
+.tech-glow {
+  filter: drop-shadow(0 0 6px hsl(var(--primary) / 0.50));
+}
+
+.tech-glow-text {
+  text-shadow: 0 0 12px hsl(var(--primary) / 0.40);
+}
+
+/* ── Accessibility: respect reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  .glass-card,
+  .glass-card-hover,
+  .glass-input,
+  .bg-sidebar,
+  .bg-header {
+    transition: none !important;
+  }
+}

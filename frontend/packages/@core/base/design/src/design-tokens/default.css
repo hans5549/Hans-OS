@@ -9,8 +9,8 @@
   /* Default background color of <body />...etc */
   --background: 0 0% 100%;
 
-  /* 主体区域背景色 */
-  --background-deep: 216 20.11% 95.47%;
+  /* 主体区域背景色 — subtle blue tint for light tech feel */
+  --background-deep: 218deg 32% 92%;
   --foreground: 210 6% 21%;
 
   /* Background color for <Card /> */
@@ -97,13 +97,13 @@
 
   /* =============component & UI============= */
 
-  /* menu */
-  --sidebar: 0 0% 100%;
+  /* menu — semi-transparent white glass over blue-tinted background */
+  --sidebar: 0 0% 100% / 0.88;
   --sidebar-deep: 0 0% 100%;
   --menu: var(--sidebar);
 
-  /* header */
-  --header: 0 0% 100%;
+  /* header — semi-transparent white glass */
+  --header: 0 0% 100% / 0.85;
 
   accent-color: var(--primary);
   color-scheme: light;

@@ -298,7 +298,7 @@ onMounted(fetchOverview);
           <Card>
             <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div class="flex items-center gap-3">
-                <span class="text-gray-500">年度：</span>
+                <span class="text-muted-foreground">年度：</span>
                 <Select
                   v-model:value="selectedYear"
                   :options="yearOptions"
@@ -354,7 +354,7 @@ onMounted(fetchOverview);
             <Col :lg="12" :xs="24">
               <Card>
                 <div class="mb-4 flex items-center gap-3">
-                  <span class="text-lg font-semibold">📋 歷史參考</span>
+                  <span class="text-lg font-semibold">歷史參考</span>
                   <Select
                     v-model:value="compareYear"
                     :options="compareYearOptions"
@@ -375,7 +375,7 @@ onMounted(fetchOverview);
                   </Tag>
                 </div>
 
-                <div v-if="!compareYear" class="py-12 text-center text-gray-400">
+                <div v-if="!compareYear" class="py-12 text-center text-muted-foreground">
                   請選擇一個歷史年度以供參考
                 </div>
                 <BudgetItemsTable

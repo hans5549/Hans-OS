@@ -60,7 +60,7 @@ function handleProjectClick(projectId: string) {
 </script>
 
 <template>
-  <aside class="flex h-full w-56 flex-shrink-0 flex-col border-r border-slate-200 bg-white">
+  <aside class="flex h-full w-56 flex-shrink-0 flex-col border-r border-border bg-background">
     <div class="flex-1 overflow-y-auto p-3">
       <!-- Smart Filters -->
       <div class="mb-4">
@@ -70,8 +70,8 @@ function handleProjectClick(projectId: string) {
           class="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors"
           :class="
             store.currentView === filter.view
-              ? 'bg-blue-50 font-semibold text-blue-700'
-              : 'text-slate-700 hover:bg-slate-100'
+              ? 'bg-primary/10 font-semibold text-primary'
+              : 'text-foreground hover:bg-accent'
           "
           type="button"
           @click="handleFilterClick(filter)"
@@ -82,8 +82,8 @@ function handleProjectClick(projectId: string) {
           <span class="flex-1 text-left">{{ $t(filter.label) }}</span>
           <span
             v-if="store.counts[filter.countKey] > 0"
-            class="min-w-[20px] rounded-full bg-slate-200 px-1.5 text-center text-xs font-medium text-slate-600"
-            :class="store.currentView === filter.view ? 'bg-blue-100 text-blue-600' : ''"
+            class="min-w-[20px] rounded-full bg-accent px-1.5 text-center text-xs font-medium text-muted-foreground"
+            :class="store.currentView === filter.view ? 'bg-primary/15 text-primary' : ''"
           >
             {{ store.counts[filter.countKey] }}
           </span>
@@ -92,7 +92,7 @@ function handleProjectClick(projectId: string) {
 
       <!-- Divider -->
       <div class="mb-2 flex items-center gap-2 px-2">
-        <span class="text-xs font-semibold uppercase tracking-wide text-slate-400">專案</span>
+        <span class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">專案</span>
       </div>
 
       <!-- Projects -->
@@ -102,8 +102,8 @@ function handleProjectClick(projectId: string) {
         class="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors"
         :class="
           store.currentView === 'project' && store.currentProjectId === project.id
-            ? 'bg-blue-50 font-semibold text-blue-700'
-            : 'text-slate-700 hover:bg-slate-100'
+            ? 'bg-primary/10 font-semibold text-primary'
+            : 'text-foreground hover:bg-accent'
         "
         type="button"
         @click="handleProjectClick(project.id)"
@@ -115,7 +115,7 @@ function handleProjectClick(projectId: string) {
         <span class="flex-1 truncate text-left">{{ project.name }}</span>
         <span
           v-if="project.itemCount > 0"
-          class="min-w-[20px] rounded-full bg-slate-200 px-1.5 text-center text-xs font-medium text-slate-600"
+          class="min-w-[20px] rounded-full bg-accent px-1.5 text-center text-xs font-medium text-muted-foreground"
         >
           {{ project.itemCount }}
         </span>
@@ -123,9 +123,9 @@ function handleProjectClick(projectId: string) {
     </div>
 
     <!-- Add Project button -->
-    <div class="border-t border-slate-200 p-3">
+    <div class="border-t border-border p-3">
       <button
-        class="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
+        class="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
         type="button"
         @click="isProjectModalOpen = true"
       >

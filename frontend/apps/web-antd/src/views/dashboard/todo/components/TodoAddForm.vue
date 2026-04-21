@@ -54,13 +54,13 @@ function handleKeydown(e: KeyboardEvent) {
 
 <template>
   <div
-    class="rounded-lg border border-blue-200 bg-white p-3 shadow-sm transition-all"
+    class="glass-card p-3 transition-all"
     @keydown.esc.stop="emit('close')"
   >
     <input
       v-model="title"
       autofocus
-      class="w-full bg-transparent text-sm text-slate-800 placeholder-slate-400 outline-none"
+      class="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
       :placeholder="$t('page.todo.addTask')"
       @keydown="handleKeydown"
     />
@@ -84,20 +84,20 @@ function handleKeydown(e: KeyboardEvent) {
       <!-- Due date -->
       <input
         v-model="dueDate"
-        class="rounded border border-slate-200 px-2 py-0.5 text-xs text-slate-600 outline-none focus:border-blue-400"
+        class="rounded border border-border px-2 py-0.5 text-xs text-muted-foreground outline-none focus:border-primary bg-transparent"
         type="date"
       />
 
       <div class="ml-auto flex gap-2">
         <button
-          class="text-xs text-slate-500 hover:text-slate-700"
+          class="text-xs text-muted-foreground hover:text-foreground"
           type="button"
           @click="emit('close')"
         >
           {{ $t('page.todo.cancel') }}
         </button>
         <button
-          class="rounded bg-blue-500 px-3 py-1 text-xs font-medium text-white hover:bg-blue-600 disabled:opacity-40"
+          class="rounded bg-primary px-3 py-1 text-xs font-medium text-primary-foreground hover:bg-primary-hover disabled:opacity-40"
           :disabled="!title.trim() || store.loading.saving"
           type="button"
           @click="submit"
