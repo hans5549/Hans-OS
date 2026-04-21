@@ -361,5 +361,38 @@
         "sourceNote": "This page reorganizes the user-provided PDF into a Hans-OS system-design reading experience."
       }
     }
+  },
+  "todo": {
+    "title": "Todo",
+    "today": "Today",
+    "inbox": "Inbox",
+    "upcoming": "Upcoming",
+    "all": "All Tasks",
+    "project": "Project",
+    "addTask": "Add task...",
+    "addProject": "Add Project",
+    "emptyToday": "No tasks for today. Press N to add one.",
+    "emptyTodayDone": "All tasks completed! Take a rest. ✨",
+    "emptyInbox": "Inbox is empty. Everything under control.",
+    "emptyProject": "No tasks in this project. Press N to start.",
+    "newProject": "New Project",
+    "editProject": "Edit Project",
+    "projectName": "Project Name",
+    "projectColor": "Color",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "priority": "Priority",
+    "priorityHigh": "P1 High",
+    "priorityMedium": "P2 Medium",
+    "priorityLow": "P3 Low",
+    "priorityNone": "P4 None",
+    "dueDate": "Due Date",
+    "description": "Description",
+    "overdue": "Overdue",
+    "completed": "Completed",
+    "tasksTotal": "tasks",
+    "confirmDelete": "Delete this task?",
+    "confirmDeleteProject": "Delete this project and all its tasks?"
   }
 }

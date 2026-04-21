@@ -361,5 +361,38 @@
         "sourceNote": "本頁整理自使用者提供的 PDF，重新編排成 Hans-OS 的系統設計閱讀頁。"
       }
     }
+  },
+  "todo": {
+    "title": "待辦事項",
+    "today": "今天",
+    "inbox": "Inbox",
+    "upcoming": "近期",
+    "all": "全部任務",
+    "project": "專案",
+    "addTask": "新增任務...",
+    "addProject": "新增專案",
+    "emptyToday": "今天沒有待辦。按 N 新增任務。",
+    "emptyTodayDone": "今天的任務全部完成！好好休息。✨",
+    "emptyInbox": "Inbox 是零。一切盡在掌握中。",
+    "emptyProject": "這個專案還沒有任務。按 N 開始。",
+    "newProject": "新增專案",
+    "editProject": "編輯專案",
+    "projectName": "專案名稱",
+    "projectColor": "顏色",
+    "save": "儲存",
+    "cancel": "取消",
+    "delete": "刪除",
+    "priority": "優先級",
+    "priorityHigh": "P1 高優先",
+    "priorityMedium": "P2 中優先",
+    "priorityLow": "P3 低優先",
+    "priorityNone": "P4 無優先",
+    "dueDate": "截止日期",
+    "description": "描述",
+    "overdue": "逾期",
+    "completed": "已完成",
+    "tasksTotal": "件任務",
+    "confirmDelete": "刪除這個任務？",
+    "confirmDeleteProject": "刪除這個專案及所有任務？"
   }
 }
