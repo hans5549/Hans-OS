@@ -230,14 +230,15 @@ namespace HansOS.Api.Migrations
                 oldType: "text[]",
                 oldDefaultValueSql: "ARRAY[]::text[]");
 
-            migrationBuilder.AlterColumn<int>(
-                name: "SourceType",
-                table: "ArticleBookmarks",
-                type: "integer",
-                nullable: false,
-                oldClrType: typeof(string),
-                oldType: "character varying(30)",
-                oldMaxLength: 30);
+            migrationBuilder.Sql("""
+                ALTER TABLE "ArticleBookmarks"
+                ALTER COLUMN "SourceType" TYPE integer
+                USING CASE "SourceType"
+                    WHEN 'ExternalUrl'     THEN 1
+                    WHEN 'InternalArticle' THEN 2
+                    ELSE 1
+                END;
+                """);
 
             migrationBuilder.AlterColumn<string>(
                 name: "SourceId",
@@ -775,7 +776,7 @@ namespace HansOS.Api.Migrations
                 table: "ArticleBookmarks",
                 columns: new[] { "UserId", "SourceId" },
                 unique: true,
-                filter: "\"SourceType\" = 'InternalArticle' AND \"SourceId\" IS NOT NULL");
+                filter: "\"SourceType\" = 2 AND \"SourceId\" IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ArticleBookmarks_UserId_SourceType",
@@ -787,7 +788,7 @@ namespace HansOS.Api.Migrations
                 table: "ArticleBookmarks",
                 columns: new[] { "UserId", "Url" },
                 unique: true,
-                filter: "\"SourceType\" = 'ExternalUrl' AND \"Url\" IS NOT NULL");
+                filter: "\"SourceType\" = 1 AND \"Url\" IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ArticleBookmarkGroups_UserId_Name",

@@ -10,9 +10,7 @@ public class ArticleBookmarkConfiguration : IEntityTypeConfiguration<ArticleBook
     {
         e.HasKey(b => b.Id);
         e.Property(b => b.UserId).IsRequired();
-        e.Property(b => b.SourceType)
-         .HasConversion<string>()
-         .HasMaxLength(30);
+        e.Property(b => b.SourceType);
         e.Property(b => b.SourceId).HasMaxLength(200);
         e.Property(b => b.Url).HasMaxLength(2048);
         e.Property(b => b.Title).HasMaxLength(300).IsRequired();
@@ -37,10 +35,10 @@ public class ArticleBookmarkConfiguration : IEntityTypeConfiguration<ArticleBook
 
         e.HasIndex(b => new { b.UserId, b.Url })
          .IsUnique()
-         .HasFilter("\"SourceType\" = 'ExternalUrl' AND \"Url\" IS NOT NULL");
+         .HasFilter("\"SourceType\" = 1 AND \"Url\" IS NOT NULL");
         e.HasIndex(b => new { b.UserId, b.SourceId })
          .IsUnique()
-         .HasFilter("\"SourceType\" = 'InternalArticle' AND \"SourceId\" IS NOT NULL");
+         .HasFilter("\"SourceType\" = 2 AND \"SourceId\" IS NOT NULL");
         e.HasIndex(b => new { b.UserId, b.SourceType });
         e.HasIndex(b => new { b.UserId, b.GroupId });
         e.HasIndex(b => new { b.UserId, b.CreatedAt });
