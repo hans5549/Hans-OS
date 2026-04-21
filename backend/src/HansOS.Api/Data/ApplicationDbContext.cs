@@ -31,6 +31,9 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<FinanceTask> FinanceTasks => Set<FinanceTask>();
     public DbSet<TodoProject> TodoProjects => Set<TodoProject>();
     public DbSet<TodoItem> TodoItems => Set<TodoItem>();
+    public DbSet<TodoCategory> TodoCategories => Set<TodoCategory>();
+    public DbSet<TodoTag> TodoTags => Set<TodoTag>();
+    public DbSet<TodoChecklistItem> TodoChecklistItems => Set<TodoChecklistItem>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -425,6 +428,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             e.Property(t => t.Description).HasMaxLength(2000);
             e.Property(t => t.Priority).HasConversion<int>();
             e.Property(t => t.Status).HasConversion<int>();
+            e.Property(t => t.Difficulty).HasConversion<int>();
+            e.Property(t => t.RecurrencePattern).HasConversion<int>();
 
             e.HasOne(t => t.User)
              .WithMany()
@@ -436,9 +441,81 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
              .HasForeignKey(t => t.ProjectId)
              .OnDelete(DeleteBehavior.SetNull);
 
+            e.HasOne(t => t.Parent)
+             .WithMany(t => t.Children)
+             .HasForeignKey(t => t.ParentId)
+             .OnDelete(DeleteBehavior.Restrict);
+
+            e.HasOne(t => t.Category)
+             .WithMany()
+             .HasForeignKey(t => t.CategoryId)
+             .OnDelete(DeleteBehavior.SetNull);
+
             e.HasIndex(t => new { t.UserId, t.Status });
             e.HasIndex(t => new { t.UserId, t.DueDate });
             e.HasIndex(t => new { t.UserId, t.ProjectId });
+            e.HasIndex(t => new { t.UserId, t.DeletedAt });
+        });
+
+        // TodoCategory — 待辦分類
+        builder.Entity<TodoCategory>(e =>
+        {
+            e.HasKey(c => c.Id);
+            e.Property(c => c.Name).HasMaxLength(100).IsRequired();
+            e.Property(c => c.Color).HasMaxLength(20);
+            e.Property(c => c.Icon).HasMaxLength(100);
+
+            e.HasOne(c => c.User)
+             .WithMany()
+             .HasForeignKey(c => c.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasIndex(c => new { c.UserId, c.Name }).IsUnique();
+        });
+
+        // TodoTag — 待辦標籤
+        builder.Entity<TodoTag>(e =>
+        {
+            e.HasKey(t => t.Id);
+            e.Property(t => t.Name).HasMaxLength(50).IsRequired();
+            e.Property(t => t.Color).HasMaxLength(20);
+
+            e.HasOne(t => t.User)
+             .WithMany()
+             .HasForeignKey(t => t.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasIndex(t => new { t.UserId, t.Name }).IsUnique();
+        });
+
+        // TodoItemTag — 中間表
+        builder.Entity<TodoItemTag>(e =>
+        {
+            e.HasKey(t => new { t.TodoItemId, t.TodoTagId });
+
+            e.HasOne(t => t.TodoItem)
+             .WithMany(i => i.TodoItemTags)
+             .HasForeignKey(t => t.TodoItemId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne(t => t.TodoTag)
+             .WithMany(tag => tag.TodoItemTags)
+             .HasForeignKey(t => t.TodoTagId)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // TodoChecklistItem — 子項目清單
+        builder.Entity<TodoChecklistItem>(e =>
+        {
+            e.HasKey(c => c.Id);
+            e.Property(c => c.Title).HasMaxLength(500).IsRequired();
+
+            e.HasOne(c => c.TodoItem)
+             .WithMany(i => i.ChecklistItems)
+             .HasForeignKey(c => c.TodoItemId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasIndex(c => c.TodoItemId);
         });
     }
 }

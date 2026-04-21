@@ -190,7 +190,7 @@ public class TodoControllerTests(HansOsWebApplicationFactory factory)
         var body = await ReadBodyAsync(response);
         body.GetProperty("code").GetInt32().Should().Be(0);
         // All returned items should have today's dueDate
-        var items = body.GetProperty("data");
+        var items = body.GetProperty("data").GetProperty("items");
         foreach (var item in items.EnumerateArray())
         {
             item.GetProperty("dueDate").GetString().Should().Be(today);
@@ -212,7 +212,7 @@ public class TodoControllerTests(HansOsWebApplicationFactory factory)
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await ReadBodyAsync(response);
-        var items = body.GetProperty("data");
+        var items = body.GetProperty("data").GetProperty("items");
         foreach (var item in items.EnumerateArray())
         {
             item.TryGetProperty("projectId", out var pid);
