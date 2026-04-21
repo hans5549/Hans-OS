@@ -2,13 +2,11 @@ using HansOS.Api.Models.Finance;
 
 namespace HansOS.Api.Services;
 
+/// <summary>個人記帳交易記錄 CRUD 與列表查詢。分析查詢請見 <see cref="IFinanceTransactionAnalyticsService"/>。</summary>
 public interface IFinanceTransactionService
 {
     /// <summary>取得指定月份的交易記錄（依日期分組）</summary>
     Task<List<DailyTransactionGroup>> GetTransactionsAsync(string userId, int year, int month, CancellationToken ct = default);
-
-    /// <summary>取得指定月份的收支摘要</summary>
-    Task<MonthlySummaryResponse> GetMonthlySummaryAsync(string userId, int year, int month, CancellationToken ct = default);
 
     /// <summary>建立交易記錄</summary>
     Task<TransactionResponse> CreateTransactionAsync(string userId, CreateTransactionRequest request, CancellationToken ct = default);

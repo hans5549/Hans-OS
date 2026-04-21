@@ -10,6 +10,356 @@
   "dashboard": {
     "title": "대시보드",
     "analytics": "분석",
-    "workspace": "워크스페이스"
+    "workspace": "워크스페이스",
+    "todo": "할 일",
+    "todoDemo": "Demo",
+    "todoDescription": "이 페이지는 현재 사이드바 진입점과 정보 구조를 잡기 위한 읽기 전용 데모입니다. 새로고침하면 모든 상호작용 상태가 초기화됩니다.",
+    "todoDeploymentHint": "권장 배포 순서: 프론트엔드 먼저, 백엔드 나중",
+    "todoListTitle": "현재 할 일 목록",
+    "todoDueAt": "마감일: ",
+    "todoStatusPending": "대기 중",
+    "todoStatusInProgress": "진행 중",
+    "todoStatusDone": "완료",
+    "todoPriorityHigh": "높음",
+    "todoPriorityMedium": "보통",
+    "todoPriorityLow": "낮음",
+    "todoTitleContract": "할 일 탭 계약 마무리",
+    "todoSummaryContract": "사이드바 할 일 탭 요구사항, 메뉴 경로, 컴포넌트 매핑, 배포 순서를 확인합니다.",
+    "todoTitleData": "홈/할 일 페이지 샘플 데이터 정리",
+    "todoSummaryData": "기존 워크스페이스 샘플 항목을 검토하고 단일 상수 소스로 공유할지 결정합니다.",
+    "todoTitleSmoke": "할 일 페이지 스모크 체크 완료",
+    "todoSummarySmoke": "사이드바 진입점이 없는 페이지를 가리키지 않도록 메뉴 트리 검증과 프론트엔드 타입 체크를 보강합니다.",
+    "todoTitleScope": "MVP 범위 확정",
+    "todoSummaryScope": "이번 릴리스는 Todo API나 데이터베이스 모델 없이 읽기 전용 데모 페이지로 유지합니다."
+  },
+  "systemDesign": {
+    "title": "현대 시스템 설계 실습",
+    "qrCodeGenerator": "QR 코드 생성기",
+    "earthquakeNotification": "지진 알림 시스템",
+    "polymarket": "예측 시장 플랫폼",
+    "amazonPriceTracking": "아마존 가격 추적",
+    "teslaRoboTaxi": "테슬라 로보택시 앱",
+    "spotifyTrendingSongs": "스포티파이 인기 음악",
+    "messenger": "메신저",
+    "webhookPlatform": "웹훅 플랫폼",
+    "googleDocs": "구글 독스",
+    "youtube": "유튜브",
+    "chatgptTasks": "ChatGPT 태스크",
+    "airbnbBooking": "에어비앤비 예약 플랫폼",
+    "agodaAiSupport": "아고다 AI 지원 에이전트",
+    "llmInferenceApi": "LLM 추론 API 서비스",
+    "qrCodeGeneratorPage": {
+      "badges": {
+        "caseStudy": "사례 연구",
+        "frontendOnly": "프론트엔드 전용",
+        "basedOnPdf": "PDF 기반",
+        "readingTime": "약 10분"
+      },
+      "hero": {
+        "kicker": "시스템 설계 · QR 코드 생성기",
+        "title": "QR 코드 생성기",
+        "description": "URL 생성, token 매핑, 302 redirect 경로를 따라가며 QR Code 서비스의 핵심 설계 트레이드오프를 uniqueness, caching, scalability 관점에서 풀어냅니다.",
+        "learnKicker": "이 페이지에서 배우는 것",
+        "targetsTitle": "설계 목표 / 가정",
+        "targetsNote": "실서비스 지표가 아니라 케이스 스터디 가정값입니다",
+        "highlights": {
+          "bottleneck": {
+            "title": "병목은 QR 이미지가 아니다",
+            "description": "token, redirect, cache 세 요소가 함께 사용자 경험을 결정하는 이유를 살펴봅니다."
+          },
+          "apiSurface": {
+            "title": "API surface를 깔끔하게 나누기",
+            "description": "생성, 이미지 조회, 원본 URL 조회, 수정, 삭제의 경계를 명확하게 이해합니다."
+          },
+          "scaling": {
+            "title": "1B codes 관점으로 사고하기",
+            "description": "read-heavy 서비스가 결국 index, cache, CDN, replica 토폴로지의 문제로 바뀌는 이유를 정리합니다."
+          }
+        },
+        "visual": {
+          "kicker": "핵심 시각화",
+          "title": "QR → token → redirect",
+          "description": "이 다이어그램은 제품 목업이 아니라 request lifecycle과 가장 뜨거운 경로를 먼저 보여주기 위한 구성입니다.",
+          "nodes": {
+            "input": {
+              "label": "입력 URL",
+              "title": "QR 매핑 생성"
+            },
+            "token": {
+              "label": "고유 token",
+              "title": "`qr_token` + UNIQUE index"
+            },
+            "redirect": {
+              "label": "실행 경로",
+              "title": "원본 URL로 302 리디렉션"
+            }
+          },
+          "chips": {
+            "db": {
+              "label": "DB",
+              "value": "매핑 데이터"
+            },
+            "cache": {
+              "label": "Cache",
+              "value": "읽기 경로"
+            },
+            "cdn": {
+              "label": "CDN",
+              "value": "QR 이미지"
+            }
+          }
+        },
+        "targets": {
+          "availability": {
+            "label": "가용성",
+            "value": "24/7",
+            "note": "실시간 모니터링 수치가 아닌 가정값"
+          },
+          "redirectLatency": {
+            "label": "리디렉션 지연",
+            "value": "< 100ms",
+            "note": "핫 트래픽에서도 매끄럽게 유지되어야 함"
+          },
+          "qrCodes": {
+            "label": "QR 코드 수",
+            "value": "1B",
+            "note": "설계 연습에서 가정한 용량 목표"
+          },
+          "users": {
+            "label": "사용자",
+            "value": "100M",
+            "note": "원문 문서의 규모 가정"
+          }
+        }
+      },
+      "navigation": {
+        "progressLabel": "읽기 진행도",
+        "inPageLabel": "이 페이지에서",
+        "startReading": "읽기 시작",
+        "mobileTocAriaLabel": "QR 코드 생성기 모바일 목차",
+        "desktopTocAriaLabel": "QR 코드 생성기 목차"
+      },
+      "sidebar": {
+        "currentSectionLabel": "현재 섹션",
+        "difficultyLabel": "난이도",
+        "difficultyValue": "중급",
+        "scopeLabel": "범위",
+        "scopeValue": "프론트엔드 콘텐츠 페이지",
+        "tocKicker": "이 페이지의 구성",
+        "tocTitle": "고정 목차"
+      },
+      "glossary": {
+        "kicker": "용어집",
+        "title": "빠른 용어 정리",
+        "expandPattern": "{label} 정의 펼치기",
+        "collapsePattern": "{label} 정의 접기",
+        "terms": {
+          "base62": {
+            "label": "Base62",
+            "description": "62개의 문자 [0-9A-Za-z]로 숫자를 표현해 token을 짧고 읽기 쉽고 공유하기 쉽게 만드는 방식입니다."
+          },
+          "collision": {
+            "label": "Collision",
+            "description": "서로 다른 입력이 우연히 같은 token을 만드는 현상입니다. 보통 UNIQUE 제약과 retry 로직으로 처리합니다."
+          },
+          "readHeavy": {
+            "label": "Read-heavy",
+            "description": "write보다 read가 훨씬 많은 트래픽 형태로, caching과 indexing의 중요도를 크게 높입니다."
+          },
+          "cdn": {
+            "label": "CDN",
+            "description": "정적 자산이나 인기 결과를 edge에서 제공해 지역 간 지연을 줄이는 계층입니다."
+          }
+        }
+      },
+      "ui": {
+        "copyButton": "복사",
+        "copyUnsupported": "현재 브라우저는 복사 기능을 지원하지 않습니다.",
+        "copySuccess": "API 예시를 복사했습니다",
+        "copyFailure": "복사에 실패했습니다. 코드를 직접 선택해 주세요.",
+        "requestLabel": "요청",
+        "responseLabel": "응답",
+        "copyApiAriaPattern": "{label} API 예시 복사"
+      },
+      "sections": {
+        "whyHard": {
+          "eyebrow": "섹션 01",
+          "title": "왜 이 문제가 어려운가",
+          "takeaway": "어려운 지점은 QR 이미지를 그리는 것이 아니라 token uniqueness, redirect freshness, read-heavy traffic을 함께 다루는 데 있습니다."
+        },
+        "requirements": {
+          "eyebrow": "섹션 02",
+          "title": "요구사항",
+          "takeaway": "생성, 관리, redirect를 모두 지원해야 하므로 데이터 모델과 사용자 경험 모두 수정 가능성을 품어야 합니다."
+        },
+        "apiSurface": {
+          "eyebrow": "섹션 03",
+          "title": "API 표면",
+          "takeaway": "API surface는 생성, 이미지 조회, 수정, 삭제, 원본 URL 조회의 책임을 명확하게 나눠야 합니다."
+        },
+        "lifecycle": {
+          "eyebrow": "섹션 04",
+          "title": "생명주기",
+          "takeaway": "생성 경로와 조회 경로는 병목이 다릅니다. 전자는 token write, 후자는 cache와 redirect가 핵심입니다."
+        },
+        "scaling": {
+          "eyebrow": "섹션 05",
+          "title": "확장성",
+          "takeaway": "트래픽이 커지면 주인공은 QR 이미지가 아니라 index, cache, CDN, read replica가 됩니다."
+        },
+        "tradeOffs": {
+          "eyebrow": "섹션 06",
+          "title": "트레이드오프",
+          "takeaway": "이 설계의 핵심은 302 over 301, UNIQUE index over optimistic guess, simple DB before distribution 같은 선택을 인정하는 데 있습니다."
+        }
+      },
+      "tensions": {
+        "uniqueness": {
+          "title": "고유성 vs. token 길이",
+          "description": "token은 공유하기 쉬울 만큼 짧아야 하지만 동시에 전역적으로 고유해야 하고, 충돌이 나도 복구 가능해야 합니다."
+        },
+        "freshness": {
+          "title": "최신성 vs. 캐싱",
+          "description": "QR 매핑은 나중에 수정되거나 삭제될 수 있으므로 redirect 경로를 영구 캐시하면 안 됩니다."
+        },
+        "readHeavy": {
+          "title": "읽기 중심 트래픽 vs. 단순한 구조",
+          "description": "read가 write를 압도하면 cache hit rate와 edge delivery가 write path 자체보다 더 중요해집니다."
+        }
+      },
+      "requirements": {
+        "functional": {
+          "title": "기능 요구사항",
+          "item1": "사용자는 URL을 제출하고 생성된 QR Code를 받을 수 있어야 합니다.",
+          "item2": "인증된 사용자는 JWT claims를 기준으로 자신이 만든 QR Code를 관리할 수 있어야 합니다.",
+          "item3": "QR Code를 스캔하면 원본 URL로 redirect 되어야 합니다."
+        },
+        "nonFunctional": {
+          "title": "비기능 요구사항",
+          "item1": "서비스는 24/7 고가용성을 유지해야 합니다.",
+          "item2": "Redirection latency는 100ms 이하를 목표로 합니다.",
+          "item3": "설계는 1B QR codes와 100M users 규모를 고려해야 합니다."
+        }
+      },
+      "api": {
+        "create": {
+          "title": "QR Code 생성",
+          "description": "새 QR Code mapping을 만들고 결과 qr_token을 반환합니다."
+        },
+        "image": {
+          "title": "QR 이미지 조회",
+          "description": "qr_token과 스타일 파라미터로 QR 이미지 위치를 조회합니다."
+        },
+        "edit": {
+          "title": "QR Code 수정",
+          "description": "기존 mapping 뒤에 있는 원본 URL을 수정합니다."
+        },
+        "delete": {
+          "title": "QR Code 삭제",
+          "description": "기존 QR Code mapping을 삭제합니다."
+        },
+        "lookup": {
+          "title": "원본 URL 조회",
+          "description": "점검이나 후속 흐름에 사용할 수 있도록 token 뒤의 원본 URL을 읽어옵니다."
+        }
+      },
+      "flow": {
+        "create": {
+          "label": "생성 흐름",
+          "steps": {
+            "receive": {
+              "title": "1. 생성 요청 수신",
+              "description": "클라이언트가 URL을 담아 POST /v1/qr_code를 호출합니다."
+            },
+            "validate": {
+              "title": "2. URL 검증 + token 생성",
+              "description": "백엔드는 URL 유효성을 확인한 뒤 전역적으로 고유한 qr_token을 생성합니다."
+            },
+            "write": {
+              "title": "3. 데이터베이스에 기록",
+              "description": "QrCodes 테이블에 mapping을 저장하고 UNIQUE 제약으로 충돌을 처리합니다."
+            },
+            "return": {
+              "title": "4. 결과 반환",
+              "description": "클라이언트에 qr_token을 반환합니다. 이미지는 이후 다른 API에서 생성할 수 있습니다."
+            }
+          }
+        },
+        "retrieve": {
+          "label": "조회 / redirect 흐름",
+          "steps": {
+            "enter": {
+              "title": "1. 조회 경로 진입",
+              "description": "클라이언트는 qr_token으로 이미지를 가져오거나 원본 URL을 조회하거나 직접 스캔하여 redirect를 시작합니다."
+            },
+            "cache": {
+              "title": "2. cache / edge 먼저 확인",
+              "description": "인기 요청은 먼저 cache 또는 CDN에 맞아서 가능하면 DB를 피해야 합니다."
+            },
+            "lookup": {
+              "title": "3. origin 조회로 되돌아가기",
+              "description": "fallback이 필요하면 백엔드가 qr_token index로 mapping을 조회합니다."
+            },
+            "redirect": {
+              "title": "4. 302 redirect 실행",
+              "description": "mapping이 바뀐 뒤에도 최신 목적지로 가도록 302 redirect를 사용합니다."
+            }
+          }
+        }
+      },
+      "scaling": {
+        "indexing": {
+          "title": "인덱싱",
+          "item1": "qr_token에는 index가 필요하며 full table scan을 피해야 합니다.",
+          "item2": "UNIQUE 제약은 collision detection 역할도 함께 수행합니다."
+        },
+        "caching": {
+          "title": "캐싱",
+          "item1": "이 서비스는 read-heavy하며 write:read 비율은 대략 1:100입니다.",
+          "item2": "cache miss일 때만 DB를 치고, 삭제 시에는 invalidation을 함께 처리합니다."
+        },
+        "cdn": {
+          "title": "CDN",
+          "item1": "QR 이미지는 edge에 올리기 좋은 정적 자산입니다.",
+          "item2": "인기 QR은 CDN이 직접 응답해 지역 간 지연을 줄일 수 있습니다."
+        },
+        "replicas": {
+          "title": "리플리카와 정리 작업",
+          "item1": "가까운 미래까지는 단일 DB 인스턴스로 충분하지만 read replica 계획은 필요합니다.",
+          "item2": "오래된 mapping은 cron job으로 정리해 장기적인 팽창을 막을 수 있습니다."
+        }
+      },
+      "tradeOffs": {
+        "redirect": {
+          "decision": "301 대신 302 사용",
+          "reason": "브라우저의 영구 캐시를 피해서 수정이나 삭제 후에도 최신 mapping 상태에 도달할 수 있게 합니다."
+        },
+        "token": {
+          "decision": "순수 deterministic hash 대신 hash + nonce + Base62 사용",
+          "reason": "같은 입력이 영원히 같은 token을 받는 상황을 피하고, 더 높은 entropy와 유연성을 확보합니다."
+        },
+        "database": {
+          "decision": "단일 primary DB로 시작하고 read replica로 확장",
+          "reason": "대략 200GB 규모까지는 구조를 단순하게 유지하고, 복잡성은 정말 필요할 때 추가할 수 있습니다."
+        },
+        "edge": {
+          "decision": "QR 이미지와 인기 mapping을 CDN / cache로 밀어내기",
+          "reason": "가장 뜨거운 경로는 write가 아니라 read와 redirect이므로 edge hit가 지연을 크게 줄입니다."
+        }
+      },
+      "footer": {
+        "takeawaysKicker": "핵심 요약",
+        "takeawaysTitle": "마지막에 가져가야 할 세 가지 포인트",
+        "takeaways": {
+          "item1": "QR 코드 생성기의 핵심은 문자열을 그림으로 그리는 것이 아니라 URL mapping을 읽기 쉽고, 수정 가능하고, cacheable한 서비스로 만드는 데 있습니다.",
+          "item2": "302 redirect, UNIQUE index, cache / CDN hit rate가 이 케이스 스터디의 가장 중요한 세 가지 설계 레버입니다.",
+          "item3": "이 페이지는 시스템 설계 사고를 보여주는 것이지 백엔드가 연결된 실사용 도구를 제공하는 것이 아닙니다."
+        },
+        "relatedKicker": "시리즈",
+        "relatedTitle": "관련 사례 연구",
+        "relatedComingSoon": "준비 중",
+        "sourceNote": "이 페이지는 사용자가 제공한 PDF를 Hans-OS용 시스템 설계 읽기 경험으로 다시 구성한 결과입니다."
+      }
+    }
   }
 }

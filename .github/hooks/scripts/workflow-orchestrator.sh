@@ -44,10 +44,9 @@ if echo "$PROMPT_LOWER" | grep -qE 'workflow\s+skip\s+\w+'; then
 
   case "$step_to_skip" in
     planner) actual="planner" ;;
-    simplifier) actual="simplifier" ;;
+    codereview|code-review|review) actual="codeReview" ;;
+    linusreview|linus-review|linus) actual="linusReview" ;;
     build|buildpassed) actual="buildPassed" ;;
-    codereview|codereviewer|code-review) actual="codeReviewer" ;;
-    securityreview|securityreviewer|security-review|security) actual="securityReviewer" ;;
     ceoreview|ceo-review|ceo) actual="ceoReview" ;;
     engreview|eng-review|eng) actual="engReview" ;;
     planlinusreview|plan-linus-review|plan-linus|planlinus) actual="planLinusReview" ;;
@@ -63,7 +62,7 @@ if echo "$PROMPT_LOWER" | grep -qE 'workflow\s+skip\s+\w+'; then
   else
     log ""
     log "[Workflow] Unknown step: $step_to_skip"
-    log "[Workflow] Valid steps: planner, simplifier, build, codereview, security, ceo, eng, plan-linus"
+    log "[Workflow] Valid steps: planner, codereview, linus, build, ceo, eng, plan-linus"
     log ""
   fi
   exit 0
@@ -75,30 +74,11 @@ if echo "$PROMPT_LOWER" | grep -qE 'commit\s+this'; then
   log "<user-prompt-submit-hook>"
   log "COMMIT WORKFLOW TRIGGERED. Execute @commit-workflow agent."
   log ""
-  log "Steps:"
-  log "  1. @code-simplifier (model: gpt-5.4) → simplify code"
-  log "  2+3. @code-review + @security-scanner (model: gpt-5.4) → parallel review"
-  log "  4. @linus-reviewer (model: gpt-5.4) → Good Taste review (after 2+3)"
-  log "  5. Build verification + git commit"
-  log ""
-  log "Or invoke: @commit-workflow for guided execution."
-  log "</user-prompt-submit-hook>"
-  log ""
-  exit 0
-fi
-
-# merge this - trigger merge flow
-if echo "$PROMPT_LOWER" | grep -qE 'merge\s+this'; then
-  log ""
-  log "<user-prompt-submit-hook>"
-  log "MERGE WORKFLOW TRIGGERED. Execute /merge-this for guided merge flow."
-  log ""
-  log "Steps:"
-  log "  1. Validate all workflow steps complete"
-  log "  2. git merge main (into feature branch)"
-  log "  3. dotnet build + dotnet test + pnpm check:type"
-  log "  4. git merge --no-ff back to main"
-  log "  5. git worktree remove + git branch -d"
+  log "Step 1 — Combined Code Review (dispatch ALL THREE in parallel):"
+  log "  @code-simplifier + @code-review + @security-scanner (model: gpt-5.4)"
+  log "Step 2 — After all 3 complete:"
+  log "  @linus-reviewer (model: gpt-5.4) → Good Taste review"
+  log "Step 3 — Build verification + git commit"
   log "</user-prompt-submit-hook>"
   log ""
   exit 0
@@ -110,13 +90,11 @@ if echo "$PROMPT_LOWER" | grep -qE '^(code-review|review\s+this)$'; then
   log "<user-prompt-submit-hook>"
   log "REVIEW WORKFLOW TRIGGERED. Execute @review-workflow agent."
   log ""
-  log "Steps:"
-  log "  1. @code-simplifier (model: gpt-5.4) → simplify code"
-  log "  2+3. @code-review + @security-scanner (model: gpt-5.4) → parallel review"
-  log "  4. @linus-reviewer (model: gpt-5.4) → Good Taste review (after 2+3)"
-  log "  5. Build verification (do NOT commit)"
-  log ""
-  log "Or invoke: @review-workflow for guided execution."
+  log "Step 1 — Combined Code Review (dispatch ALL THREE in parallel):"
+  log "  @code-simplifier + @code-review + @security-scanner (model: gpt-5.4)"
+  log "Step 2 — After all 3 complete:"
+  log "  @linus-reviewer (model: gpt-5.4) → Good Taste review"
+  log "Step 3 — Build verification (do NOT commit)"
   log "</user-prompt-submit-hook>"
   log ""
   exit 0
@@ -220,9 +198,8 @@ if [[ "$has_commit_intent" == "true" ]]; then
       while IFS= read -r step; do
         [[ -z "$step" ]] && continue
         case "$step" in
-          simplifier) log "   [ ] Code Simplifier (@code-simplifier)" ;;
-          codeReviewer) log "   [ ] Code Review (@code-review)" ;;
-          securityReviewer) log "   [ ] Security Review (@security-scanner)" ;;
+          codeReview) log "   [ ] Combined Code Review (@code-simplifier + @code-review + @security-scanner)" ;;
+          linusReview) log "   [ ] Linus Review (@linus-reviewer)" ;;
         esac
       done <<< "$missing_steps"
       log ""

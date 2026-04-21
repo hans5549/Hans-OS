@@ -1,6 +1,6 @@
 # UI Framework Switching
 
-`Vue Admin` supports your freedom to choose the UI framework. The default UI framework for the demo site is `Ant Design Vue`, consistent with the older version. The framework also has built-in versions for `Element Plus` and `Naive UI`, allowing you to choose according to your preference.
+`Vue Admin` currently keeps `Ant Design Vue` as the default UI framework for the demo app, consistent with the older version. If you want another UI framework, follow the steps below to add your own app variant.
 
 ## Adding a New UI Framework
 

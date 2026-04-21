@@ -84,13 +84,24 @@ public class ActivityService(ApplicationDbContext db) : IActivityService
             .FirstOrDefaultAsync(a => a.Id == id, ct)
             ?? throw new KeyNotFoundException("活動不存在");
 
-        return MapToDetailResponse(activity);
+        var expenseIds = activity.Expenses
+            .Concat(activity.Groups.SelectMany(g => g.Expenses))
+            .Select(e => e.Id)
+            .ToList();
+
+        var remittanceMap = await db.PendingRemittances
+            .AsNoTracking()
+            .Where(r => r.ActivityExpenseId.HasValue && expenseIds.Contains(r.ActivityExpenseId.Value))
+            .ToDictionaryAsync(r => r.ActivityExpenseId!.Value, ct);
+
+        return MapToDetailResponse(activity, remittanceMap);
     }
 
     public async Task<ActivityDetailResponse> CreateAsync(
         CreateActivityRequest request, CancellationToken ct = default)
     {
-        await ValidateDepartmentExistsAsync(request.DepartmentId, ct);
+        await db.EnsureDepartmentExistsAsync(request.DepartmentId, ct);
+        await ValidateBudgetItemsAsync(request.DepartmentId, request.Year, request.Groups, request.Expenses, ct);
 
         var now = DateTime.UtcNow;
         var nextSequence = await GetNextSequenceAsync(
@@ -119,9 +130,9 @@ public class ActivityService(ApplicationDbContext db) : IActivityService
     public async Task<ActivityDetailResponse> UpdateAsync(
         Guid id, UpdateActivityRequest request, CancellationToken ct = default)
     {
-        // 確認活動存在
-        var exists = await db.Activities.AnyAsync(a => a.Id == id, ct);
-        if (!exists) throw new KeyNotFoundException("活動不存在");
+        var activity = await db.Activities.FirstOrDefaultAsync(a => a.Id == id, ct)
+            ?? throw new KeyNotFoundException("活動不存在");
+        await ValidateBudgetItemsAsync(activity.DepartmentId, activity.Year, request.Groups, request.Expenses, ct);
 
         var now = DateTime.UtcNow;
 
@@ -146,7 +157,6 @@ public class ActivityService(ApplicationDbContext db) : IActivityService
         }
 
         // 更新活動基本資訊
-        var activity = await db.Activities.FirstAsync(a => a.Id == id, ct);
         activity.Name = request.Name;
         activity.Description = request.Description;
         activity.UpdatedAt = now;
@@ -206,17 +216,6 @@ public class ActivityService(ApplicationDbContext db) : IActivityService
         await db.SaveChangesAsync(ct);
     }
 
-    // ── Private Helpers ──────────────────────────────
-
-    private async Task ValidateDepartmentExistsAsync(Guid departmentId, CancellationToken ct)
-    {
-        var exists = await db.SportsDepartments
-            .AsNoTracking()
-            .AnyAsync(d => d.Id == departmentId, ct);
-
-        if (!exists)
-            throw new ArgumentException("指定的部門不存在");
-    }
 
     private async Task<int> GetNextSequenceAsync(
         Guid departmentId, int year, int month, CancellationToken ct)
@@ -267,6 +266,60 @@ public class ActivityService(ApplicationDbContext db) : IActivityService
         }
     }
 
+    private async Task ValidateBudgetItemsAsync(
+        Guid departmentId,
+        int year,
+        List<ActivityGroupInput>? groups,
+        List<ActivityExpenseInput>? ungroupedExpenses,
+        CancellationToken ct)
+    {
+        var budgetItemIds = EnumerateExpenseInputs(groups, ungroupedExpenses)
+            .Where(input => input.BudgetItemId.HasValue)
+            .Select(input => input.BudgetItemId!.Value)
+            .Distinct()
+            .ToList();
+        if (budgetItemIds.Count == 0)
+        {
+            return;
+        }
+
+        var matchedCount = await db.BudgetItems
+            .AsNoTracking()
+            .Where(item => budgetItemIds.Contains(item.Id))
+            .Where(item => item.DepartmentBudget.DepartmentId == departmentId
+                && item.DepartmentBudget.AnnualBudget.Year == year)
+            .CountAsync(ct);
+
+        if (matchedCount != budgetItemIds.Count)
+        {
+            throw new ArgumentException("活動細項綁定的預算項目必須屬於相同部門與年度");
+        }
+    }
+
+    private static IEnumerable<ActivityExpenseInput> EnumerateExpenseInputs(
+        List<ActivityGroupInput>? groups,
+        List<ActivityExpenseInput>? ungroupedExpenses)
+    {
+        if (groups is not null)
+        {
+            foreach (var group in groups)
+            {
+                foreach (var expense in group.Expenses)
+                {
+                    yield return expense;
+                }
+            }
+        }
+
+        if (ungroupedExpenses is not null)
+        {
+            foreach (var expense in ungroupedExpenses)
+            {
+                yield return expense;
+            }
+        }
+    }
+
     private static ActivityExpense CreateExpense(
         Guid activityId, Guid? groupId, ActivityExpenseInput input, DateTime now)
         => new()
@@ -283,7 +336,8 @@ public class ActivityService(ApplicationDbContext db) : IActivityService
             UpdatedAt = now,
         };
 
-    private static ActivityDetailResponse MapToDetailResponse(Activity activity)
+    private static ActivityDetailResponse MapToDetailResponse(
+        Activity activity, Dictionary<Guid, PendingRemittance> remittanceMap)
     {
         var groupedExpenseIds = activity.Groups
             .SelectMany(g => g.Expenses)
@@ -293,7 +347,7 @@ public class ActivityService(ApplicationDbContext db) : IActivityService
         var ungroupedExpenses = activity.Expenses
             .Where(e => e.ActivityGroupId is null && !groupedExpenseIds.Contains(e.Id))
             .OrderBy(e => e.Sequence)
-            .Select(MapExpenseResponse)
+            .Select(e => MapExpenseResponse(e, remittanceMap))
             .ToList();
 
         var groups = activity.Groups
@@ -303,7 +357,7 @@ public class ActivityService(ApplicationDbContext db) : IActivityService
                 g.Name,
                 g.Sequence,
                 g.Expenses.Sum(e => e.Amount),
-                g.Expenses.OrderBy(e => e.Sequence).Select(MapExpenseResponse).ToList()))
+                g.Expenses.OrderBy(e => e.Sequence).Select(e => MapExpenseResponse(e, remittanceMap)).ToList()))
             .ToList();
 
         var totalAmount = activity.Expenses.Sum(e => e.Amount);
@@ -322,13 +376,19 @@ public class ActivityService(ApplicationDbContext db) : IActivityService
             ungroupedExpenses);
     }
 
-    private static ActivityExpenseResponse MapExpenseResponse(ActivityExpense e)
-        => new(
+    private static ActivityExpenseResponse MapExpenseResponse(
+        ActivityExpense e, Dictionary<Guid, PendingRemittance> remittanceMap)
+    {
+        remittanceMap.TryGetValue(e.Id, out var remittance);
+        return new(
             e.Id,
             e.Description,
             e.Amount,
             e.Note,
             e.Sequence,
             e.BudgetItemId,
-            e.BudgetItem?.ActivityName);
+            e.BudgetItem?.ActivityName,
+            remittance?.Id,
+            remittance?.Status);
+    }
 }

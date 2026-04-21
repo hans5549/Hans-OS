@@ -12,7 +12,7 @@
 
 ::: tip
 
-应用不限于前端应用，也可以是后端应用、移动端应用等，例如 `apps/backend-mock`就是一个后端服务。
+当前仓库的 `apps` 目录仅保留 `web-antd`，其他能力通过 `packages`、`docs` 与 `playground` 继续提供。
 
 :::
 

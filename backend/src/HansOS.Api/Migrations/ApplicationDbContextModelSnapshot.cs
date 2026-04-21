@@ -260,6 +260,133 @@ namespace HansOS.Api.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
+            modelBuilder.Entity("HansOS.Api.Data.Entities.ArticleBookmark", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CoverImageUrl")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CustomTitle")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("Domain")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("ExcerptSnapshot")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid?>("GroupId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsPinned")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("LastOpenedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("SourceId")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("SourceType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.PrimitiveCollection<string[]>("Tags")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text[]")
+                        .HasDefaultValueSql("ARRAY[]::text[]");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Url")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GroupId");
+
+                    b.HasIndex("UserId", "CreatedAt");
+
+                    b.HasIndex("UserId", "GroupId");
+
+                    b.HasIndex("UserId", "SourceId")
+                        .IsUnique()
+                        .HasFilter("\"SourceType\" = 'InternalArticle' AND \"SourceId\" IS NOT NULL");
+
+                    b.HasIndex("UserId", "SourceType");
+
+                    b.HasIndex("UserId", "Url")
+                        .IsUnique()
+                        .HasFilter("\"SourceType\" = 'ExternalUrl' AND \"Url\" IS NOT NULL");
+
+                    b.ToTable("ArticleBookmarks");
+                });
+
+            modelBuilder.Entity("HansOS.Api.Data.Entities.ArticleBookmarkGroup", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "Name")
+                        .IsUnique();
+
+                    b.HasIndex("UserId", "SortOrder");
+
+                    b.ToTable("ArticleBookmarkGroups");
+                });
+
             modelBuilder.Entity("HansOS.Api.Data.Entities.BankInitialBalance", b =>
                 {
                     b.Property<Guid>("Id")
@@ -295,6 +422,9 @@ namespace HansOS.Api.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("ActivityId")
+                        .HasColumnType("uuid");
+
                     b.Property<decimal>("Amount")
                         .HasPrecision(18)
                         .HasColumnType("numeric(18,0)");
@@ -319,6 +449,9 @@ namespace HansOS.Api.Migrations
                         .HasPrecision(18)
                         .HasColumnType("numeric(18,0)");
 
+                    b.Property<Guid?>("PendingRemittanceId")
+                        .HasColumnType("uuid");
+
                     b.Property<bool>("ReceiptCollected")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
@@ -340,7 +473,11 @@ namespace HansOS.Api.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ActivityId");
+
                     b.HasIndex("DepartmentId");
+
+                    b.HasIndex("PendingRemittanceId");
 
                     b.HasIndex("BankName", "TransactionDate");
 
@@ -483,6 +620,13 @@ namespace HansOS.Api.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)")
+                        .HasDefaultValue("TWD");
+
                     b.Property<string>("Icon")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
@@ -517,6 +661,59 @@ namespace HansOS.Api.Migrations
                     b.ToTable("FinanceAccounts");
                 });
 
+            modelBuilder.Entity("HansOS.Api.Data.Entities.FinanceTask", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DepartmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateOnly?>("DueDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Priority")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("DepartmentId");
+
+                    b.HasIndex("DueDate");
+
+                    b.HasIndex("Status");
+
+                    b.ToTable("FinanceTasks");
+                });
+
             modelBuilder.Entity("HansOS.Api.Data.Entities.FinanceTransaction", b =>
                 {
                     b.Property<Guid>("Id")
@@ -536,7 +733,22 @@ namespace HansOS.Api.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)")
+                        .HasDefaultValue("TWD");
+
                     b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Project")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Tags")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
@@ -688,6 +900,9 @@ namespace HansOS.Api.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("ActivityExpenseId")
+                        .HasColumnType("uuid");
+
                     b.Property<decimal>("Amount")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
@@ -736,6 +951,8 @@ namespace HansOS.Api.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ActivityExpenseId");
 
                     b.HasIndex("DepartmentId");
 
@@ -880,6 +1097,229 @@ namespace HansOS.Api.Migrations
                     b.HasIndex("UserId", "TradeDate");
 
                     b.ToTable("StockTransactions");
+                });
+
+            modelBuilder.Entity("HansOS.Api.Data.Entities.TodoCategory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Color")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Icon")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "SortOrder");
+
+                    b.ToTable("TodoCategories");
+                });
+
+            modelBuilder.Entity("HansOS.Api.Data.Entities.TodoChecklistItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsCompleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("TodoItemId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TodoItemId", "SortOrder");
+
+                    b.ToTable("TodoChecklistItems");
+                });
+
+            modelBuilder.Entity("HansOS.Api.Data.Entities.TodoItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("ArchivedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CategoryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(10000)
+                        .HasColumnType("character varying(10000)");
+
+                    b.Property<string>("Difficulty")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateOnly?>("DueDate")
+                        .HasColumnType("date");
+
+                    b.Property<Guid?>("ParentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Priority")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<int>("RecurrenceInterval")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("RecurrencePattern")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid?>("RecurrenceSourceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("ReminderAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateOnly?>("ScheduledDate")
+                        .HasColumnType("date");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CategoryId");
+
+                    b.HasIndex("ParentId");
+
+                    b.HasIndex("RecurrenceSourceId");
+
+                    b.HasIndex("UserId", "ArchivedAt");
+
+                    b.HasIndex("UserId", "CategoryId");
+
+                    b.HasIndex("UserId", "DeletedAt");
+
+                    b.HasIndex("UserId", "ReminderAt");
+
+                    b.HasIndex("UserId", "ParentId", "SortOrder");
+
+                    b.HasIndex("UserId", "Status", "DueDate");
+
+                    b.ToTable("TodoItems");
+                });
+
+            modelBuilder.Entity("HansOS.Api.Data.Entities.TodoItemRelation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RelationType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid>("SourceItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TargetItemId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TargetItemId");
+
+                    b.HasIndex("SourceItemId", "TargetItemId", "RelationType")
+                        .IsUnique();
+
+                    b.ToTable("TodoItemRelations", t =>
+                        {
+                            t.HasCheckConstraint("CK_TodoItemRelation_NoSelfReference", "\"SourceItemId\" != \"TargetItemId\"");
+                        });
+                });
+
+            modelBuilder.Entity("HansOS.Api.Data.Entities.TodoTag", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Color")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "Name")
+                        .IsUnique();
+
+                    b.ToTable("TodoTags");
                 });
 
             modelBuilder.Entity("HansOS.Api.Data.Entities.TransactionCategory", b =>
@@ -1059,6 +1499,21 @@ namespace HansOS.Api.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("TodoItemTodoTag", b =>
+                {
+                    b.Property<Guid>("TagsId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TodoItemsId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("TagsId", "TodoItemsId");
+
+                    b.HasIndex("TodoItemsId");
+
+                    b.ToTable("TodoItemTodoTag");
+                });
+
             modelBuilder.Entity("HansOS.Api.Data.Entities.Activity", b =>
                 {
                     b.HasOne("HansOS.Api.Data.Entities.SportsDepartment", "Department")
@@ -1084,7 +1539,7 @@ namespace HansOS.Api.Migrations
                         .IsRequired();
 
                     b.HasOne("HansOS.Api.Data.Entities.BudgetItem", "BudgetItem")
-                        .WithMany()
+                        .WithMany("LinkedExpenses")
                         .HasForeignKey("BudgetItemId")
                         .OnDelete(DeleteBehavior.SetNull);
 
@@ -1106,14 +1561,57 @@ namespace HansOS.Api.Migrations
                     b.Navigation("Activity");
                 });
 
+            modelBuilder.Entity("HansOS.Api.Data.Entities.ArticleBookmark", b =>
+                {
+                    b.HasOne("HansOS.Api.Data.Entities.ArticleBookmarkGroup", "Group")
+                        .WithMany()
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("HansOS.Api.Data.Entities.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Group");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("HansOS.Api.Data.Entities.ArticleBookmarkGroup", b =>
+                {
+                    b.HasOne("HansOS.Api.Data.Entities.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("HansOS.Api.Data.Entities.BankTransaction", b =>
                 {
+                    b.HasOne("HansOS.Api.Data.Entities.Activity", "Activity")
+                        .WithMany()
+                        .HasForeignKey("ActivityId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("HansOS.Api.Data.Entities.SportsDepartment", "Department")
                         .WithMany()
                         .HasForeignKey("DepartmentId")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.HasOne("HansOS.Api.Data.Entities.PendingRemittance", "PendingRemittance")
+                        .WithMany()
+                        .HasForeignKey("PendingRemittanceId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Activity");
+
                     b.Navigation("Department");
+
+                    b.Navigation("PendingRemittance");
                 });
 
             modelBuilder.Entity("HansOS.Api.Data.Entities.BudgetItem", b =>
@@ -1168,6 +1666,16 @@ namespace HansOS.Api.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("HansOS.Api.Data.Entities.FinanceTask", b =>
+                {
+                    b.HasOne("HansOS.Api.Data.Entities.SportsDepartment", "Department")
+                        .WithMany()
+                        .HasForeignKey("DepartmentId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Department");
+                });
+
             modelBuilder.Entity("HansOS.Api.Data.Entities.FinanceTransaction", b =>
                 {
                     b.HasOne("HansOS.Api.Data.Entities.FinanceAccount", "Account")
@@ -1213,10 +1721,17 @@ namespace HansOS.Api.Migrations
 
             modelBuilder.Entity("HansOS.Api.Data.Entities.PendingRemittance", b =>
                 {
+                    b.HasOne("HansOS.Api.Data.Entities.ActivityExpense", "ActivityExpense")
+                        .WithMany()
+                        .HasForeignKey("ActivityExpenseId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("HansOS.Api.Data.Entities.SportsDepartment", "Department")
                         .WithMany()
                         .HasForeignKey("DepartmentId")
                         .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("ActivityExpense");
 
                     b.Navigation("Department");
                 });
@@ -1244,6 +1759,90 @@ namespace HansOS.Api.Migrations
                 });
 
             modelBuilder.Entity("HansOS.Api.Data.Entities.StockTransaction", b =>
+                {
+                    b.HasOne("HansOS.Api.Data.Entities.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("HansOS.Api.Data.Entities.TodoCategory", b =>
+                {
+                    b.HasOne("HansOS.Api.Data.Entities.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("HansOS.Api.Data.Entities.TodoChecklistItem", b =>
+                {
+                    b.HasOne("HansOS.Api.Data.Entities.TodoItem", "TodoItem")
+                        .WithMany("ChecklistItems")
+                        .HasForeignKey("TodoItemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("TodoItem");
+                });
+
+            modelBuilder.Entity("HansOS.Api.Data.Entities.TodoItem", b =>
+                {
+                    b.HasOne("HansOS.Api.Data.Entities.TodoCategory", "Category")
+                        .WithMany("TodoItems")
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("HansOS.Api.Data.Entities.TodoItem", "Parent")
+                        .WithMany("Children")
+                        .HasForeignKey("ParentId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("HansOS.Api.Data.Entities.TodoItem", "RecurrenceSource")
+                        .WithMany()
+                        .HasForeignKey("RecurrenceSourceId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("HansOS.Api.Data.Entities.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Category");
+
+                    b.Navigation("Parent");
+
+                    b.Navigation("RecurrenceSource");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("HansOS.Api.Data.Entities.TodoItemRelation", b =>
+                {
+                    b.HasOne("HansOS.Api.Data.Entities.TodoItem", "SourceItem")
+                        .WithMany("SourceRelations")
+                        .HasForeignKey("SourceItemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("HansOS.Api.Data.Entities.TodoItem", "TargetItem")
+                        .WithMany("TargetRelations")
+                        .HasForeignKey("TargetItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("SourceItem");
+
+                    b.Navigation("TargetItem");
+                });
+
+            modelBuilder.Entity("HansOS.Api.Data.Entities.TodoTag", b =>
                 {
                     b.HasOne("HansOS.Api.Data.Entities.ApplicationUser", "User")
                         .WithMany()
@@ -1322,6 +1921,21 @@ namespace HansOS.Api.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("TodoItemTodoTag", b =>
+                {
+                    b.HasOne("HansOS.Api.Data.Entities.TodoTag", null)
+                        .WithMany()
+                        .HasForeignKey("TagsId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("HansOS.Api.Data.Entities.TodoItem", null)
+                        .WithMany()
+                        .HasForeignKey("TodoItemsId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("HansOS.Api.Data.Entities.Activity", b =>
                 {
                     b.Navigation("Expenses");
@@ -1339,6 +1953,11 @@ namespace HansOS.Api.Migrations
                     b.Navigation("DepartmentBudgets");
                 });
 
+            modelBuilder.Entity("HansOS.Api.Data.Entities.BudgetItem", b =>
+                {
+                    b.Navigation("LinkedExpenses");
+                });
+
             modelBuilder.Entity("HansOS.Api.Data.Entities.DepartmentBudget", b =>
                 {
                     b.Navigation("Items");
@@ -1349,6 +1968,22 @@ namespace HansOS.Api.Migrations
                     b.Navigation("Children");
 
                     b.Navigation("RoleMenus");
+                });
+
+            modelBuilder.Entity("HansOS.Api.Data.Entities.TodoCategory", b =>
+                {
+                    b.Navigation("TodoItems");
+                });
+
+            modelBuilder.Entity("HansOS.Api.Data.Entities.TodoItem", b =>
+                {
+                    b.Navigation("ChecklistItems");
+
+                    b.Navigation("Children");
+
+                    b.Navigation("SourceRelations");
+
+                    b.Navigation("TargetRelations");
                 });
 
             modelBuilder.Entity("HansOS.Api.Data.Entities.TransactionCategory", b =>

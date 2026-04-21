@@ -8,10 +8,8 @@
 // - Supports both Planning Phase and Coding Phase
 // ============================================================================
 
-import { execSync } from 'child_process';
 import {
   getWorkflowState,
-  setWorkflowState,
   resetWorkflowState,
   completeStep,
   getCodingMissingSteps,
@@ -61,16 +59,14 @@ if (skipMatch) {
 
   const stepMap = {
     planner: 'planner',
-    simplifier: 'simplifier',
+    codereview: 'codeReview',
+    'code-review': 'codeReview',
+    review: 'codeReview',
+    linusreview: 'linusReview',
+    'linus-review': 'linusReview',
+    linus: 'linusReview',
     build: 'buildPassed',
     buildpassed: 'buildPassed',
-    codereview: 'codeReviewer',
-    codereviewer: 'codeReviewer',
-    'code-review': 'codeReviewer',
-    securityreview: 'securityReviewer',
-    securityreviewer: 'securityReviewer',
-    'security-review': 'securityReviewer',
-    security: 'securityReviewer',
     ceoreview: 'ceoReview',
     'ceo-review': 'ceoReview',
     ceo: 'ceoReview',
@@ -93,7 +89,7 @@ if (skipMatch) {
   } else {
     log('');
     log(`[Workflow] Unknown step: ${stepToSkip}`);
-    log('[Workflow] Valid steps: planner, simplifier, build, codereview, security, ceo, eng, plan-linus');
+    log('[Workflow] Valid steps: planner, codereview, linus, build, ceo, eng, plan-linus');
     log('');
   }
   process.exit(0);
@@ -106,14 +102,14 @@ if (/commit\s+this/i.test(promptLower)) {
   log('COMMIT WORKFLOW TRIGGERED. Execute the following steps.');
   log('MANDATORY: Steps MUST use the Agent tool. Do NOT substitute with your own text summary.');
   log('');
-  log('Dispatch IN PARALLEL (one message, multiple Agent tool calls):');
-  log('  1. Agent tool -> subagent_type: "code-simplifier:code-simplifier"');
-  log('Then after simplifier completes, dispatch IN PARALLEL:');
-  log('  2. Agent tool -> subagent_type: "code-review-specialist"');
-  log('  3. Agent tool -> subagent_type: "security-vuln-scanner"');
-  log('Then: dotnet build backend/HansOS.slnx -> git commit (Conventional Commits, Traditional Chinese)');
-  log('');
-  log('For detailed instructions, use /commit-this command instead.');
+  log('Step 1 — Combined Code Review (dispatch ALL THREE in parallel):');
+  log('  Agent tool -> subagent_type: "code-simplifier:code-simplifier"');
+  log('  Agent tool -> subagent_type: "code-review-specialist"');
+  log('  Agent tool -> subagent_type: "security-vuln-scanner"');
+  log('Step 2 — After all 3 complete, dispatch:');
+  log('  Agent tool -> subagent_type: "linus-reviewer"');
+  log('Step 3 — Build + commit:');
+  log('  dotnet build backend/HansOS.slnx -> git commit (Conventional Commits, Traditional Chinese)');
   log('</user-prompt-submit-hook>');
   log('');
   process.exit(0);
@@ -126,83 +122,15 @@ if (/^code-review$/i.test(promptLower.trim())) {
   log('CODE-REVIEW WORKFLOW TRIGGERED. Execute the following steps.');
   log('MANDATORY: Steps MUST use the Agent tool. Do NOT substitute with your own text summary.');
   log('');
-  log('Dispatch IN PARALLEL (one message, multiple Agent tool calls):');
-  log('  1. Agent tool -> subagent_type: "code-simplifier:code-simplifier"');
-  log('Then after simplifier completes, dispatch IN PARALLEL:');
-  log('  2. Agent tool -> subagent_type: "code-review-specialist"');
-  log('  3. Agent tool -> subagent_type: "security-vuln-scanner"');
-  log('Then: dotnet build backend/HansOS.slnx -> report result (do NOT commit)');
+  log('Step 1 — Combined Code Review (dispatch ALL THREE in parallel):');
+  log('  Agent tool -> subagent_type: "code-simplifier:code-simplifier"');
+  log('  Agent tool -> subagent_type: "code-review-specialist"');
+  log('  Agent tool -> subagent_type: "security-vuln-scanner"');
+  log('Step 2 — After all 3 complete, dispatch:');
+  log('  Agent tool -> subagent_type: "linus-reviewer"');
+  log('Step 3 — Build verification (do NOT commit)');
   log('');
-  log('Use "commit this" or /commit-this when ready to commit.');
-  log('</user-prompt-submit-hook>');
-  log('');
-  process.exit(0);
-}
-
-// worktree merge-back — check reviews passed, then give merge instructions
-if (/worktree\s+merge-?back/i.test(promptLower)) {
-  const state = getWorkflowState();
-
-  if (!state.mergeBackPending) {
-    log('');
-    log('[Merge-Back] No merge-back in progress.');
-    log('[Merge-Back] This command is available after a commit in a worktree.');
-    log('');
-    process.exit(0);
-  }
-
-  // Check if all reviews passed
-  const missing = getCodingMissingSteps();
-  if (missing.length > 0) {
-    const stepDisplayNames = {
-      simplifier: 'Code Simplifier (run code-simplifier:code-simplifier agent)',
-      codeReviewer: 'Code Review (run code-review-specialist agent)',
-      securityReviewer: 'Security Review (run security-vuln-scanner agent)',
-    };
-    log('');
-    log('[Merge-Back] Reviews not yet complete. Finish reviews first.');
-    log('');
-    log(' Missing steps:');
-    for (const step of missing) {
-      log(`   [ ] ${stepDisplayNames[step] || step}`);
-    }
-    log('');
-    log(' Run "code-review" or "commit this" to execute the review pipeline.');
-    log(' Then run "worktree merge-back" again.');
-    log('');
-    process.exit(0);
-  }
-
-  // All reviews passed — give merge-back instructions
-  let wtBranch = '';
-  try {
-    wtBranch = execSync('git branch --show-current', {
-      encoding: 'utf-8',
-      stdio: ['pipe', 'pipe', 'pipe'],
-    }).trim();
-  } catch { /* fallback */ }
-
-  // Clear mergeBackPending
-  state.mergeBackPending = false;
-  setWorkflowState(state);
-
-  log('');
-  log('<user-prompt-submit-hook>');
-  log('WORKTREE MERGE-BACK: All reviews passed! Execute final merge.');
-  log('');
-  log(`Branch: ${wtBranch}`);
-  log('');
-  log('Execute these steps IN ORDER:');
-  log('');
-  log('1. Call: ExitWorktree(action: "keep")');
-  log(`2. Run: git merge --no-ff ${wtBranch}`);
-  log('3. If merge succeeds:');
-  log(`   - Run: git worktree remove .claude/worktrees/${wtBranch.replace(/^worktree-/, '')}`);
-  log(`   - Run: git branch -d ${wtBranch}`);
-  log('   - Run: workflow reset');
-  log('4. If merge fails (conflict):');
-  log('   - Run: git merge --abort');
-  log('   - Report: "MERGE CONFLICT on main. Worktree kept. Resolve manually."');
+  log('Use "commit this" when ready to commit.');
   log('</user-prompt-submit-hook>');
   log('');
   process.exit(0);
@@ -284,9 +212,8 @@ if (hasCommitIntent) {
 
     if (missing.length > 0) {
       const stepDisplayNames = {
-        simplifier: 'Code Simplifier (run code-simplifier:code-simplifier agent)',
-        codeReviewer: 'Code Review (run code-review-specialist agent)',
-        securityReviewer: 'Security Review (run security-vuln-scanner agent)',
+        codeReview: 'Combined Code Review (run code-simplifier + code-review-specialist + security-vuln-scanner)',
+        linusReview: 'Linus Review (run linus-reviewer agent)',
       };
 
       log('');

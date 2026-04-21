@@ -30,10 +30,11 @@ tools: ["read", "search"]
 
 1. **架構適配**：是否符合三層架構（Controller → Service → DbContext）？
 2. **資料流**：資料如何在各層之間流動？有無不必要的轉換？
-3. **邊界案例**：有哪些容易被忽略的邊界情況？
-4. **測試覆蓋**：測試計畫是否涵蓋 happy path、401、400、edge cases？
-5. **效能考量**：有無 N+1 查詢、記憶體問題、阻塞操作？
-6. **依賴影響**：修改是否會影響現有功能？
+3. **任務切分**：是否已拆成可依 phase 順序執行、可獨立提交的小 task？
+4. **測試策略**：是否清楚定義 RED / GREEN / REFACTOR、happy path、401、400、edge cases？
+5. **Checkpoint 設計**：phase 結束時如何做 automated + manual verification？是否需要使用者 approval？
+6. **效能考量**：有無 N+1 查詢、記憶體問題、阻塞操作？
+7. **依賴影響**：修改是否會影響現有功能？
 
 ## 視角三：Linus Review（簡潔與品味）
 
@@ -69,6 +70,8 @@ tools: ["read", "search"]
 ## 綜合建議
 - 【結論】通過 / 需修改 / 不建議
 - 【衝突項目】[如果 CEO 和 Linus 意見衝突，列出兩方觀點]
+- 【任務切分】[目前 phase 是否可直接開始做，或需重新切 task]
+- 【測試 / Checkpoint】[RED/GREEN/REFACTOR 與 phase 驗證是否完整]
 - 【下一步】[建議的行動]
 ```
 

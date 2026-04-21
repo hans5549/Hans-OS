@@ -18,6 +18,8 @@ export interface PendingRemittanceResponse {
   status: PendingRemittanceStatus;
   completedAt: string | null;
   createdAt: string;
+  activityExpenseId: string | null;
+  activityExpenseDescription: string | null;
 }
 
 export interface CreatePendingRemittanceRequest {
@@ -29,6 +31,7 @@ export interface CreatePendingRemittanceRequest {
   recipientName?: string;
   expectedDate?: string;
   note?: string;
+  activityExpenseId?: string;
 }
 
 export interface UpdatePendingRemittanceRequest {
@@ -40,6 +43,12 @@ export interface UpdatePendingRemittanceRequest {
   recipientName?: string;
   expectedDate?: string;
   note?: string;
+  activityExpenseId?: string;
+}
+
+export interface CompletePendingRemittanceRequest {
+  bankName: string;
+  transactionDate: string;
 }
 
 // ── API 函式 ──────────────────────────────────────
@@ -88,7 +97,10 @@ export async function deletePendingRemittanceApi(id: string) {
   return requestClient.delete(`/pending-remittances/${id}`);
 }
 
-/** 標記匯款完成 */
-export async function completePendingRemittanceApi(id: string) {
-  return requestClient.put(`/pending-remittances/${id}/complete`, {});
+/** 標記匯款完成（自動建立收支表支出） */
+export async function completePendingRemittanceApi(
+  id: string,
+  data: CompletePendingRemittanceRequest,
+) {
+  return requestClient.put(`/pending-remittances/${id}/complete`, data);
 }

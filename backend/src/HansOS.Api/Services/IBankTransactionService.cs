@@ -18,9 +18,6 @@ public interface IBankTransactionService
 
     Task DeleteTransactionAsync(Guid id, CancellationToken ct = default);
 
-    Task<byte[]> ExportToExcelAsync(
-        string bankName, int year, int? month = null, CancellationToken ct = default);
-
-    Task<ReceiptTrackingSummaryResponse> GetReceiptTrackingAsync(
-        int year, int? month = null, CancellationToken ct = default);
+    Task BatchUpdateDepartmentAsync(
+        BatchUpdateDepartmentRequest request, CancellationToken ct = default);
 }

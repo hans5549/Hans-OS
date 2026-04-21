@@ -62,6 +62,22 @@ public class PendingRemittanceControllerTests(HansOsWebApplicationFactory factor
         return request;
     }
 
+    private static HttpRequestMessage AuthPatch(string url, string token, object data)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Patch, url)
+        {
+            Content = JsonContent.Create(data),
+        };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        return request;
+    }
+
+    private static object DefaultCompleteBody() => new
+    {
+        bankName = "台北富邦",
+        transactionDate = "2026-01-15",
+    };
+
     private static HttpRequestMessage AuthDelete(string url, string token)
     {
         var request = new HttpRequestMessage(HttpMethod.Delete, url);
@@ -143,7 +159,7 @@ public class PendingRemittanceControllerTests(HansOsWebApplicationFactory factor
         // Arrange
         var token = await LoginAndGetTokenAsync();
         var id = await CreateRemittanceAndGetIdAsync(token);
-        await _client.SendAsync(AuthPutNoBody($"/pending-remittances/{id}/complete", token));
+        await _client.SendAsync(AuthPut($"/pending-remittances/{id}/complete", token, DefaultCompleteBody()));
 
         // Act
         var response = await _client.SendAsync(AuthGet("/pending-remittances?status=Completed", token));
@@ -510,7 +526,7 @@ public class PendingRemittanceControllerTests(HansOsWebApplicationFactory factor
         var id = await CreateRemittanceAndGetIdAsync(token);
 
         // Act
-        var response = await _client.SendAsync(AuthPutNoBody($"/pending-remittances/{id}/complete", token));
+        var response = await _client.SendAsync(AuthPut($"/pending-remittances/{id}/complete", token, DefaultCompleteBody()));
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -533,7 +549,7 @@ public class PendingRemittanceControllerTests(HansOsWebApplicationFactory factor
         var token = await LoginAndGetTokenAsync();
 
         // Act
-        var response = await _client.SendAsync(AuthPutNoBody($"/pending-remittances/{Guid.NewGuid()}/complete", token));
+        var response = await _client.SendAsync(AuthPut($"/pending-remittances/{Guid.NewGuid()}/complete", token, DefaultCompleteBody()));
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -547,14 +563,80 @@ public class PendingRemittanceControllerTests(HansOsWebApplicationFactory factor
         var id = await CreateRemittanceAndGetIdAsync(token);
 
         // Complete once
-        var firstResponse = await _client.SendAsync(AuthPutNoBody($"/pending-remittances/{id}/complete", token));
+        var firstResponse = await _client.SendAsync(AuthPut($"/pending-remittances/{id}/complete", token, DefaultCompleteBody()));
         firstResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // Act — complete again
-        var response = await _client.SendAsync(AuthPutNoBody($"/pending-remittances/{id}/complete", token));
+        var response = await _client.SendAsync(AuthPut($"/pending-remittances/{id}/complete", token, DefaultCompleteBody()));
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Complete_WithoutBankName_Returns400()
+    {
+        // Arrange
+        var token = await LoginAndGetTokenAsync();
+        var id = await CreateRemittanceAndGetIdAsync(token);
+
+        // Act — missing bankName
+        var response = await _client.SendAsync(AuthPut($"/pending-remittances/{id}/complete", token, new
+        {
+            transactionDate = "2026-01-15",
+        }));
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Complete_WithBankNameAndDate_AutoCreatesExpenseTransaction()
+    {
+        // Arrange
+        var token = await LoginAndGetTokenAsync();
+        var id = await CreateRemittanceAndGetIdAsync(token, new
+        {
+            description = "活動場地費",
+            amount = 12000,
+            sourceAccount = "台北富邦 001-234567",
+            targetAccount = "國泰世華 789-012345",
+        });
+
+        // Act
+        var response = await _client.SendAsync(AuthPut($"/pending-remittances/{id}/complete", token, new
+        {
+            bankName = "台北富邦",
+            transactionDate = "2026-06-15",
+        }));
+
+        // Assert — 200 OK with success code
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
+        body.GetProperty("code").GetInt32().Should().Be(0);
+
+        // Assert — remittance status changed to completed
+        var remittanceResp = await _client.SendAsync(AuthGet($"/pending-remittances/{id}", token));
+        remittanceResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var remittanceBody = await remittanceResp.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
+        var remittance = remittanceBody.GetProperty("data");
+        remittance.GetProperty("status").GetInt32().Should().Be(1);
+        remittance.GetProperty("completedAt").GetString().Should().NotBeNullOrEmpty();
+
+        // Assert — a matching BankTransaction was auto-created
+        var txResp = await _client.SendAsync(AuthGet("/bank-transactions/台北富邦?year=2026&month=6", token));
+        txResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var txBody = await txResp.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
+        var transactions = txBody.GetProperty("data").EnumerateArray().ToList();
+
+        var created = transactions.FirstOrDefault(t =>
+            t.GetProperty("pendingRemittanceId").ValueKind != JsonValueKind.Null &&
+            t.GetProperty("pendingRemittanceId").GetString() == id.ToString());
+
+        created.ValueKind.Should().NotBe(JsonValueKind.Undefined, because: "待匯款完成後應自動建立收支表支出紀錄");
+        created.GetProperty("transactionType").GetInt32().Should().Be(1, because: "自動建立的收支記錄應為支出類型");
+        created.GetProperty("amount").GetDecimal().Should().Be(12000m);
+        created.GetProperty("description").GetString().Should().Be("活動場地費");
     }
 
     #endregion

@@ -1,79 +1,39 @@
-using ClosedXML.Excel;
-
 using HansOS.Api.Data;
 using HansOS.Api.Data.Entities;
 using HansOS.Api.Models.BankTransactions;
-
 using Microsoft.EntityFrameworkCore;
 
 namespace HansOS.Api.Services;
 
+/// <summary>
+/// 銀行交易 CRUD 與期間查詢。
+/// Excel 匯出 → <see cref="IBankTransactionExcelExportService"/>
+/// 收據追蹤 → <see cref="IBankTransactionReceiptService"/>
+/// </summary>
 public class BankTransactionService(ApplicationDbContext db) : IBankTransactionService
 {
     public async Task<List<BankTransactionResponse>> GetTransactionsAsync(
         string bankName, int year, int? month = null, CancellationToken ct = default)
     {
         var (startDate, endDate) = GetPeriodRange(year, month);
-
-        var transactions = await db.BankTransactions
-            .AsNoTracking()
+        var transactions = await GetTransactionsQuery(bankName, startDate, endDate)
             .Include(t => t.Department)
-            .Where(t => t.BankName == bankName
-                        && t.TransactionDate >= startDate
-                        && t.TransactionDate <= endDate)
+            .Include(t => t.Activity)
             .OrderBy(t => t.TransactionDate)
             .ThenBy(t => t.CreatedAt)
             .ToListAsync(ct);
-
         var openingBalance = await CalculateOpeningBalanceAsync(bankName, startDate, ct);
-
-        var result = new List<BankTransactionResponse>(transactions.Count);
-        var runningBalance = openingBalance;
-
-        foreach (var t in transactions)
-        {
-            runningBalance += t.TransactionType == TransactionType.Income ? t.Amount : -t.Amount;
-            runningBalance -= t.Fee;
-
-            result.Add(new BankTransactionResponse(
-                t.Id,
-                t.BankName,
-                t.TransactionType,
-                t.TransactionDate,
-                t.Description,
-                t.DepartmentId,
-                t.Department?.Name,
-                t.Amount,
-                t.Fee,
-                t.ReceiptCollected,
-                t.ReceiptMailed,
-                runningBalance));
-        }
-
-        return result;
+        return MapTransactions(transactions, openingBalance);
     }
 
     public async Task<BankTransactionSummaryResponse> GetPeriodSummaryAsync(
         string bankName, int year, int? month = null, CancellationToken ct = default)
     {
         var (startDate, endDate) = GetPeriodRange(year, month);
-
         var openingBalance = await CalculateOpeningBalanceAsync(bankName, startDate, ct);
-
-        var periodTransactions = await db.BankTransactions
-            .AsNoTracking()
-            .Where(t => t.BankName == bankName
-                        && t.TransactionDate >= startDate
-                        && t.TransactionDate <= endDate)
-            .ToListAsync(ct);
-
-        var totalIncome = periodTransactions
-            .Where(t => t.TransactionType == TransactionType.Income)
-            .Sum(t => t.Amount);
-
-        var totalExpense = periodTransactions
-            .Where(t => t.TransactionType == TransactionType.Expense)
-            .Sum(t => t.Amount)
+        var periodTransactions = await GetTransactionsQuery(bankName, startDate, endDate).ToListAsync(ct);
+        var totalIncome = periodTransactions.Where(t => t.TransactionType == TransactionType.Income).Sum(t => t.Amount);
+        var totalExpense = periodTransactions.Where(t => t.TransactionType == TransactionType.Expense).Sum(t => t.Amount)
             + periodTransactions.Sum(t => t.Fee);
 
         return new BankTransactionSummaryResponse(
@@ -86,41 +46,18 @@ public class BankTransactionService(ApplicationDbContext db) : IBankTransactionS
     public async Task<BankTransactionResponse> CreateTransactionAsync(
         string bankName, CreateBankTransactionRequest request, CancellationToken ct = default)
     {
-        if (request.DepartmentId.HasValue)
-        {
-            var departmentExists = await db.SportsDepartments
-                .AnyAsync(d => d.Id == request.DepartmentId.Value, ct);
-            if (!departmentExists)
-            {
-                throw new ArgumentException("指定的部門不存在");
-            }
-        }
-
-        var isExpense = request.TransactionType == TransactionType.Expense;
+        await db.EnsureDepartmentExistsIfProvidedAsync(request.DepartmentId, ct);
+        await ValidateActivitySelectionAsync(
+            request.TransactionType,
+            request.DepartmentId,
+            request.ActivityId,
+            request.TransactionDate.Year,
+            ct);
         var now = DateTime.UtcNow;
-        var entity = new BankTransaction
-        {
-            Id = Guid.NewGuid(),
-            BankName = bankName,
-            TransactionType = request.TransactionType,
-            TransactionDate = request.TransactionDate,
-            Description = request.Description.Trim(),
-            DepartmentId = request.DepartmentId,
-            Amount = request.Amount,
-            Fee = request.Fee,
-            ReceiptCollected = isExpense && request.ReceiptCollected,
-            ReceiptMailed = isExpense && request.ReceiptMailed,
-            CreatedAt = now,
-            UpdatedAt = now,
-        };
+        var entity = CreateEntity(bankName, request, now);
 
         db.BankTransactions.Add(entity);
         await db.SaveChangesAsync(ct);
-
-        var department = entity.DepartmentId.HasValue
-            ? await db.SportsDepartments.AsNoTracking()
-                .FirstOrDefaultAsync(d => d.Id == entity.DepartmentId, ct)
-            : null;
 
         return new BankTransactionResponse(
             entity.Id,
@@ -129,12 +66,15 @@ public class BankTransactionService(ApplicationDbContext db) : IBankTransactionS
             entity.TransactionDate,
             entity.Description,
             entity.DepartmentId,
-            department?.Name,
+            await GetDepartmentNameAsync(entity.DepartmentId, ct),
             entity.Amount,
             entity.Fee,
             entity.ReceiptCollected,
             entity.ReceiptMailed,
-            0);
+            0,
+            entity.ActivityId,
+            await GetActivityNameAsync(entity.ActivityId, ct),
+            entity.PendingRemittanceId);
     }
 
     public async Task UpdateTransactionAsync(
@@ -143,25 +83,14 @@ public class BankTransactionService(ApplicationDbContext db) : IBankTransactionS
         var entity = await db.BankTransactions.FindAsync([id], ct)
             ?? throw new KeyNotFoundException("交易記錄不存在");
 
-        if (request.DepartmentId.HasValue)
-        {
-            var departmentExists = await db.SportsDepartments
-                .AnyAsync(d => d.Id == request.DepartmentId.Value, ct);
-            if (!departmentExists)
-            {
-                throw new ArgumentException("指定的部門不存在");
-            }
-        }
-
-        entity.TransactionType = request.TransactionType;
-        entity.TransactionDate = request.TransactionDate;
-        entity.Description = request.Description.Trim();
-        entity.DepartmentId = request.DepartmentId;
-        entity.Amount = request.Amount;
-        entity.Fee = request.Fee;
-        var isExpense = request.TransactionType == TransactionType.Expense;
-        entity.ReceiptCollected = isExpense && request.ReceiptCollected;
-        entity.ReceiptMailed = isExpense && request.ReceiptMailed;
+        await db.EnsureDepartmentExistsIfProvidedAsync(request.DepartmentId, ct);
+        await ValidateActivitySelectionAsync(
+            request.TransactionType,
+            request.DepartmentId,
+            request.ActivityId,
+            request.TransactionDate.Year,
+            ct);
+        ApplyTransactionUpdate(entity, request);
         entity.UpdatedAt = DateTime.UtcNow;
 
         await db.SaveChangesAsync(ct);
@@ -176,116 +105,205 @@ public class BankTransactionService(ApplicationDbContext db) : IBankTransactionS
         await db.SaveChangesAsync(ct);
     }
 
-    public async Task<byte[]> ExportToExcelAsync(
-        string bankName, int year, int? month = null, CancellationToken ct = default)
+    public async Task BatchUpdateDepartmentAsync(
+        BatchUpdateDepartmentRequest request, CancellationToken ct = default)
     {
-        var transactions = await GetTransactionsAsync(bankName, year, month, ct);
-        var summary = await GetPeriodSummaryAsync(bankName, year, month, ct);
-
-        var periodLabel = month.HasValue
-            ? $"{year}年{month}月"
-            : $"{year}年度";
-
-        using var workbook = new XLWorkbook();
-        var worksheet = workbook.Worksheets.Add($"{bankName}收支表");
-
-        // Title
-        worksheet.Cell(1, 1).Value = $"{bankName}收支表 — {periodLabel}";
-        worksheet.Range(1, 1, 1, 9).Merge().Style
-            .Font.SetBold(true)
-            .Font.SetFontSize(14)
-            .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
-
-        // Summary row
-        worksheet.Cell(3, 1).Value = "期初餘額";
-        worksheet.Cell(3, 2).Value = summary.OpeningBalance;
-        worksheet.Cell(3, 3).Value = "期間收入";
-        worksheet.Cell(3, 4).Value = summary.TotalIncome;
-        worksheet.Cell(3, 5).Value = "期間支出";
-        worksheet.Cell(3, 6).Value = summary.TotalExpense;
-        worksheet.Cell(3, 7).Value = "期末餘額";
-        worksheet.Cell(3, 8).Value = summary.ClosingBalance;
-
-        // Headers
-        var headers = new[] { "日期", "摘要", "歸屬部門", "收入", "支出", "手續費", "餘額", "已回收", "已寄送" };
-        for (var i = 0; i < headers.Length; i++)
-        {
-            worksheet.Cell(5, i + 1).Value = headers[i];
-        }
-        worksheet.Range(5, 1, 5, headers.Length).Style
-            .Font.SetBold(true)
-            .Fill.SetBackgroundColor(XLColor.LightGray);
-
-        // Data rows
-        for (var row = 0; row < transactions.Count; row++)
-        {
-            var t = transactions[row];
-            var r = row + 6;
-            worksheet.Cell(r, 1).Value = t.TransactionDate.ToString("yyyy/MM/dd");
-            worksheet.Cell(r, 2).Value = t.Description;
-            worksheet.Cell(r, 3).Value = t.DepartmentName ?? "";
-            worksheet.Cell(r, 4).Value = t.TransactionType == TransactionType.Income ? t.Amount : 0;
-            worksheet.Cell(r, 5).Value = t.TransactionType == TransactionType.Expense ? t.Amount : 0;
-            worksheet.Cell(r, 6).Value = t.Fee;
-            worksheet.Cell(r, 7).Value = t.RunningBalance;
-            worksheet.Cell(r, 8).Value = t.TransactionType == TransactionType.Expense
-                ? (t.ReceiptCollected ? "✓" : "✗") : "";
-            worksheet.Cell(r, 9).Value = t.TransactionType == TransactionType.Expense
-                ? (t.ReceiptMailed ? "✓" : "✗") : "";
-        }
-
-        // Totals row
-        var totalRow = transactions.Count + 6;
-        worksheet.Cell(totalRow, 1).Value = "合計";
-        worksheet.Cell(totalRow, 4).Value = summary.TotalIncome;
-        worksheet.Cell(totalRow, 5).Value = summary.TotalExpense - transactions.Sum(t => t.Fee);
-        worksheet.Cell(totalRow, 6).Value = transactions.Sum(t => t.Fee);
-        worksheet.Range(totalRow, 1, totalRow, headers.Length).Style.Font.SetBold(true);
-
-        // Format currency columns
-        foreach (var col in new[] { 4, 5, 6, 7 })
-        {
-            worksheet.Column(col).Style.NumberFormat.Format = "#,##0";
-        }
-
-        worksheet.Columns().AdjustToContents();
-
-        using var stream = new MemoryStream();
-        workbook.SaveAs(stream);
-        return stream.ToArray();
+        await db.EnsureDepartmentExistsIfProvidedAsync(request.DepartmentId, ct);
+        var entities = await GetBatchUpdateEntitiesAsync(request, ct);
+        var now = DateTime.UtcNow;
+        ApplyDepartmentUpdate(entities, request.DepartmentId, now);
+        await db.SaveChangesAsync(ct);
     }
 
-    public async Task<ReceiptTrackingSummaryResponse> GetReceiptTrackingAsync(
-        int year, int? month = null, CancellationToken ct = default)
-    {
-        var (startDate, endDate) = GetPeriodRange(year, month);
-
-        var items = await db.BankTransactions
+    private IQueryable<BankTransaction> GetTransactionsQuery(string bankName, DateOnly startDate, DateOnly endDate) =>
+        db.BankTransactions
             .AsNoTracking()
-            .Include(t => t.Department)
-            .Where(t => t.TransactionDate >= startDate
-                        && t.TransactionDate <= endDate
-                        && t.TransactionType == TransactionType.Expense
-                        && (!t.ReceiptCollected || !t.ReceiptMailed))
-            .OrderBy(t => t.BankName)
-            .ThenBy(t => t.TransactionDate)
-            .Select(t => new ReceiptTrackingResponse(
-                t.Id,
-                t.BankName,
-                t.TransactionDate,
-                t.Description,
-                t.DepartmentId,
-                t.Department != null ? t.Department.Name : null,
-                t.Amount,
-                t.ReceiptCollected,
-                t.ReceiptMailed))
-            .ToListAsync(ct);
+            .Where(t => t.BankName == bankName
+                        && t.TransactionDate >= startDate
+                        && t.TransactionDate <= endDate);
 
-        return new ReceiptTrackingSummaryResponse(
-            items.Count,
-            items.Count(i => !i.ReceiptCollected),
-            items.Count(i => !i.ReceiptMailed),
-            items);
+    private static List<BankTransactionResponse> MapTransactions(
+        List<BankTransaction> transactions, decimal openingBalance)
+    {
+        var result = new List<BankTransactionResponse>(transactions.Count);
+        var runningBalance = openingBalance;
+
+        foreach (var transaction in transactions)
+        {
+            runningBalance += GetNetAmount(transaction);
+            result.Add(MapTransaction(transaction, runningBalance));
+        }
+
+        return result;
+    }
+
+    private static BankTransactionResponse MapTransaction(BankTransaction transaction, decimal runningBalance) =>
+        new(
+            transaction.Id,
+            transaction.BankName,
+            transaction.TransactionType,
+            transaction.TransactionDate,
+            transaction.Description,
+            transaction.DepartmentId,
+            transaction.Department?.Name,
+            transaction.Amount,
+            transaction.Fee,
+            transaction.ReceiptCollected,
+            transaction.ReceiptMailed,
+            runningBalance,
+            transaction.ActivityId,
+            transaction.Activity?.Name,
+            transaction.PendingRemittanceId);
+
+    private static decimal GetNetAmount(BankTransaction transaction) =>
+        (transaction.TransactionType == TransactionType.Income ? transaction.Amount : -transaction.Amount) - transaction.Fee;
+
+    private static BankTransaction CreateEntity(
+        string bankName, CreateBankTransactionRequest request, DateTime now)
+    {
+        var isExpense = request.TransactionType == TransactionType.Expense;
+        return new BankTransaction
+        {
+            Id = Guid.NewGuid(),
+            BankName = bankName,
+            TransactionType = request.TransactionType,
+            TransactionDate = request.TransactionDate,
+            Description = request.Description.Trim(),
+            DepartmentId = request.DepartmentId,
+            Amount = request.Amount,
+            Fee = request.Fee,
+            ReceiptCollected = isExpense && request.ReceiptCollected,
+            ReceiptMailed = isExpense && request.ReceiptMailed,
+            ActivityId = request.ActivityId,
+            CreatedAt = now,
+            UpdatedAt = now,
+        };
+    }
+
+    private static void ApplyTransactionUpdate(BankTransaction entity, UpdateBankTransactionRequest request)
+    {
+        var isExpense = request.TransactionType == TransactionType.Expense;
+        entity.TransactionType = request.TransactionType;
+        entity.TransactionDate = request.TransactionDate;
+        entity.Description = request.Description.Trim();
+        entity.DepartmentId = request.DepartmentId;
+        entity.Amount = request.Amount;
+        entity.Fee = request.Fee;
+        entity.ReceiptCollected = isExpense && request.ReceiptCollected;
+        entity.ReceiptMailed = isExpense && request.ReceiptMailed;
+        entity.ActivityId = request.ActivityId;
+    }
+
+    private async Task<List<BankTransaction>> GetBatchUpdateEntitiesAsync(
+        BatchUpdateDepartmentRequest request, CancellationToken ct)
+    {
+        var uniqueIds = request.Ids.Distinct().ToList();
+        var entities = await db.BankTransactions.Where(t => uniqueIds.Contains(t.Id)).ToListAsync(ct);
+        if (entities.Count != uniqueIds.Count)
+        {
+            throw new KeyNotFoundException("部分交易記錄不存在");
+        }
+
+        var (startDate, endDate) = GetPeriodRange(request.Year, request.Month);
+        if (entities.Any(t => t.BankName != request.BankName
+                              || t.TransactionDate < startDate
+                              || t.TransactionDate > endDate))
+        {
+            throw new ArgumentException("部分交易記錄不在目前查詢範圍內");
+        }
+
+        return entities;
+    }
+
+    private static void ApplyDepartmentUpdate(
+        List<BankTransaction> entities, Guid? departmentId, DateTime now)
+    {
+        foreach (var entity in entities)
+        {
+            if (entity.DepartmentId != departmentId)
+            {
+                entity.ActivityId = null;
+            }
+
+            entity.DepartmentId = departmentId;
+            entity.UpdatedAt = now;
+        }
+    }
+
+    private async Task<string?> GetDepartmentNameAsync(Guid? departmentId, CancellationToken ct)
+    {
+        if (!departmentId.HasValue)
+        {
+            return null;
+        }
+
+        return await db.SportsDepartments
+            .AsNoTracking()
+            .Where(d => d.Id == departmentId.Value)
+            .Select(d => d.Name)
+            .FirstOrDefaultAsync(ct);
+    }
+
+    private async Task<string?> GetActivityNameAsync(Guid? activityId, CancellationToken ct)
+    {
+        if (!activityId.HasValue)
+        {
+            return null;
+        }
+
+        return await db.Activities
+            .AsNoTracking()
+            .Where(a => a.Id == activityId.Value)
+            .Select(a => a.Name)
+            .FirstOrDefaultAsync(ct);
+    }
+
+    private async Task ValidateActivitySelectionAsync(
+        TransactionType transactionType,
+        Guid? departmentId,
+        Guid? activityId,
+        int transactionYear,
+        CancellationToken ct)
+    {
+        if (!activityId.HasValue)
+        {
+            return;
+        }
+
+        if (transactionType != TransactionType.Expense)
+        {
+            throw new ArgumentException("只有支出交易可以指定來源活動");
+        }
+
+        if (!departmentId.HasValue)
+        {
+            throw new ArgumentException("選擇來源活動時必須同時指定歸屬部門");
+        }
+
+        var activity = await db.Activities
+            .AsNoTracking()
+            .Where(a => a.Id == activityId.Value)
+            .Select(a => new
+            {
+                a.DepartmentId,
+                a.Year,
+            })
+            .FirstOrDefaultAsync(ct);
+
+        if (activity is null)
+        {
+            throw new ArgumentException("指定的來源活動不存在");
+        }
+
+        if (activity.DepartmentId != departmentId.Value)
+        {
+            throw new ArgumentException("來源活動與歸屬部門不一致");
+        }
+
+        if (activity.Year != transactionYear)
+        {
+            throw new ArgumentException("來源活動年度必須與交易日期年份一致");
+        }
     }
 
     private async Task<decimal> CalculateOpeningBalanceAsync(

@@ -40,14 +40,12 @@ default_state() {
     "ceoReview": false,
     "engReview": false,
     "planLinusReview": false,
-    "simplifier": false,
-    "codeReviewer": false,
-    "securityReviewer": false,
+    "codeReview": false,
+    "linusReview": false,
     "buildPassed": false
   },
   "lineChangeSinceReview": 0,
   "buildRetryCount": 0,
-  "editHistory": [],
   "lastModified": "",
   "currentPlanFile": ""
 }
@@ -82,7 +80,6 @@ read_state() {
     .modifiedFiles //= [] |
     .completedSteps //= $defaults.completedSteps |
     .completedSteps = ($defaults.completedSteps * .completedSteps) |
-    .editHistory //= [] |
     .lineChangeSinceReview //= 0 |
     .buildRetryCount //= 0
   '
@@ -151,28 +148,27 @@ add_modified_file() {
   if is_code_file "$file_path"; then
     state=$(echo "$state" | jq --argjson lc "$line_count" '.lineChangeSinceReview += $lc')
 
-    local simplifier_done
-    simplifier_done=$(echo "$state" | jq -r '.completedSteps.simplifier')
+    local review_done
+    review_done=$(echo "$state" | jq -r '.completedSteps.codeReview')
     local cum_lines
     cum_lines=$(echo "$state" | jq -r '.lineChangeSinceReview')
 
-    if [[ "$simplifier_done" == "true" ]]; then
-      # Simplifier already done → only reset post-simplifier steps if >= 10 lines
+    if [[ "$review_done" == "true" ]]; then
+      # Code review done → small changes (< 10 lines) warn but preserve
       if [[ "$cum_lines" -ge 10 ]]; then
         state=$(echo "$state" | jq '
-          .completedSteps.codeReviewer = false |
-          .completedSteps.securityReviewer = false |
+          .completedSteps.codeReview = false |
+          .completedSteps.linusReview = false |
           .completedSteps.buildPassed = false |
           .lineChangeSinceReview = 0
         ')
       fi
     else
-      # Simplifier not done → reset all coding review steps
+      # Code review not done → reset all coding steps
       state=$(echo "$state" | jq '
-        .completedSteps.simplifier = false |
-        .completedSteps.buildPassed = false |
-        .completedSteps.codeReviewer = false |
-        .completedSteps.securityReviewer = false
+        .completedSteps.codeReview = false |
+        .completedSteps.linusReview = false |
+        .completedSteps.buildPassed = false
       ')
     fi
   fi
@@ -189,7 +185,7 @@ complete_step() {
   state=$(read_state)
   state=$(echo "$state" | jq --arg s "$step_name" '.completedSteps[$s] = true')
   # Reset cumulative line counter when review completes
-  if [[ "$step_name" == "codeReviewer" || "$step_name" == "securityReviewer" ]]; then
+  if [[ "$step_name" == "codeReview" ]]; then
     state=$(echo "$state" | jq '.lineChangeSinceReview = 0')
   fi
   write_state "$state"
@@ -216,9 +212,8 @@ get_coding_missing_steps() {
   state=$(read_state)
   echo "$state" | jq -r '
     [
-      if .completedSteps.simplifier != true then "simplifier" else empty end,
-      if .completedSteps.codeReviewer != true then "codeReviewer" else empty end,
-      if .completedSteps.securityReviewer != true then "securityReviewer" else empty end
+      if .completedSteps.codeReview != true then "codeReview" else empty end,
+      if .completedSteps.linusReview != true then "linusReview" else empty end
     ] | .[]
   '
 }
@@ -281,7 +276,7 @@ show_workflow_status() {
   done
 
   log "  -- Coding Phase --"
-  local code_steps=("simplifier:Code Simplifier" "codeReviewer:Code Review" "securityReviewer:Security Review" "buildPassed:Build Passed")
+  local code_steps=("codeReview:Combined Code Review" "linusReview:Linus Review" "buildPassed:Build Passed")
   for entry in "${code_steps[@]}"; do
     local key="${entry%%:*}"
     local name="${entry#*:}"

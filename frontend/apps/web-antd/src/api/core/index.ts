@@ -1,4 +1,5 @@
 export * from './activities';
+export * from './article-collection';
 export * from './annual-budget';
 export * from './auth';
 export * from './bank-transactions';
@@ -11,3 +12,4 @@ export * from './finance-accounts';
 export * from './finance-categories';
 export * from './finance-transactions';
 export * from './finance-stocks';
+export * from './finance-tasks';

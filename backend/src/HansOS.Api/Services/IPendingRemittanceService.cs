@@ -18,5 +18,5 @@ public interface IPendingRemittanceService
 
     Task DeleteAsync(Guid id, CancellationToken ct = default);
 
-    Task CompleteAsync(Guid id, CancellationToken ct = default);
+    Task CompleteAsync(Guid id, CompletePendingRemittanceRequest request, CancellationToken ct = default);
 }

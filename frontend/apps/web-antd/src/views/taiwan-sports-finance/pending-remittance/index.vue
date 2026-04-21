@@ -27,6 +27,7 @@ import {
 import dayjs from 'dayjs';
 
 import type {
+  CompletePendingRemittanceRequest,
   CreatePendingRemittanceRequest,
   DepartmentResponse,
   PendingRemittanceResponse,
@@ -102,6 +103,7 @@ onMounted(fetchData);
 const columns = [
   { dataIndex: 'description', title: '摘要', ellipsis: true },
   { dataIndex: 'amount', title: '匯款金額', width: 130, align: 'right' as const },
+  { key: 'activitySource', title: '活動費來源', width: 150, ellipsis: true },
   { dataIndex: 'sourceAccount', title: '來源帳戶', width: 120 },
   { dataIndex: 'targetAccount', title: '目標帳戶', width: 120 },
   { dataIndex: 'departmentName', title: '部門', width: 120 },
@@ -203,15 +205,44 @@ async function handleSubmit() {
   }
 }
 
-// ── 標記完成 ────────────────────────────────────
+// ── 標記完成（開啟確認 Modal）─────────────────────
 
-async function handleComplete(id: string) {
+const completeModalVisible = ref(false);
+const completeSubmitting = ref(false);
+const completingId = ref<string | null>(null);
+const completeFormState = ref<CompletePendingRemittanceRequest>({
+  bankName: '',
+  transactionDate: dayjs().format('YYYY-MM-DD'),
+});
+
+function handleComplete(id: string) {
+  completingId.value = id;
+  completeFormState.value = {
+    bankName: '',
+    transactionDate: dayjs().format('YYYY-MM-DD'),
+  };
+  completeModalVisible.value = true;
+}
+
+async function handleConfirmComplete() {
+  if (!completeFormState.value.bankName) {
+    message.warning('請選擇銀行帳戶');
+    return;
+  }
+  if (!completeFormState.value.transactionDate) {
+    message.warning('請選擇交易日期');
+    return;
+  }
+  completeSubmitting.value = true;
   try {
-    await completePendingRemittanceApi(id);
-    message.success('已標記為完成');
+    await completePendingRemittanceApi(completingId.value!, completeFormState.value);
+    message.success('已標記為完成，並自動建立收支表支出紀錄');
+    completeModalVisible.value = false;
     await fetchData();
   } catch {
     message.error('操作失敗');
+  } finally {
+    completeSubmitting.value = false;
   }
 }
 
@@ -264,6 +295,16 @@ async function handleDelete(id: string) {
           size="middle"
         >
           <template #bodyCell="{ column, record }">
+            <template v-if="column.key === 'activitySource'">
+              <Tag
+                v-if="(record as PendingRemittanceResponse).activityExpenseDescription"
+                color="cyan"
+              >
+                {{ (record as PendingRemittanceResponse).activityExpenseDescription }}
+              </Tag>
+              <span v-else class="text-gray-300">—</span>
+            </template>
+
             <template v-if="column.dataIndex === 'amount'">
               <span class="font-medium">
                 {{ formatCurrency((record as PendingRemittanceResponse).amount) }}
@@ -298,17 +339,15 @@ async function handleDelete(id: string) {
                 >
                   編輯
                 </Button>
-                <Popconfirm
+                <Button
                   v-if="(record as PendingRemittanceResponse).status === 0"
-                  cancel-text="取消"
-                  ok-text="確認完成"
-                  title="確定標記此匯款為已完成嗎？"
-                  @confirm="handleComplete((record as PendingRemittanceResponse).id)"
+                  class="text-green-600"
+                  size="small"
+                  type="link"
+                  @click="handleComplete((record as PendingRemittanceResponse).id)"
                 >
-                  <Button size="small" type="link" class="text-green-600">
-                    完成
-                  </Button>
-                </Popconfirm>
+                  完成
+                </Button>
                 <Popconfirm
                   cancel-text="取消"
                   ok-text="確認刪除"
@@ -449,6 +488,44 @@ async function handleDelete(id: string) {
             placeholder="備註說明（選填）"
             :rows="3"
             show-count
+          />
+        </FormItem>
+      </Form>
+    </Modal>
+    <!-- 完成匯款 Modal -->
+    <Modal
+      :confirm-loading="completeSubmitting"
+      destroy-on-close
+      ok-text="確認完成並建立收支記錄"
+      :open="completeModalVisible"
+      title="完成匯款"
+      :width="440"
+      @cancel="completeModalVisible = false"
+      @ok="handleConfirmComplete"
+    >
+      <p class="mb-4 text-gray-500 text-sm">完成後將自動建立一筆收支表支出紀錄</p>
+      <Form :model="completeFormState" layout="vertical">
+        <FormItem label="銀行帳戶" required>
+          <Select
+            v-model:value="completeFormState.bankName"
+            placeholder="請選擇匯款來源帳戶"
+          >
+            <SelectOption
+              v-for="acc in accountOptions"
+              :key="acc"
+              :value="acc"
+            >
+              {{ acc }}
+            </SelectOption>
+          </Select>
+        </FormItem>
+        <FormItem label="交易日期" required>
+          <DatePicker
+            :value="completeFormState.transactionDate ? dayjs(completeFormState.transactionDate) : undefined"
+            class="w-full"
+            format="YYYY/MM/DD"
+            placeholder="選擇交易日期"
+            @change="(_: unknown, dateStr: string | string[]) => { completeFormState.transactionDate = typeof dateStr === 'string' ? dateStr : (dateStr[0] ?? ''); }"
           />
         </FormItem>
       </Form>

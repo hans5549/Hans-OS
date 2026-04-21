@@ -206,6 +206,106 @@ public class MenuServiceTests : IDisposable
         level3.Children.Should().BeNull();
     }
 
+    [Fact]
+    public async Task GetMenusByRoles_LeafOnlyAssignment_LoadsAllAncestors()
+    {
+        // Arrange — 只指派 leaf menu，仍應補齊整條 ancestor 鏈
+        var roleId = "leaf-only-role-id";
+        var rootId = Guid.NewGuid();
+        var categoryId = Guid.NewGuid();
+        var leafId = Guid.NewGuid();
+        var siblingLeafId = Guid.NewGuid();
+        var unrelatedCategoryId = Guid.NewGuid();
+        var unrelatedLeafId = Guid.NewGuid();
+
+        _db.Roles.Add(new IdentityRole { Id = roleId, Name = "learner", NormalizedName = "LEARNER" });
+
+        _db.Menus.AddRange(
+            new Menu
+            {
+                Id = rootId,
+                Name = "SystemDesignPractice",
+                Path = "/system-design",
+                Component = "BasicLayout",
+                Title = "System Design",
+                Type = MenuType.Catalog,
+                Order = 1
+            },
+            new Menu
+            {
+                Id = categoryId,
+                ParentId = rootId,
+                Name = "RealWorldApps",
+                Path = "/system-design/real-world-apps",
+                Title = "Real World Apps",
+                Type = MenuType.Catalog,
+                Order = 1
+            },
+            new Menu
+            {
+                Id = leafId,
+                ParentId = categoryId,
+                Name = "QrCodeGenerator",
+                Path = "/system-design/real-world-apps/qr-code-generator",
+                Component = "/system-design/real-world-apps/qr-code-generator/index",
+                Title = "QR Code Generator",
+                Type = MenuType.Menu,
+                Order = 1
+            },
+            new Menu
+            {
+                Id = siblingLeafId,
+                ParentId = categoryId,
+                Name = "Youtube",
+                Path = "/system-design/real-world-apps/youtube",
+                Component = "/system-design/real-world-apps/youtube/index",
+                Title = "YouTube",
+                Type = MenuType.Menu,
+                Order = 2
+            },
+            new Menu
+            {
+                Id = unrelatedCategoryId,
+                ParentId = rootId,
+                Name = "Fundamentals",
+                Path = "/system-design/fundamentals",
+                Title = "Fundamentals",
+                Type = MenuType.Catalog,
+                Order = 2
+            },
+            new Menu
+            {
+                Id = unrelatedLeafId,
+                ParentId = unrelatedCategoryId,
+                Name = "NetworkingEssentials",
+                Path = "/system-design/fundamentals/networking-essentials",
+                Component = "/system-design/fundamentals/networking-essentials/index",
+                Title = "Networking Essentials",
+                Type = MenuType.Menu,
+                Order = 1
+            });
+
+        _db.RoleMenus.Add(new RoleMenu { RoleId = roleId, MenuId = leafId });
+
+        await _db.SaveChangesAsync();
+
+        // Act
+        var result = await _sut.GetMenusByRolesAsync(["learner"]);
+
+        // Assert
+        result.Should().HaveCount(1);
+        var root = result[0];
+        root.Name.Should().Be("SystemDesignPractice");
+        root.Children.Should().HaveCount(1);
+
+        var category = root.Children![0];
+        category.Name.Should().Be("RealWorldApps");
+        category.Children.Should().HaveCount(1);
+
+        var leaf = category.Children![0];
+        leaf.Name.Should().Be("QrCodeGenerator");
+    }
+
     public void Dispose()
     {
         _db.Dispose();

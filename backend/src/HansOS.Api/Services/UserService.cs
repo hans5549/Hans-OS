@@ -7,6 +7,33 @@ namespace HansOS.Api.Services;
 public class UserService(
     UserManager<ApplicationUser> userManager) : IUserService
 {
+    private static readonly HashSet<string> RemovedDashboardHomePaths =
+    [
+        "/analytics",
+        "/dashboard",
+        "/todo",
+        "/workspace"
+    ];
+
+    private static readonly IReadOnlyDictionary<string, string> LegacySystemDesignHomePaths =
+        new Dictionary<string, string>
+        {
+            ["/system-design/qr-code-generator"] = "/system-design/real-world-apps/qr-code-generator",
+            ["/system-design/earthquake-notification"] = "/system-design/real-world-apps/earthquake-notification",
+            ["/system-design/polymarket"] = "/system-design/real-world-apps/polymarket",
+            ["/system-design/amazon-price-tracking"] = "/system-design/real-world-apps/amazon-price-tracking",
+            ["/system-design/tesla-robo-taxi"] = "/system-design/real-world-apps/tesla-robo-taxi",
+            ["/system-design/spotify-trending-songs"] = "/system-design/real-world-apps/spotify-trending-songs",
+            ["/system-design/messenger"] = "/system-design/real-world-apps/messenger",
+            ["/system-design/webhook-platform"] = "/system-design/real-world-apps/webhook-platform",
+            ["/system-design/google-docs"] = "/system-design/real-world-apps/google-docs",
+            ["/system-design/youtube"] = "/system-design/real-world-apps/youtube",
+            ["/system-design/chatgpt-tasks"] = "/system-design/real-world-apps/chatgpt-tasks",
+            ["/system-design/airbnb-booking"] = "/system-design/real-world-apps/airbnb-booking",
+            ["/system-design/agoda-ai-support"] = "/system-design/real-world-apps/agoda-ai-support",
+            ["/system-design/llm-inference-api"] = "/system-design/real-world-apps/llm-inference-api",
+        };
+
     public async Task<UserInfoResponse> GetUserInfoAsync(string userId, CancellationToken ct = default)
     {
         var user = await userManager.FindByIdAsync(userId)
@@ -21,7 +48,7 @@ public class UserService(
             Avatar: user.Avatar ?? string.Empty,
             Roles: [.. roles],
             Desc: user.Desc ?? string.Empty,
-            HomePath: user.HomePath ?? "/analytics",
+            HomePath: NormalizeHomePath(user.HomePath),
             Token: string.Empty,
             Email: user.Email ?? string.Empty,
             Phone: user.PhoneNumber ?? string.Empty
@@ -77,4 +104,19 @@ public class UserService(
         "PasswordMismatch" => "舊密碼不正確",
         _ => "操作失敗，請稍後再試"
     };
+
+    private static string NormalizeHomePath(string? homePath)
+    {
+        if (string.IsNullOrWhiteSpace(homePath) || RemovedDashboardHomePaths.Contains(homePath))
+        {
+            return "/index";
+        }
+
+        if (LegacySystemDesignHomePaths.TryGetValue(homePath, out var normalizedHomePath))
+        {
+            return normalizedHomePath;
+        }
+
+        return homePath;
+    }
 }

@@ -136,7 +136,8 @@ public class PendingRemittanceServiceTests : IDisposable
             DepartmentId: null,
             RecipientName: "王小明",
             ExpectedDate: new DateOnly(2026, 6, 1),
-            Note: "備註文字");
+            Note: "備註文字",
+            ActivityExpenseId: null);
 
         var result = await _sut.CreateAsync(request);
 
@@ -162,12 +163,13 @@ public class PendingRemittanceServiceTests : IDisposable
             DepartmentId: null,
             RecipientName: null,
             ExpectedDate: null,
-            Note: null);
+            Note: null,
+            ActivityExpenseId: null);
 
         var result = await _sut.CreateAsync(request);
 
         var saved = await _db.PendingRemittances.FindAsync(result.Id);
-        saved.Should().NotBeNull();
+        Assert.NotNull(saved);
         saved!.Description.Should().Be("存入資料庫測試");
         saved.Amount.Should().Be(8000m);
     }
@@ -184,7 +186,8 @@ public class PendingRemittanceServiceTests : IDisposable
             DepartmentId: deptId,
             RecipientName: null,
             ExpectedDate: null,
-            Note: null);
+            Note: null,
+            ActivityExpenseId: null);
 
         var result = await _sut.CreateAsync(request);
 
@@ -203,7 +206,8 @@ public class PendingRemittanceServiceTests : IDisposable
             DepartmentId: Guid.NewGuid(),
             RecipientName: null,
             ExpectedDate: null,
-            Note: null);
+            Note: null,
+            ActivityExpenseId: null);
 
         var act = () => _sut.CreateAsync(request);
 
@@ -222,7 +226,8 @@ public class PendingRemittanceServiceTests : IDisposable
             DepartmentId: null,
             RecipientName: "  王小明  ",
             ExpectedDate: null,
-            Note: "  備註  ");
+            Note: "  備註  ",
+            ActivityExpenseId: null);
 
         var result = await _sut.CreateAsync(request);
 
@@ -247,7 +252,8 @@ public class PendingRemittanceServiceTests : IDisposable
             DepartmentId: null,
             RecipientName: "李大華",
             ExpectedDate: new DateOnly(2026, 12, 25),
-            Note: "更新備註");
+            Note: "更新備註",
+            ActivityExpenseId: null);
 
         await _sut.UpdateAsync(id, request);
 
@@ -272,7 +278,8 @@ public class PendingRemittanceServiceTests : IDisposable
             DepartmentId: null,
             RecipientName: null,
             ExpectedDate: null,
-            Note: null);
+            Note: null,
+            ActivityExpenseId: null);
 
         var act = () => _sut.UpdateAsync(Guid.NewGuid(), request);
 
@@ -291,7 +298,8 @@ public class PendingRemittanceServiceTests : IDisposable
             DepartmentId: Guid.NewGuid(),
             RecipientName: null,
             ExpectedDate: null,
-            Note: null);
+            Note: null,
+            ActivityExpenseId: null);
 
         var act = () => _sut.UpdateAsync(id, request);
 
@@ -309,7 +317,7 @@ public class PendingRemittanceServiceTests : IDisposable
         await _sut.DeleteAsync(id);
 
         var deleted = await _db.PendingRemittances.FindAsync(id);
-        deleted.Should().BeNull();
+        Assert.Null(deleted);
     }
 
     [Fact]
@@ -327,7 +335,7 @@ public class PendingRemittanceServiceTests : IDisposable
     {
         var id = await SeedRemittanceAsync(status: PendingRemittanceStatus.Pending);
 
-        await _sut.CompleteAsync(id);
+        await _sut.CompleteAsync(id, new CompletePendingRemittanceRequest("測試銀行", new DateOnly(2026, 4, 9)));
 
         var entity = await _db.PendingRemittances.FindAsync(id);
         entity!.Status.Should().Be(PendingRemittanceStatus.Completed);
@@ -339,7 +347,7 @@ public class PendingRemittanceServiceTests : IDisposable
         var id = await SeedRemittanceAsync(status: PendingRemittanceStatus.Pending);
         var before = DateTime.UtcNow;
 
-        await _sut.CompleteAsync(id);
+        await _sut.CompleteAsync(id, new CompletePendingRemittanceRequest("測試銀行", new DateOnly(2026, 4, 9)));
 
         var entity = await _db.PendingRemittances.FindAsync(id);
         entity!.CompletedAt.Should().NotBeNull();
@@ -351,7 +359,7 @@ public class PendingRemittanceServiceTests : IDisposable
     {
         var id = await SeedRemittanceAsync(status: PendingRemittanceStatus.Completed);
 
-        var act = () => _sut.CompleteAsync(id);
+        var act = () => _sut.CompleteAsync(id, new CompletePendingRemittanceRequest("測試銀行", new DateOnly(2026, 4, 9)));
 
         await act.Should().ThrowAsync<ArgumentException>()
             .WithMessage("*已完成*");
@@ -360,7 +368,7 @@ public class PendingRemittanceServiceTests : IDisposable
     [Fact]
     public async Task Complete_NonExistingId_ThrowsKeyNotFoundException()
     {
-        var act = () => _sut.CompleteAsync(Guid.NewGuid());
+        var act = () => _sut.CompleteAsync(Guid.NewGuid(), new CompletePendingRemittanceRequest("測試銀行", new DateOnly(2026, 4, 9)));
 
         await act.Should().ThrowAsync<KeyNotFoundException>();
     }

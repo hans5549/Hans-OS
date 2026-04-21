@@ -11,7 +11,9 @@ namespace HansOS.Api.Controllers;
 [ApiController]
 [Route("finance/transactions")]
 [Authorize]
-public class FinanceTransactionController(IFinanceTransactionService transactionService) : ControllerBase
+public class FinanceTransactionController(
+    IFinanceTransactionService transactionService,
+    IFinanceTransactionAnalyticsService analyticsService) : ControllerBase
 {
     private string CurrentUserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
@@ -27,7 +29,24 @@ public class FinanceTransactionController(IFinanceTransactionService transaction
     public async Task<ApiEnvelope<MonthlySummaryResponse>> GetMonthlySummary(
         [FromQuery] int year, [FromQuery] int month, CancellationToken ct)
         => ApiEnvelope<MonthlySummaryResponse>.Success(
-            await transactionService.GetMonthlySummaryAsync(CurrentUserId, year, month, ct));
+            await analyticsService.GetMonthlySummaryAsync(CurrentUserId, year, month, ct));
+
+    /// <summary>取得跨月收支趨勢（最多 12 個月）</summary>
+    [HttpGet("trends")]
+    public async Task<ApiEnvelope<TrendResponse>> GetTrends(
+        [FromQuery] int startYear, [FromQuery] int startMonth,
+        [FromQuery] int endYear, [FromQuery] int endMonth,
+        CancellationToken ct)
+        => ApiEnvelope<TrendResponse>.Success(
+            await analyticsService.GetTrendAsync(CurrentUserId, startYear, startMonth, endYear, endMonth, ct));
+
+    /// <summary>取得月度分類佔比</summary>
+    [HttpGet("category-breakdown")]
+    public async Task<ApiEnvelope<CategoryBreakdownResponse>> GetCategoryBreakdown(
+        [FromQuery] int year, [FromQuery] int month, [FromQuery] string type,
+        CancellationToken ct)
+        => ApiEnvelope<CategoryBreakdownResponse>.Success(
+            await analyticsService.GetCategoryBreakdownAsync(CurrentUserId, year, month, type, ct));
 
     /// <summary>新增交易</summary>
     [HttpPost]

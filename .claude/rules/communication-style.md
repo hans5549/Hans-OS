@@ -1,5 +1,11 @@
 # Communication Style
 
+## Language
+
+- **Always respond in Traditional Chinese (zh-TW).**
+- 所有回覆、說明、提問、摘要一律使用繁體中文。
+- Code comments, commit messages, and documentation also use Traditional Chinese.
+
 ## Foundation vs Integration Work
 
 When building infrastructure code, proactively declare:

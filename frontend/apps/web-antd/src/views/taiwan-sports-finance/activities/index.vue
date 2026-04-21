@@ -170,10 +170,10 @@ onMounted(async () => {
           />
           <Select
             v-model:value="selectedDepartmentId"
-            :allow-clear="true"
             placeholder="全部部門"
             style="width: 160px"
           >
+            <SelectOption :value="undefined">全部部門</SelectOption>
             <SelectOption
               v-for="dept in departments"
               :key="dept.id"
@@ -243,6 +243,7 @@ onMounted(async () => {
               :activity="activity"
               @delete="handleDelete"
               @edit="handleEdit"
+              @remittanceCreated="fetchActivities"
             />
           </template>
           <Card v-else>

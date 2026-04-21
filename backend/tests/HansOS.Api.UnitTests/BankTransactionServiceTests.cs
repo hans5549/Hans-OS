@@ -13,6 +13,8 @@ public class BankTransactionServiceTests : IDisposable
 {
     private readonly ApplicationDbContext _db;
     private readonly BankTransactionService _sut;
+    private readonly BankTransactionExcelExportService _excelSut;
+    private readonly BankTransactionReceiptService _receiptSut;
 
     public BankTransactionServiceTests()
     {
@@ -21,6 +23,8 @@ public class BankTransactionServiceTests : IDisposable
             .Options;
         _db = new ApplicationDbContext(dbOptions);
         _sut = new BankTransactionService(_db);
+        _excelSut = new BankTransactionExcelExportService(_sut);
+        _receiptSut = new BankTransactionReceiptService(_db);
     }
 
     // ── GetTransactionsAsync ────────────────────────
@@ -101,7 +105,7 @@ public class BankTransactionServiceTests : IDisposable
 
         // 驗證已存入資料庫
         var saved = await _db.BankTransactions.FindAsync(result.Id);
-        saved.Should().NotBeNull();
+        Assert.NotNull(saved);
     }
 
     [Fact]
@@ -118,6 +122,66 @@ public class BankTransactionServiceTests : IDisposable
 
         await act.Should().ThrowAsync<ArgumentException>()
             .WithMessage("*部門不存在*");
+    }
+
+    [Fact]
+    public async Task CreateTransaction_WithValidActivity_SavesActivityId()
+    {
+        var departmentId = await SeedDepartmentAsync("活動部門");
+        var activityId = await SeedActivityAsync(departmentId, "活動支出");
+        var request = new CreateBankTransactionRequest(
+            TransactionType: TransactionType.Expense,
+            TransactionDate: new DateOnly(2026, 4, 1),
+            Description: "關聯活動支出",
+            DepartmentId: departmentId,
+            Amount: 500,
+            ActivityId: activityId);
+
+        var result = await _sut.CreateTransactionAsync("上海銀行", request);
+
+        result.ActivityId.Should().Be(activityId);
+
+        var saved = await _db.BankTransactions.FindAsync(result.Id);
+        saved!.ActivityId.Should().Be(activityId);
+    }
+
+    [Fact]
+    public async Task CreateTransaction_ActivityFromDifferentDepartment_ThrowsError()
+    {
+        var transactionDepartmentId = await SeedDepartmentAsync("交易部門");
+        var activityDepartmentId = await SeedDepartmentAsync("活動部門");
+        var activityId = await SeedActivityAsync(activityDepartmentId, "跨部門活動");
+        var request = new CreateBankTransactionRequest(
+            TransactionType: TransactionType.Expense,
+            TransactionDate: new DateOnly(2026, 4, 1),
+            Description: "跨部門活動支出",
+            DepartmentId: transactionDepartmentId,
+            Amount: 500,
+            ActivityId: activityId);
+
+        var act = () => _sut.CreateTransactionAsync("上海銀行", request);
+
+        await act.Should().ThrowAsync<ArgumentException>()
+            .WithMessage("*來源活動與歸屬部門不一致*");
+    }
+
+    [Fact]
+    public async Task CreateTransaction_IncomeWithActivity_ThrowsError()
+    {
+        var departmentId = await SeedDepartmentAsync("活動部門");
+        var activityId = await SeedActivityAsync(departmentId, "收入活動");
+        var request = new CreateBankTransactionRequest(
+            TransactionType: TransactionType.Income,
+            TransactionDate: new DateOnly(2026, 4, 1),
+            Description: "收入活動支出",
+            DepartmentId: departmentId,
+            Amount: 500,
+            ActivityId: activityId);
+
+        var act = () => _sut.CreateTransactionAsync("上海銀行", request);
+
+        await act.Should().ThrowAsync<ArgumentException>()
+            .WithMessage("*只有支出交易可以指定來源活動*");
     }
 
     // ── UpdateTransactionAsync ──────────────────────
@@ -160,6 +224,69 @@ public class BankTransactionServiceTests : IDisposable
         await act.Should().ThrowAsync<KeyNotFoundException>();
     }
 
+    // ── BatchUpdateDepartmentAsync ──────────────────
+
+    [Fact]
+    public async Task BatchUpdateDepartment_WithLinkedActivityAndDifferentDepartment_ClearsActivity()
+    {
+        var originalDepartmentId = await SeedDepartmentAsync("原始部門");
+        var targetDepartmentId = await SeedDepartmentAsync("目標部門");
+        var activityId = await SeedActivityAsync(originalDepartmentId, "活動");
+        var transactionId = await SeedTransactionAsync(
+            "上海銀行",
+            TransactionType.Expense,
+            new DateOnly(2026, 5, 3),
+            600,
+            "活動支出",
+            receiptCollected: false,
+            receiptMailed: false,
+            departmentId: originalDepartmentId,
+            activityId: activityId);
+
+        var request = new BatchUpdateDepartmentRequest(
+            BankName: "上海銀行",
+            Ids: [transactionId],
+            Year: 2026,
+            Month: 5,
+            DepartmentId: targetDepartmentId);
+
+        await _sut.BatchUpdateDepartmentAsync(request);
+
+        var updated = await _db.BankTransactions.FindAsync(transactionId);
+        updated!.DepartmentId.Should().Be(targetDepartmentId);
+        updated.ActivityId.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task BatchUpdateDepartment_WithLinkedActivityAndSameDepartment_UpdatesSuccessfully()
+    {
+        var departmentId = await SeedDepartmentAsync("活動部門");
+        var activityId = await SeedActivityAsync(departmentId, "活動");
+        var transactionId = await SeedTransactionAsync(
+            "上海銀行",
+            TransactionType.Expense,
+            new DateOnly(2026, 5, 3),
+            600,
+            "活動支出",
+            receiptCollected: false,
+            receiptMailed: false,
+            departmentId: departmentId,
+            activityId: activityId);
+
+        var request = new BatchUpdateDepartmentRequest(
+            BankName: "上海銀行",
+            Ids: [transactionId],
+            Year: 2026,
+            Month: 5,
+            DepartmentId: departmentId);
+
+        await _sut.BatchUpdateDepartmentAsync(request);
+
+        var updated = await _db.BankTransactions.FindAsync(transactionId);
+        updated!.DepartmentId.Should().Be(departmentId);
+        updated.ActivityId.Should().Be(activityId);
+    }
+
     // ── DeleteTransactionAsync ──────────────────────
 
     [Fact]
@@ -170,7 +297,7 @@ public class BankTransactionServiceTests : IDisposable
         await _sut.DeleteTransactionAsync(id);
 
         var deleted = await _db.BankTransactions.FindAsync(id);
-        deleted.Should().BeNull();
+        Assert.Null(deleted);
     }
 
     [Fact]
@@ -188,7 +315,7 @@ public class BankTransactionServiceTests : IDisposable
     {
         await SeedTransactionAsync("上海銀行", TransactionType.Income, new DateOnly(2026, 7, 1), 10000, "收入");
 
-        var result = await _sut.ExportToExcelAsync("上海銀行", 2026, 7);
+        var result = await _excelSut.ExportAsync("上海銀行", 2026, 7);
 
         result.Should().NotBeEmpty();
         // XLSX magic bytes: PK (50 4B)
@@ -199,7 +326,7 @@ public class BankTransactionServiceTests : IDisposable
     [Fact]
     public async Task ExportToExcel_NoTransactions_ReturnsValidExcel()
     {
-        var result = await _sut.ExportToExcelAsync("上海銀行", 2026, 12);
+        var result = await _excelSut.ExportAsync("上海銀行", 2026, 12);
 
         result.Should().NotBeEmpty();
         result[0].Should().Be(0x50);
@@ -244,7 +371,7 @@ public class BankTransactionServiceTests : IDisposable
     {
         await SeedTransactionAsync("上海銀行", TransactionType.Income, new DateOnly(2027, 3, 1), 10000, "收入");
 
-        var result = await _sut.ExportToExcelAsync("上海銀行", 2027, 3);
+        var result = await _excelSut.ExportAsync("上海銀行", 2027, 3);
 
         result.Should().NotBeEmpty();
         using var stream = new MemoryStream(result);
@@ -262,7 +389,7 @@ public class BankTransactionServiceTests : IDisposable
     {
         await SeedTransactionAsync("上海銀行", TransactionType.Expense, new DateOnly(2027, 4, 1), 3000, "支出");
 
-        var result = await _sut.ExportToExcelAsync("上海銀行", 2027, 4);
+        var result = await _excelSut.ExportAsync("上海銀行", 2027, 4);
 
         result.Should().NotBeEmpty();
         using var stream = new MemoryStream(result);
@@ -328,7 +455,7 @@ public class BankTransactionServiceTests : IDisposable
             new DateOnly(2030, 1, 10), 1000, "未處理收據",
             receiptCollected: false, receiptMailed: false);
 
-        var result = await _sut.GetReceiptTrackingAsync(2030, 1);
+        var result = await _receiptSut.GetReceiptTrackingAsync(2030, 1);
 
         result.TotalCount.Should().Be(1);
         result.Items.Should().ContainSingle(i => i.Description == "未處理收據");
@@ -342,7 +469,7 @@ public class BankTransactionServiceTests : IDisposable
             new DateOnly(2030, 2, 10), 1000, "已處理完成",
             receiptCollected: true, receiptMailed: true);
 
-        var result = await _sut.GetReceiptTrackingAsync(2030, 2);
+        var result = await _receiptSut.GetReceiptTrackingAsync(2030, 2);
 
         result.TotalCount.Should().Be(0);
         result.Items.Should().BeEmpty();
@@ -356,7 +483,7 @@ public class BankTransactionServiceTests : IDisposable
             new DateOnly(2030, 3, 10), 2000, "未領取收據",
             receiptCollected: false, receiptMailed: true);
 
-        var result = await _sut.GetReceiptTrackingAsync(2030, 3);
+        var result = await _receiptSut.GetReceiptTrackingAsync(2030, 3);
 
         result.TotalCount.Should().Be(1);
         result.NotCollectedCount.Should().Be(1);
@@ -371,7 +498,7 @@ public class BankTransactionServiceTests : IDisposable
             new DateOnly(2030, 4, 10), 3000, "未寄送收據",
             receiptCollected: true, receiptMailed: false);
 
-        var result = await _sut.GetReceiptTrackingAsync(2030, 4);
+        var result = await _receiptSut.GetReceiptTrackingAsync(2030, 4);
 
         result.TotalCount.Should().Be(1);
         result.NotMailedCount.Should().Be(1);
@@ -386,7 +513,7 @@ public class BankTransactionServiceTests : IDisposable
             new DateOnly(2030, 6, 10), 5000, "收入交易",
             receiptCollected: false, receiptMailed: false);
 
-        var result = await _sut.GetReceiptTrackingAsync(2030, 6);
+        var result = await _receiptSut.GetReceiptTrackingAsync(2030, 6);
 
         result.TotalCount.Should().Be(0);
         result.Items.Should().BeEmpty();
@@ -420,7 +547,7 @@ public class BankTransactionServiceTests : IDisposable
         await SeedTransactionAsync("上海銀行", TransactionType.Income,
             new DateOnly(2030, 5, 20), 5000, "收入交易");
 
-        var result = await _sut.GetReceiptTrackingAsync(2030, 5);
+        var result = await _receiptSut.GetReceiptTrackingAsync(2030, 5);
 
         result.TotalCount.Should().Be(3);
         result.NotCollectedCount.Should().Be(2);
@@ -431,31 +558,43 @@ public class BankTransactionServiceTests : IDisposable
 
     private async Task<Guid> SeedTransactionAsync(
         string bankName, TransactionType type, DateOnly date, decimal amount, string description,
-        decimal fee = 0)
-    {
-        var entity = new BankTransaction
-        {
-            Id = Guid.NewGuid(),
-            BankName = bankName,
-            TransactionType = type,
-            TransactionDate = date,
-            Description = description,
-            Amount = amount,
-            Fee = fee,
-            ReceiptCollected = false,
-            ReceiptMailed = false,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow,
-        };
-        _db.BankTransactions.Add(entity);
-        await _db.SaveChangesAsync();
-        return entity.Id;
-    }
+        decimal fee = 0) =>
+        await SeedTransactionAsync(
+            bankName,
+            type,
+            date,
+            amount,
+            description,
+            receiptCollected: false,
+            receiptMailed: false,
+            fee);
 
     private async Task<Guid> SeedTransactionWithReceiptAsync(
         string bankName, TransactionType type, DateOnly date, decimal amount, string description,
-        bool receiptCollected, bool receiptMailed, decimal fee = 0)
+        bool receiptCollected, bool receiptMailed, decimal fee = 0) =>
+        await SeedTransactionAsync(
+            bankName,
+            type,
+            date,
+            amount,
+            description,
+            receiptCollected,
+            receiptMailed,
+            fee);
+
+    private async Task<Guid> SeedTransactionAsync(
+        string bankName,
+        TransactionType type,
+        DateOnly date,
+        decimal amount,
+        string description,
+        bool receiptCollected,
+        bool receiptMailed,
+        decimal fee = 0,
+        Guid? departmentId = null,
+        Guid? activityId = null)
     {
+        var now = DateTime.UtcNow;
         var entity = new BankTransaction
         {
             Id = Guid.NewGuid(),
@@ -463,21 +602,53 @@ public class BankTransactionServiceTests : IDisposable
             TransactionType = type,
             TransactionDate = date,
             Description = description,
+            DepartmentId = departmentId,
             Amount = amount,
             Fee = fee,
             ReceiptCollected = receiptCollected,
             ReceiptMailed = receiptMailed,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow,
+            ActivityId = activityId,
+            CreatedAt = now,
+            UpdatedAt = now,
         };
         _db.BankTransactions.Add(entity);
         await _db.SaveChangesAsync();
         return entity.Id;
     }
 
-    public void Dispose()
+    private async Task<Guid> SeedDepartmentAsync(string name)
     {
-        _db.Dispose();
-        GC.SuppressFinalize(this);
+        var now = DateTime.UtcNow;
+        var entity = new SportsDepartment
+        {
+            Id = Guid.NewGuid(),
+            Name = name,
+            CreatedAt = now,
+            UpdatedAt = now,
+        };
+        _db.SportsDepartments.Add(entity);
+        await _db.SaveChangesAsync();
+        return entity.Id;
     }
+
+    private async Task<Guid> SeedActivityAsync(Guid departmentId, string name)
+    {
+        var now = DateTime.UtcNow;
+        var entity = new Activity
+        {
+            Id = Guid.NewGuid(),
+            DepartmentId = departmentId,
+            Year = 2026,
+            Month = 4,
+            Name = name,
+            Sequence = 1,
+            CreatedAt = now,
+            UpdatedAt = now,
+        };
+        _db.Activities.Add(entity);
+        await _db.SaveChangesAsync();
+        return entity.Id;
+    }
+
+    public void Dispose() => _db.Dispose();
 }

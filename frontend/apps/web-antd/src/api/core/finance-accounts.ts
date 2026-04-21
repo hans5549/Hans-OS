@@ -5,6 +5,7 @@ import { requestClient } from '#/api/request';
 export interface CreateAccountRequest {
   name: string;
   accountType: string;
+  currency?: string;
   initialBalance?: number;
   icon?: string;
   sortOrder?: number;
@@ -18,6 +19,7 @@ export interface AccountResponse {
   id: string;
   name: string;
   accountType: string;
+  currency: string;
   initialBalance: number;
   icon: string | null;
   sortOrder: number;
@@ -28,6 +30,7 @@ export interface AccountBalanceResponse {
   id: string;
   name: string;
   accountType: string;
+  currency: string;
   initialBalance: number;
   currentBalance: number;
   icon: string | null;

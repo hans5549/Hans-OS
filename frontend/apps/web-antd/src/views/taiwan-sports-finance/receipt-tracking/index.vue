@@ -6,11 +6,13 @@ import { Page } from '@vben/common-ui';
 import {
   Card,
   Col,
+  message,
   Row,
   Segmented,
   Select,
   Spin,
   Statistic,
+  Switch,
   Table,
   Tag,
 } from 'ant-design-vue';
@@ -18,12 +20,9 @@ import dayjs from 'dayjs';
 
 import type { ReceiptTrackingResponse } from '#/api';
 
-import { getReceiptTrackingApi } from '#/api';
-import { useRouter } from 'vue-router';
+import { getReceiptTrackingApi, patchReceiptStatusApi } from '#/api';
 
 defineOptions({ name: 'TsfReceiptTrackingPage' });
-
-const router = useRouter();
 
 // ── 時間篩選 ────────────────────────────────────
 
@@ -91,6 +90,7 @@ const totalCount = ref(0);
 const notCollectedCount = ref(0);
 const notMailedCount = ref(0);
 const allItems = ref<ReceiptTrackingResponse[]>([]);
+const updatingIds = ref(new Set<string>());
 
 const filteredItems = computed(() => {
   if (filterType.value === 'not-collected') {
@@ -129,8 +129,8 @@ const columns = [
   { dataIndex: 'description', title: '摘要', ellipsis: true },
   { dataIndex: 'departmentName', title: '部門', width: 120 },
   { dataIndex: 'amount', title: '金額', width: 120, align: 'right' as const },
-  { key: 'receiptCollected', title: '已回收', width: 80, align: 'center' as const },
-  { key: 'receiptMailed', title: '已寄送', width: 80, align: 'center' as const },
+  { key: 'receiptCollected', title: '已回收', width: 90, align: 'center' as const },
+  { key: 'receiptMailed', title: '已寄送', width: 90, align: 'center' as const },
 ];
 
 // ── 金額格式化 ──────────────────────────────────
@@ -142,13 +142,38 @@ function formatCurrency(val: number): string {
   });
 }
 
-// ── 跳轉到收支表 ────────────────────────────────
+// ── 內聯更新收據狀態 ─────────────────────────────
 
-function navigateToBank(record: ReceiptTrackingResponse) {
-  const bankPath = record.bankName.includes('上海')
-    ? '/taiwan-sports-finance/shanghai-bank'
-    : '/taiwan-sports-finance/tcb-bank';
-  router.push(bankPath);
+async function handleToggleReceiptStatus(
+  record: ReceiptTrackingResponse,
+  field: 'receiptCollected' | 'receiptMailed',
+  newValue: boolean,
+) {
+  const key = `${record.id}-${field}`;
+  updatingIds.value = new Set([...updatingIds.value, key]);
+  // 先更新本地狀態（樂觀更新）
+  const item = allItems.value.find((i) => i.id === record.id);
+  if (item) {
+    if (field === 'receiptCollected') item.receiptCollected = newValue;
+    else item.receiptMailed = newValue;
+  }
+  try {
+    await patchReceiptStatusApi(record.id, {
+      receiptCollected: field === 'receiptCollected' ? newValue : undefined,
+      receiptMailed: field === 'receiptMailed' ? newValue : undefined,
+    });
+    message.success('收據狀態已更新');
+    await fetchData();
+  } catch {
+    // 還原本地狀態
+    if (item) {
+      if (field === 'receiptCollected') item.receiptCollected = !newValue;
+      else item.receiptMailed = !newValue;
+    }
+    message.error('更新失敗');
+  } finally {
+    updatingIds.value = new Set([...updatingIds.value].filter((k) => k !== key));
+  }
 }
 </script>
 
@@ -225,10 +250,6 @@ function navigateToBank(record: ReceiptTrackingResponse) {
           :pagination="{ pageSize: 50, showTotal: (total: number) => `共 ${total} 筆` }"
           row-key="id"
           size="middle"
-          :custom-row="(record: ReceiptTrackingResponse) => ({
-            onClick: () => navigateToBank(record),
-            style: 'cursor: pointer',
-          })"
         >
           <template #bodyCell="{ column, record }">
             <template v-if="column.dataIndex === 'bankName'">
@@ -248,15 +269,21 @@ function navigateToBank(record: ReceiptTrackingResponse) {
             </template>
 
             <template v-if="column.key === 'receiptCollected'">
-              <Tag :color="(record as ReceiptTrackingResponse).receiptCollected ? 'green' : 'red'">
-                {{ (record as ReceiptTrackingResponse).receiptCollected ? '已回收' : '未回收' }}
-              </Tag>
+              <Switch
+                :checked="(record as ReceiptTrackingResponse).receiptCollected"
+                :loading="updatingIds.has(`${(record as ReceiptTrackingResponse).id}-receiptCollected`)"
+                size="small"
+                @change="(val) => handleToggleReceiptStatus(record as unknown as ReceiptTrackingResponse, 'receiptCollected', val as boolean)"
+              />
             </template>
 
             <template v-if="column.key === 'receiptMailed'">
-              <Tag :color="(record as ReceiptTrackingResponse).receiptMailed ? 'green' : 'orange'">
-                {{ (record as ReceiptTrackingResponse).receiptMailed ? '已寄送' : '未寄送' }}
-              </Tag>
+              <Switch
+                :checked="(record as ReceiptTrackingResponse).receiptMailed"
+                :loading="updatingIds.has(`${(record as ReceiptTrackingResponse).id}-receiptMailed`)"
+                size="small"
+                @change="(val) => handleToggleReceiptStatus(record as unknown as ReceiptTrackingResponse, 'receiptMailed', val as boolean)"
+              />
             </template>
           </template>
 

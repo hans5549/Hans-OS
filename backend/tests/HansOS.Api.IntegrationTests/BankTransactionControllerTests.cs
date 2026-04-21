@@ -66,6 +66,42 @@ public class BankTransactionControllerTests(HansOsWebApplicationFactory factory)
         return req;
     }
 
+    private async Task<JsonElement> ReadBodyAsync(HttpResponseMessage response) =>
+        await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
+
+    private static JsonElement GetData(JsonElement body) => body.GetProperty("data");
+
+    private async Task<string> CreateDepartmentAsync(string token, string name)
+    {
+        var response = await _client.SendAsync(
+            AuthPost("/tsf-settings/departments", token, new { name }));
+        return GetData(await ReadBodyAsync(response)).GetProperty("id").GetString()!;
+    }
+
+    private async Task<string> CreateTransactionAsync(string token, string bankName, object data)
+    {
+        var response = await _client.SendAsync(AuthPost($"/bank-transactions/{bankName}", token, data));
+        return GetData(await ReadBodyAsync(response)).GetProperty("id").GetString()!;
+    }
+
+    private async Task<string> CreateActivityAsync(
+        string token,
+        string departmentId,
+        int year,
+        int month,
+        string name)
+    {
+        var response = await _client.SendAsync(AuthPost("/activities", token, new
+        {
+            departmentId,
+            year,
+            month,
+            name,
+            expenses = Array.Empty<object>(),
+        }));
+        return GetData(await ReadBodyAsync(response)).GetProperty("id").GetString()!;
+    }
+
     // ── GET Transactions ────────────────────────────────────
 
     [Fact]
@@ -195,6 +231,118 @@ public class BankTransactionControllerTests(HansOsWebApplicationFactory factory)
             description = "會費收入",
             amount = 5000,
             departmentId = Guid.NewGuid(),
+        }));
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task CreateTransaction_ValidExpenseWithActivity_ReturnsCreated()
+    {
+        var token = await LoginAndGetTokenAsync();
+        var deptId = await CreateDepartmentAsync(token, "活動關聯測試部門");
+        var activityId = await CreateActivityAsync(token, deptId, 2081, 7, "春季集訓");
+
+        var response = await _client.SendAsync(AuthPost("/bank-transactions/上海銀行", token, new
+        {
+            transactionType = 1,
+            transactionDate = "2081-07-15",
+            description = "春季集訓支出",
+            departmentId = deptId,
+            activityId,
+            amount = 3200,
+        }));
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var data = GetData(await ReadBodyAsync(response));
+        data.GetProperty("activityId").GetString().Should().Be(activityId);
+        data.GetProperty("activityName").GetString().Should().Be("春季集訓");
+
+        var listResponse = await _client.SendAsync(
+            AuthGet("/bank-transactions/上海銀行?year=2081&month=7", token));
+        listResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var transactions = GetData(await ReadBodyAsync(listResponse)).EnumerateArray().ToList();
+        transactions.Should().ContainSingle(t =>
+            t.GetProperty("description").GetString() == "春季集訓支出"
+            && t.GetProperty("activityId").GetString() == activityId
+            && t.GetProperty("activityName").GetString() == "春季集訓");
+    }
+
+    [Fact]
+    public async Task CreateTransaction_InvalidActivity_Returns400()
+    {
+        var token = await LoginAndGetTokenAsync();
+        var deptId = await CreateDepartmentAsync(token, "無效活動測試部門");
+
+        var response = await _client.SendAsync(AuthPost("/bank-transactions/上海銀行", token, new
+        {
+            transactionType = 1,
+            transactionDate = "2082-08-16",
+            description = "無效活動測試",
+            departmentId = deptId,
+            activityId = Guid.NewGuid(),
+            amount = 1800,
+        }));
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task CreateTransaction_IncomeWithActivity_Returns400()
+    {
+        var token = await LoginAndGetTokenAsync();
+        var deptId = await CreateDepartmentAsync(token, "收入活動測試部門");
+        var activityId = await CreateActivityAsync(token, deptId, 2086, 2, "不應綁定收入");
+
+        var response = await _client.SendAsync(AuthPost("/bank-transactions/上海銀行", token, new
+        {
+            transactionType = 0,
+            transactionDate = "2086-02-11",
+            description = "收入誤綁活動",
+            departmentId = deptId,
+            activityId,
+            amount = 1500,
+        }));
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task CreateTransaction_ActivityDepartmentMismatch_Returns400()
+    {
+        var token = await LoginAndGetTokenAsync();
+        var sourceDeptId = await CreateDepartmentAsync(token, "來源活動部門");
+        var otherDeptId = await CreateDepartmentAsync(token, "交易歸屬部門");
+        var activityId = await CreateActivityAsync(token, sourceDeptId, 2083, 9, "部門不符活動");
+
+        var response = await _client.SendAsync(AuthPost("/bank-transactions/合作金庫", token, new
+        {
+            transactionType = 1,
+            transactionDate = "2083-09-08",
+            description = "部門不符測試",
+            departmentId = otherDeptId,
+            activityId,
+            amount = 2600,
+        }));
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task CreateTransaction_ActivityYearMismatch_Returns400()
+    {
+        var token = await LoginAndGetTokenAsync();
+        var deptId = await CreateDepartmentAsync(token, "年度不符測試部門");
+        var activityId = await CreateActivityAsync(token, deptId, 2084, 12, "跨年活動");
+
+        var response = await _client.SendAsync(AuthPost("/bank-transactions/合作金庫", token, new
+        {
+            transactionType = 1,
+            transactionDate = "2085-01-03",
+            description = "年度不符測試",
+            departmentId = deptId,
+            activityId,
+            amount = 2100,
         }));
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -1052,5 +1200,307 @@ public class BankTransactionControllerTests(HansOsWebApplicationFactory factory)
         items.EnumerateArray()
             .Any(i => i.GetProperty("description").GetString() == "混合銀行測試-合庫")
             .Should().BeTrue();
+    }
+
+    // ── Batch Update Department ─────────────────────────────
+
+    [Fact]
+    public async Task BatchUpdateDepartment_Unauthorized_Returns401()
+    {
+        var response = await _client.PostAsJsonAsync("/bank-transactions/batch-department", new
+        {
+            bankName = "合作金庫",
+            ids = new[] { Guid.NewGuid() },
+            year = 2030,
+            departmentId = (Guid?)null,
+        });
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task BatchUpdateDepartment_AssignDepartment_UpdatesAll()
+    {
+        var token = await LoginAndGetTokenAsync();
+        var deptId = await CreateDepartmentAsync(token, "批次部門測試");
+        var tx1Id = await CreateTransactionAsync(token, "合作金庫", new
+        {
+            transactionType = 1,
+            transactionDate = "2030-01-10",
+            description = "批次測試支出一",
+            amount = 100,
+        });
+        var tx2Id = await CreateTransactionAsync(token, "合作金庫", new
+        {
+            transactionType = 1,
+            transactionDate = "2030-01-11",
+            description = "批次測試支出二",
+            amount = 200,
+        });
+
+        var response = await _client.SendAsync(
+            AuthPost("/bank-transactions/batch-department", token, new
+            {
+                bankName = "合作金庫",
+                ids = new[] { tx1Id, tx2Id },
+                year = 2030,
+                month = 1,
+                departmentId = deptId,
+            }));
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await ReadBodyAsync(response);
+        body.GetProperty("code").GetInt32().Should().Be(0);
+
+        var listResp = await _client.SendAsync(
+            AuthGet("/bank-transactions/合作金庫?year=2030&month=1", token));
+        var txArray = GetData(await ReadBodyAsync(listResp)).EnumerateArray().ToList();
+
+        txArray.Where(t => t.GetProperty("departmentName").GetString() == "批次部門測試")
+            .Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task BatchUpdateDepartment_ClearDepartment_SetsNull()
+    {
+        var token = await LoginAndGetTokenAsync();
+        var deptId = await CreateDepartmentAsync(token, "清除測試部門");
+        var txId = await CreateTransactionAsync(token, "合作金庫", new
+        {
+            transactionType = 1,
+            transactionDate = "2030-02-10",
+            description = "清除部門測試",
+            amount = 300,
+            departmentId = deptId,
+        });
+
+        var response = await _client.SendAsync(
+            AuthPost("/bank-transactions/batch-department", token, new
+            {
+                bankName = "合作金庫",
+                ids = new[] { txId },
+                year = 2030,
+                month = 2,
+                departmentId = (string?)null,
+            }));
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var listResp = await _client.SendAsync(
+            AuthGet("/bank-transactions/合作金庫?year=2030&month=2", token));
+        var tx = GetData(await ReadBodyAsync(listResp)).EnumerateArray()
+            .First(t => t.GetProperty("description").GetString() == "清除部門測試");
+
+        tx.GetProperty("departmentId").ValueKind.Should().Be(JsonValueKind.Null);
+        tx.GetProperty("departmentName").ValueKind.Should().Be(JsonValueKind.Null);
+    }
+
+    [Fact]
+    public async Task BatchUpdateDepartment_ChangedDepartment_ClearsActivityLink()
+    {
+        var token = await LoginAndGetTokenAsync();
+        var sourceDeptId = await CreateDepartmentAsync(token, "批次原始部門");
+        var targetDeptId = await CreateDepartmentAsync(token, "批次目標部門");
+        var activityId = await CreateActivityAsync(token, sourceDeptId, 2030, 3, "批次活動");
+        var txId = await CreateTransactionAsync(token, "合作金庫", new
+        {
+            transactionType = 1,
+            transactionDate = "2030-03-12",
+            description = "批次清除活動測試",
+            amount = 420,
+            departmentId = sourceDeptId,
+            activityId,
+        });
+
+        var response = await _client.SendAsync(
+            AuthPost("/bank-transactions/batch-department", token, new
+            {
+                bankName = "合作金庫",
+                ids = new[] { txId },
+                year = 2030,
+                month = 3,
+                departmentId = targetDeptId,
+            }));
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var listResp = await _client.SendAsync(
+            AuthGet("/bank-transactions/合作金庫?year=2030&month=3", token));
+        var tx = GetData(await ReadBodyAsync(listResp)).EnumerateArray()
+            .First(t => t.GetProperty("description").GetString() == "批次清除活動測試");
+
+        tx.GetProperty("departmentId").GetString().Should().Be(targetDeptId);
+        tx.GetProperty("activityId").ValueKind.Should().Be(JsonValueKind.Null);
+        tx.GetProperty("activityName").ValueKind.Should().Be(JsonValueKind.Null);
+    }
+
+    [Fact]
+    public async Task BatchUpdateDepartment_EmptyIds_Returns400()
+    {
+        var token = await LoginAndGetTokenAsync();
+
+        var response = await _client.SendAsync(
+            AuthPost("/bank-transactions/batch-department", token, new
+            {
+                bankName = "合作金庫",
+                ids = Array.Empty<Guid>(),
+                year = 2030,
+                departmentId = (Guid?)null,
+            }));
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task BatchUpdateDepartment_NonExistentTransactionId_Returns404()
+    {
+        var token = await LoginAndGetTokenAsync();
+
+        var response = await _client.SendAsync(
+            AuthPost("/bank-transactions/batch-department", token, new
+            {
+                bankName = "合作金庫",
+                ids = new[] { Guid.NewGuid() },
+                year = 2030,
+                departmentId = (Guid?)null,
+            }));
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task BatchUpdateDepartment_OutOfScopeTransaction_Returns400()
+    {
+        var token = await LoginAndGetTokenAsync();
+        var deptId = await CreateDepartmentAsync(token, "批次範圍測試部門");
+        var txId = await CreateTransactionAsync(token, "合作金庫", new
+        {
+            transactionType = 1,
+            transactionDate = "2031-04-15",
+            description = "批次範圍外測試",
+            amount = 520,
+        });
+
+        var response = await _client.SendAsync(
+            AuthPost("/bank-transactions/batch-department", token, new
+            {
+                bankName = "合作金庫",
+                ids = new[] { txId },
+                year = 2031,
+                month = 5,
+                departmentId = deptId,
+            }));
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    private static HttpRequestMessage AuthPatch(string url, string token, object data)
+    {
+        var req = new HttpRequestMessage(HttpMethod.Patch, url)
+        {
+            Content = JsonContent.Create(data),
+        };
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        return req;
+    }
+
+    // ── PATCH Receipt Status ──────────────────────────────────
+
+    /// <summary>未登入呼叫 PATCH receipt-status 應回傳 401</summary>
+    [Fact]
+    public async Task PatchReceiptStatus_Unauthorized_Returns401()
+    {
+        var req = new HttpRequestMessage(HttpMethod.Patch, $"/bank-transactions/{Guid.NewGuid()}/receipt-status")
+        {
+            Content = JsonContent.Create(new { receiptCollected = true }),
+        };
+        var response = await _client.SendAsync(req);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    /// <summary>對不存在的交易 PATCH receipt-status 應回傳 404</summary>
+    [Fact]
+    public async Task PatchReceiptStatus_NotFound_Returns404()
+    {
+        var token = await LoginAndGetTokenAsync();
+        var response = await _client.SendAsync(AuthPatch(
+            $"/bank-transactions/{Guid.NewGuid()}/receipt-status",
+            token,
+            new { receiptCollected = true }));
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    /// <summary>PATCH receiptCollected=true 後，GET 應回傳更新後的值</summary>
+    [Fact]
+    public async Task PatchReceiptStatus_SetCollected_UpdatesField()
+    {
+        var token = await LoginAndGetTokenAsync();
+
+        // 建立支出交易
+        var createResp = await _client.SendAsync(AuthPost("/bank-transactions/上海銀行", token, new
+        {
+            transactionType = 1,
+            transactionDate = "2031-01-10",
+            description = "收據狀態 PATCH 測試",
+            amount = 5000,
+            receiptCollected = false,
+            receiptMailed = false,
+        }));
+        var id = GetData(await ReadBodyAsync(createResp)).GetProperty("id").GetString()!;
+
+        // PATCH — 標記已回收
+        var patchResp = await _client.SendAsync(AuthPatch(
+            $"/bank-transactions/{id}/receipt-status",
+            token,
+            new { receiptCollected = true }));
+
+        patchResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await ReadBodyAsync(patchResp);
+        body.GetProperty("code").GetInt32().Should().Be(0);
+
+        // 驗證 GET 反映更新
+        var listResp = await _client.SendAsync(
+            AuthGet("/bank-transactions/上海銀行?year=2031&month=1", token));
+        var tx = GetData(await ReadBodyAsync(listResp)).EnumerateArray()
+            .First(t => t.GetProperty("id").GetString() == id);
+
+        tx.GetProperty("receiptCollected").GetBoolean().Should().BeTrue();
+        tx.GetProperty("receiptMailed").GetBoolean().Should().BeFalse();
+    }
+
+    /// <summary>PATCH 只更新指定欄位，未傳入的欄位保持不變</summary>
+    [Fact]
+    public async Task PatchReceiptStatus_PartialUpdate_OnlyChangesSpecifiedField()
+    {
+        var token = await LoginAndGetTokenAsync();
+
+        // 建立已回收、未寄送的支出交易
+        var createResp = await _client.SendAsync(AuthPost("/bank-transactions/上海銀行", token, new
+        {
+            transactionType = 1,
+            transactionDate = "2031-02-10",
+            description = "收據狀態部分更新測試",
+            amount = 3000,
+            receiptCollected = true,
+            receiptMailed = false,
+        }));
+        var id = GetData(await ReadBodyAsync(createResp)).GetProperty("id").GetString()!;
+
+        // PATCH — 只標記已寄送（不傳 receiptCollected）
+        var patchResp = await _client.SendAsync(AuthPatch(
+            $"/bank-transactions/{id}/receipt-status",
+            token,
+            new { receiptMailed = true }));
+
+        patchResp.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        // 驗證兩個欄位都正確
+        var listResp = await _client.SendAsync(
+            AuthGet("/bank-transactions/上海銀行?year=2031&month=2", token));
+        var tx = GetData(await ReadBodyAsync(listResp)).EnumerateArray()
+            .First(t => t.GetProperty("id").GetString() == id);
+
+        tx.GetProperty("receiptCollected").GetBoolean().Should().BeTrue(because: "未傳入的欄位應保持原值");
+        tx.GetProperty("receiptMailed").GetBoolean().Should().BeTrue(because: "應更新為 true");
     }
 }

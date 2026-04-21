@@ -41,8 +41,8 @@ try {
 
     process.stderr.write(
       hasPlan
-        ? 'BLOCKED: Plan approved but you are on main branch. You MUST call EnterWorktree first.\n\n  EnterWorktree(name: "your-feature-name")'
-        : 'BLOCKED: Cannot edit files on main branch. Create a feature branch first.\n\n  git checkout -b feature/xxx\n  or use EnterWorktree after plan approval.'
+        ? 'BLOCKED: Plan approved but you are on main branch. Create a feature branch first.\n\n  git checkout -b feature/your-feature-name'
+        : 'BLOCKED: Cannot edit files on main branch. Create a feature branch first.\n\n  git checkout -b feature/xxx'
     );
     process.exit(2);
   }
@@ -140,11 +140,11 @@ if (filePath) {
       const codeCount = state.modifiedFiles.filter((f) => isCodeFile(f)).length;
       const cumLines = state.lineChangeSinceReview || 0;
 
-      if (state.completedSteps.simplifier && cumLines > 0 && cumLines < 10) {
+      if (state.completedSteps.codeReview && cumLines > 0 && cumLines < 10) {
         log(`[Workflow] Tracking code edit: ${filePath} (+${lineCount} lines, cumulative ${cumLines}/10 — reviews preserved)`);
       } else {
         log(`[Workflow] Tracking code file: ${filePath} | Total code files: ${codeCount}`);
-        if (!state.completedSteps.simplifier || cumLines >= 10) {
+        if (!state.completedSteps.codeReview || cumLines >= 10) {
           log('[Workflow] Review steps have been reset');
         }
       }

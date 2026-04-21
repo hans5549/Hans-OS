@@ -14,6 +14,7 @@ public class PendingRemittanceService(ApplicationDbContext db) : IPendingRemitta
         var query = db.PendingRemittances
             .AsNoTracking()
             .Include(r => r.Department)
+            .Include(r => r.ActivityExpense)
             .AsQueryable();
 
         if (status.HasValue)
@@ -33,6 +34,7 @@ public class PendingRemittanceService(ApplicationDbContext db) : IPendingRemitta
         var entity = await db.PendingRemittances
             .AsNoTracking()
             .Include(r => r.Department)
+            .Include(r => r.ActivityExpense)
             .FirstOrDefaultAsync(r => r.Id == id, ct)
             ?? throw new KeyNotFoundException("待匯款紀錄不存在");
 
@@ -52,6 +54,16 @@ public class PendingRemittanceService(ApplicationDbContext db) : IPendingRemitta
             }
         }
 
+        if (request.ActivityExpenseId.HasValue)
+        {
+            var expenseExists = await db.ActivityExpenses
+                .AnyAsync(e => e.Id == request.ActivityExpenseId.Value, ct);
+            if (!expenseExists)
+            {
+                throw new ArgumentException("指定的活動費不存在");
+            }
+        }
+
         var now = DateTime.UtcNow;
         var entity = new PendingRemittance
         {
@@ -64,6 +76,7 @@ public class PendingRemittanceService(ApplicationDbContext db) : IPendingRemitta
             RecipientName = request.RecipientName?.Trim(),
             ExpectedDate = request.ExpectedDate,
             Note = request.Note?.Trim(),
+            ActivityExpenseId = request.ActivityExpenseId,
             Status = PendingRemittanceStatus.Pending,
             CreatedAt = now,
             UpdatedAt = now,
@@ -72,25 +85,7 @@ public class PendingRemittanceService(ApplicationDbContext db) : IPendingRemitta
         db.PendingRemittances.Add(entity);
         await db.SaveChangesAsync(ct);
 
-        var department = entity.DepartmentId.HasValue
-            ? await db.SportsDepartments.AsNoTracking()
-                .FirstOrDefaultAsync(d => d.Id == entity.DepartmentId, ct)
-            : null;
-
-        return new PendingRemittanceResponse(
-            entity.Id,
-            entity.Description,
-            entity.Amount,
-            entity.SourceAccount,
-            entity.TargetAccount,
-            entity.DepartmentId,
-            department?.Name,
-            entity.RecipientName,
-            entity.ExpectedDate,
-            entity.Note,
-            entity.Status,
-            entity.CompletedAt,
-            entity.CreatedAt);
+        return await GetByIdAsync(entity.Id, ct);
     }
 
     public async Task UpdateAsync(
@@ -109,6 +104,16 @@ public class PendingRemittanceService(ApplicationDbContext db) : IPendingRemitta
             }
         }
 
+        if (request.ActivityExpenseId.HasValue)
+        {
+            var expenseExists = await db.ActivityExpenses
+                .AnyAsync(e => e.Id == request.ActivityExpenseId.Value, ct);
+            if (!expenseExists)
+            {
+                throw new ArgumentException("指定的活動費不存在");
+            }
+        }
+
         entity.Description = request.Description.Trim();
         entity.Amount = request.Amount;
         entity.SourceAccount = request.SourceAccount.Trim();
@@ -117,6 +122,7 @@ public class PendingRemittanceService(ApplicationDbContext db) : IPendingRemitta
         entity.RecipientName = request.RecipientName?.Trim();
         entity.ExpectedDate = request.ExpectedDate;
         entity.Note = request.Note?.Trim();
+        entity.ActivityExpenseId = request.ActivityExpenseId;
         entity.UpdatedAt = DateTime.UtcNow;
 
         await db.SaveChangesAsync(ct);
@@ -131,9 +137,11 @@ public class PendingRemittanceService(ApplicationDbContext db) : IPendingRemitta
         await db.SaveChangesAsync(ct);
     }
 
-    public async Task CompleteAsync(Guid id, CancellationToken ct = default)
+    public async Task CompleteAsync(Guid id, CompletePendingRemittanceRequest request, CancellationToken ct = default)
     {
-        var entity = await db.PendingRemittances.FindAsync([id], ct)
+        var entity = await db.PendingRemittances
+            .Include(r => r.ActivityExpense)
+            .FirstOrDefaultAsync(r => r.Id == id, ct)
             ?? throw new KeyNotFoundException("待匯款紀錄不存在");
 
         if (entity.Status == PendingRemittanceStatus.Completed)
@@ -141,10 +149,30 @@ public class PendingRemittanceService(ApplicationDbContext db) : IPendingRemitta
             throw new ArgumentException("此匯款紀錄已完成");
         }
 
+        var now = DateTime.UtcNow;
         entity.Status = PendingRemittanceStatus.Completed;
-        entity.CompletedAt = DateTime.UtcNow;
-        entity.UpdatedAt = DateTime.UtcNow;
+        entity.CompletedAt = now;
+        entity.UpdatedAt = now;
 
+        var bankTransaction = new BankTransaction
+        {
+            Id = Guid.NewGuid(),
+            BankName = request.BankName.Trim(),
+            TransactionType = TransactionType.Expense,
+            TransactionDate = request.TransactionDate,
+            Description = entity.Description,
+            Amount = entity.Amount,
+            Fee = 0,
+            DepartmentId = entity.DepartmentId,
+            ActivityId = entity.ActivityExpense?.ActivityId,
+            PendingRemittanceId = entity.Id,
+            ReceiptCollected = false,
+            ReceiptMailed = false,
+            CreatedAt = now,
+            UpdatedAt = now,
+        };
+
+        db.BankTransactions.Add(bankTransaction);
         await db.SaveChangesAsync(ct);
     }
 
@@ -161,5 +189,7 @@ public class PendingRemittanceService(ApplicationDbContext db) : IPendingRemitta
             r.Note,
             r.Status,
             r.CompletedAt,
-            r.CreatedAt);
+            r.CreatedAt,
+            r.ActivityExpenseId,
+            r.ActivityExpense?.Description);
 }

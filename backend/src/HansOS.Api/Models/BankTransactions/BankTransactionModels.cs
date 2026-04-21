@@ -13,7 +13,8 @@ public record CreateBankTransactionRequest(
     [Required][Range(1, double.MaxValue)] decimal Amount,
     [Range(0, double.MaxValue)] decimal Fee = 0,
     bool ReceiptCollected = false,
-    bool ReceiptMailed = false);
+    bool ReceiptMailed = false,
+    Guid? ActivityId = null);
 
 public record UpdateBankTransactionRequest(
     [Required] TransactionType TransactionType,
@@ -23,7 +24,21 @@ public record UpdateBankTransactionRequest(
     [Required][Range(1, double.MaxValue)] decimal Amount,
     [Range(0, double.MaxValue)] decimal Fee = 0,
     bool ReceiptCollected = false,
-    bool ReceiptMailed = false);
+    bool ReceiptMailed = false,
+    Guid? ActivityId = null);
+
+/// <summary>批次更新歸屬部門</summary>
+public record BatchUpdateDepartmentRequest(
+    [Required][StringLength(100)] string BankName,
+    [Required][MinLength(1)][MaxLength(200)] List<Guid> Ids,
+    [Range(2000, 2100)] int Year,
+    [Range(1, 12)] int? Month,
+    Guid? DepartmentId);
+
+/// <summary>更新收據狀態請求</summary>
+public record PatchReceiptStatusRequest(
+    bool? ReceiptCollected,
+    bool? ReceiptMailed);
 
 // Response DTOs
 public record BankTransactionResponse(
@@ -38,7 +53,10 @@ public record BankTransactionResponse(
     decimal Fee,
     bool ReceiptCollected,
     bool ReceiptMailed,
-    decimal RunningBalance);
+    decimal RunningBalance,
+    Guid? ActivityId,
+    string? ActivityName,
+    Guid? PendingRemittanceId);
 
 /// <summary>收據追蹤回應</summary>
 public record ReceiptTrackingResponse(

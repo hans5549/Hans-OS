@@ -29,7 +29,7 @@ public class UserServiceTests
             UserName = "hans",
             RealName = "Hans",
             Avatar = "https://example.com/avatar.png",
-            HomePath = "/analytics",
+            HomePath = "/custom-home",
             IsActive = true
         };
         _userManager.FindByIdAsync("user-1").Returns(user);
@@ -42,7 +42,7 @@ public class UserServiceTests
         result.RealName.Should().Be("Hans");
         result.Avatar.Should().Be("https://example.com/avatar.png");
         result.Roles.Should().Contain("admin");
-        result.HomePath.Should().Be("/analytics");
+        result.HomePath.Should().Be("/custom-home");
     }
 
     [Fact]
@@ -208,9 +208,65 @@ public class UserServiceTests
         result.Roles.Should().BeEmpty();
         result.Username.Should().Be("noroles");
         result.Avatar.Should().Be(string.Empty);
-        result.HomePath.Should().Be("/analytics");
+        result.HomePath.Should().Be("/index");
         result.Email.Should().Be(string.Empty);
         result.Phone.Should().Be(string.Empty);
         result.Desc.Should().Be(string.Empty);
+    }
+
+    [Theory]
+    [InlineData("/analytics")]
+    [InlineData("/dashboard")]
+    [InlineData("/todo")]
+    [InlineData("/workspace")]
+    public async Task GetUserInfo_LegacyDashboardHomePath_NormalizesToIndex(string legacyHomePath)
+    {
+        var user = new ApplicationUser
+        {
+            Id = "legacy-user",
+            UserName = "legacy",
+            HomePath = legacyHomePath,
+            IsActive = true
+        };
+        _userManager.FindByIdAsync("legacy-user").Returns(user);
+        _userManager.GetRolesAsync(user).Returns(new List<string>());
+
+        var result = await _sut.GetUserInfoAsync("legacy-user");
+
+        result.HomePath.Should().Be("/index");
+    }
+
+    [Theory]
+    [InlineData("/system-design/qr-code-generator", "/system-design/real-world-apps/qr-code-generator")]
+    [InlineData("/system-design/earthquake-notification", "/system-design/real-world-apps/earthquake-notification")]
+    [InlineData("/system-design/polymarket", "/system-design/real-world-apps/polymarket")]
+    [InlineData("/system-design/amazon-price-tracking", "/system-design/real-world-apps/amazon-price-tracking")]
+    [InlineData("/system-design/tesla-robo-taxi", "/system-design/real-world-apps/tesla-robo-taxi")]
+    [InlineData("/system-design/spotify-trending-songs", "/system-design/real-world-apps/spotify-trending-songs")]
+    [InlineData("/system-design/messenger", "/system-design/real-world-apps/messenger")]
+    [InlineData("/system-design/webhook-platform", "/system-design/real-world-apps/webhook-platform")]
+    [InlineData("/system-design/google-docs", "/system-design/real-world-apps/google-docs")]
+    [InlineData("/system-design/youtube", "/system-design/real-world-apps/youtube")]
+    [InlineData("/system-design/chatgpt-tasks", "/system-design/real-world-apps/chatgpt-tasks")]
+    [InlineData("/system-design/airbnb-booking", "/system-design/real-world-apps/airbnb-booking")]
+    [InlineData("/system-design/agoda-ai-support", "/system-design/real-world-apps/agoda-ai-support")]
+    [InlineData("/system-design/llm-inference-api", "/system-design/real-world-apps/llm-inference-api")]
+    public async Task GetUserInfo_LegacySystemDesignHomePath_NormalizesToReorganizedPath(
+        string legacyHomePath,
+        string expectedHomePath)
+    {
+        var user = new ApplicationUser
+        {
+            Id = "legacy-system-design-user",
+            UserName = "legacy-system-design",
+            HomePath = legacyHomePath,
+            IsActive = true,
+        };
+        _userManager.FindByIdAsync("legacy-system-design-user").Returns(user);
+        _userManager.GetRolesAsync(user).Returns(new List<string>());
+
+        var result = await _sut.GetUserInfoAsync("legacy-system-design-user");
+
+        result.HomePath.Should().Be(expectedHomePath);
     }
 }

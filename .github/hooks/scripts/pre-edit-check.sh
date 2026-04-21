@@ -82,13 +82,13 @@ if is_code_file "$FILE_PATH" || is_doc_file "$FILE_PATH"; then
   if is_code_file "$FILE_PATH"; then
     code_count=$(echo "$state" | jq '[.modifiedFiles[] | select(test("\\.(cs|razor|json|css|js|html|csproj|xml|jsx|ts|tsx|vue|mts)$"))] | length')
     cum_lines=$(echo "$state" | jq -r '.lineChangeSinceReview // 0')
-    simplifier_done=$(echo "$state" | jq -r '.completedSteps.simplifier')
+    review_done=$(echo "$state" | jq -r '.completedSteps.codeReview')
 
-    if [[ "$simplifier_done" == "true" && "$cum_lines" -gt 0 && "$cum_lines" -lt 10 ]]; then
+    if [[ "$review_done" == "true" && "$cum_lines" -gt 0 && "$cum_lines" -lt 10 ]]; then
       log "[Workflow] Tracking code edit: $FILE_PATH (+$LINE_COUNT lines, cumulative $cum_lines/10 — reviews preserved)"
     else
       log "[Workflow] Tracking code file: $FILE_PATH | Total code files: $code_count"
-      if [[ "$simplifier_done" != "true" || "$cum_lines" -ge 10 ]]; then
+      if [[ "$review_done" != "true" || "$cum_lines" -ge 10 ]]; then
         log "[Workflow] Review steps have been reset"
       fi
     fi

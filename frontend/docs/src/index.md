@@ -68,10 +68,10 @@ features:
     details: 规范且标准的大仓架构，使用 pnpm + monorepo + turbo 工程管理模式，提供企业级开发规范。
     link: https://turbo.build/
     linkText: 官方站点
-  - title: Nitro Mock Server
+  - title: Flexible API Integration
     icon:
       src: /logos/nitro.svg
-    details: 内置 Nitro Mock 服务，让你的 mock 服务更加强大。
+    details: 直接连接现有后端，或在仓库外部接入你自己的 Nitro / mock 服务。
     link: https://nitro.unjs.io/
     linkText: 官方站点
 ---

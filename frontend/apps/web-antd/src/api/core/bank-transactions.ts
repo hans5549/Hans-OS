@@ -17,6 +17,9 @@ export interface BankTransactionResponse {
   receiptCollected: boolean;
   receiptMailed: boolean;
   runningBalance: number;
+  activityId: string | null;
+  activityName: string | null;
+  pendingRemittanceId: string | null;
 }
 
 export interface BankTransactionSummaryResponse {
@@ -35,6 +38,7 @@ export interface CreateBankTransactionRequest {
   fee?: number;
   receiptCollected?: boolean;
   receiptMailed?: boolean;
+  activityId?: string;
 }
 
 export interface UpdateBankTransactionRequest {
@@ -46,6 +50,32 @@ export interface UpdateBankTransactionRequest {
   fee?: number;
   receiptCollected?: boolean;
   receiptMailed?: boolean;
+  activityId?: string;
+}
+
+export interface PatchReceiptStatusRequest {
+  receiptCollected?: boolean;
+  receiptMailed?: boolean;
+}
+
+export interface BatchUpdateDepartmentRequest {
+  bankName: string;
+  ids: string[];
+  month?: number;
+  departmentId?: null | string;
+  year: number;
+}
+
+function buildPeriodParams(year: number, month?: number) {
+  const params = new URLSearchParams({ year: String(year) });
+  if (month !== undefined) {
+    params.set('month', String(month));
+  }
+  return params;
+}
+
+function buildPeriodUrl(path: string, year: number, month?: number) {
+  return `${path}?${buildPeriodParams(year, month)}`;
 }
 
 // ── API 函式 ──────────────────────────────────────
@@ -56,12 +86,8 @@ export async function getBankTransactionsApi(
   year: number,
   month?: number,
 ) {
-  const params = new URLSearchParams({ year: String(year) });
-  if (month !== undefined) {
-    params.set('month', String(month));
-  }
   return requestClient.get<BankTransactionResponse[]>(
-    `/bank-transactions/${encodeURIComponent(bankName)}?${params}`,
+    buildPeriodUrl(`/bank-transactions/${encodeURIComponent(bankName)}`, year, month),
   );
 }
 
@@ -71,12 +97,12 @@ export async function getBankTransactionSummaryApi(
   year: number,
   month?: number,
 ) {
-  const params = new URLSearchParams({ year: String(year) });
-  if (month !== undefined) {
-    params.set('month', String(month));
-  }
   return requestClient.get<BankTransactionSummaryResponse>(
-    `/bank-transactions/${encodeURIComponent(bankName)}/summary?${params}`,
+    buildPeriodUrl(
+      `/bank-transactions/${encodeURIComponent(bankName)}/summary`,
+      year,
+      month,
+    ),
   );
 }
 
@@ -104,17 +130,24 @@ export async function deleteBankTransactionApi(id: string) {
   return requestClient.delete(`/bank-transactions/${id}`);
 }
 
+/** 批次更新歸屬部門 */
+export async function batchUpdateDepartmentApi(
+  data: BatchUpdateDepartmentRequest,
+) {
+  return requestClient.post('/bank-transactions/batch-department', data);
+}
+
 /** 匯出 Excel（觸發瀏覽器下載） */
 export async function exportBankTransactionsApi(
   bankName: string,
   year: number,
   month?: number,
 ): Promise<void> {
-  const params = new URLSearchParams({ year: String(year) });
-  if (month !== undefined) {
-    params.set('month', String(month));
-  }
-  const url = `/bank-transactions/${encodeURIComponent(bankName)}/export?${params}`;
+  const url = buildPeriodUrl(
+    `/bank-transactions/${encodeURIComponent(bankName)}/export`,
+    year,
+    month,
+  );
   const blob = await requestClient.download<Blob>(url);
   const downloadUrl = window.URL.createObjectURL(blob);
   const link = document.createElement('a');
@@ -166,16 +199,23 @@ export interface ReceiptTrackingSummaryResponse {
   items: ReceiptTrackingResponse[];
 }
 
+/** 更新收據狀態（inline 勾選） */
+export async function patchReceiptStatusApi(
+  id: string,
+  data: PatchReceiptStatusRequest,
+) {
+  return requestClient.request(`/bank-transactions/${id}/receipt-status`, {
+    data,
+    method: 'PATCH',
+  });
+}
+
 /** 取得需關注的收據清單（跨銀行） */
 export async function getReceiptTrackingApi(
   year: number,
   month?: number,
 ) {
-  const params = new URLSearchParams({ year: String(year) });
-  if (month !== undefined) {
-    params.set('month', String(month));
-  }
   return requestClient.get<ReceiptTrackingSummaryResponse>(
-    `/bank-transactions/receipt-tracking?${params}`,
+    buildPeriodUrl('/bank-transactions/receipt-tracking', year, month),
   );
 }

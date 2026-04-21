@@ -25,27 +25,57 @@ public class MenuService(ApplicationDbContext db) : IMenuService
             .Distinct()
             .ToListAsync(ct);
 
-        // Load all matching menus (flat list)
+        var menus = await LoadMenusWithAncestorsAsync(menuIds, ct);
+
+        return BuildTree(menus, null);
+    }
+
+    private async Task<List<Menu>> LoadMenusWithAncestorsAsync(
+        IReadOnlyCollection<Guid> menuIds,
+        CancellationToken ct)
+    {
         var menus = await db.Menus
             .AsNoTracking()
-            .Where(m => menuIds.Contains(m.Id) && m.IsActive && m.Type != MenuType.Button)
-            .OrderBy(m => m.Order)
+            .Where(menu => menuIds.Contains(menu.Id) && menu.IsActive && menu.Type != MenuType.Button)
+            .OrderBy(menu => menu.Order)
             .ToListAsync(ct);
 
-        // Also load parent menus that might not be directly assigned
-        var allParentIds = menus.Where(m => m.ParentId.HasValue).Select(m => m.ParentId!.Value).Distinct().ToList();
-        var missingParentIds = allParentIds.Except(menus.Select(m => m.Id)).ToList();
+        var loadedMenuIds = menus.Select(menu => menu.Id).ToHashSet();
+        var missingParentIds = GetMissingParentIds(menus, loadedMenuIds);
 
-        if (missingParentIds.Count > 0)
+        while (missingParentIds.Count > 0)
         {
             var parentMenus = await db.Menus
                 .AsNoTracking()
-                .Where(m => missingParentIds.Contains(m.Id) && m.IsActive)
+                .Where(menu => missingParentIds.Contains(menu.Id) && menu.IsActive && menu.Type != MenuType.Button)
                 .ToListAsync(ct);
+
+            if (parentMenus.Count == 0)
+            {
+                break;
+            }
+
             menus.AddRange(parentMenus);
+
+            foreach (var parentMenu in parentMenus)
+            {
+                loadedMenuIds.Add(parentMenu.Id);
+            }
+
+            missingParentIds = GetMissingParentIds(menus, loadedMenuIds);
         }
 
-        return BuildTree(menus, null);
+        return menus;
+    }
+
+    private static HashSet<Guid> GetMissingParentIds(
+        IEnumerable<Menu> menus,
+        IReadOnlySet<Guid> loadedMenuIds)
+    {
+        return menus
+            .Where(menu => menu.ParentId.HasValue && !loadedMenuIds.Contains(menu.ParentId.Value))
+            .Select(menu => menu.ParentId!.Value)
+            .ToHashSet();
     }
 
     private static List<MenuRouteResponse> BuildTree(List<Menu> menus, Guid? parentId)

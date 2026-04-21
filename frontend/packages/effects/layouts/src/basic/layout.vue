@@ -425,7 +425,7 @@ const headerSlots = computed(() => {
           @clear-preferences-and-logout="clearPreferencesAndLogout"
         />
       </template>
-      <VbenBackTop />
+      <VbenBackTop :bottom="80" />
     </template>
   </VbenAdminLayout>
 </template>
