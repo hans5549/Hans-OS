@@ -26,6 +26,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<FinanceTransaction> FinanceTransactions => Set<FinanceTransaction>();
     public DbSet<StockTransaction> StockTransactions => Set<StockTransaction>();
     public DbSet<BudgetShareToken> BudgetShareTokens => Set<BudgetShareToken>();
+    public DbSet<TodoProject> TodoProjects => Set<TodoProject>();
+    public DbSet<TodoItem> TodoItems => Set<TodoItem>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -395,6 +397,45 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
              .OnDelete(DeleteBehavior.Cascade);
 
             e.HasIndex(t => t.DepartmentId).IsUnique();
+        });
+
+        // TodoProject — 待辦事項專案（清單）
+        builder.Entity<TodoProject>(e =>
+        {
+            e.HasKey(p => p.Id);
+            e.Property(p => p.Name).HasMaxLength(100).IsRequired();
+            e.Property(p => p.Color).HasMaxLength(20).HasDefaultValue("#3B82F6");
+
+            e.HasOne(p => p.User)
+             .WithMany()
+             .HasForeignKey(p => p.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasIndex(p => new { p.UserId, p.Order });
+        });
+
+        // TodoItem — 待辦事項
+        builder.Entity<TodoItem>(e =>
+        {
+            e.HasKey(t => t.Id);
+            e.Property(t => t.Title).HasMaxLength(500).IsRequired();
+            e.Property(t => t.Description).HasMaxLength(2000);
+            e.Property(t => t.Priority).HasConversion<int>();
+            e.Property(t => t.Status).HasConversion<int>();
+
+            e.HasOne(t => t.User)
+             .WithMany()
+             .HasForeignKey(t => t.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne(t => t.Project)
+             .WithMany(p => p.Items)
+             .HasForeignKey(t => t.ProjectId)
+             .OnDelete(DeleteBehavior.SetNull);
+
+            e.HasIndex(t => new { t.UserId, t.Status });
+            e.HasIndex(t => new { t.UserId, t.DueDate });
+            e.HasIndex(t => new { t.UserId, t.ProjectId });
         });
     }
 }
