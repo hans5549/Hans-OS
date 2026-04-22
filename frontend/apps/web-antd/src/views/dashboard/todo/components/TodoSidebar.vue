@@ -57,15 +57,15 @@ const smartFilters: SmartFilter[] = [
 ];
 
 function handleFilterClick(filter: SmartFilter) {
-  router.replace({ name: 'Todo', query: { view: filter.view } });
+  router.replace({ path: '/todo', query: { view: filter.view } });
 }
 
 function handleProjectClick(projectId: string) {
-  router.replace({ name: 'Todo', query: { view: 'project', id: projectId } });
+  router.replace({ path: '/todo', query: { id: projectId, view: 'project' } });
 }
 
 function handleTagClick(tagId: string) {
-  router.replace({ name: 'Todo', query: { view: 'tag', id: tagId } });
+  router.replace({ path: '/todo', query: { id: tagId, view: 'tag' } });
 }
 </script>
 
