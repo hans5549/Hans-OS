@@ -14,8 +14,8 @@ const store = useTodoStore();
 const route = useRoute();
 
 function syncViewFromQuery() {
-  const view = route.query['view'] as string;
-  const id = route.query['id'] as string;
+  const view = (route.query['view'] as string) ?? '';
+  const id = (route.query['id'] as string) ?? '';
   if (view === 'inbox') store.setView('inbox');
   else if (view === 'upcoming') store.setView('upcoming');
   else if (view === 'all') store.setView('all');
