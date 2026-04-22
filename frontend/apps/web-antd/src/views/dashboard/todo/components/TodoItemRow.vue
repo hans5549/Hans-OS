@@ -17,6 +17,13 @@ const store = useTodoStore();
 const isAnimating = ref(false);
 let animationTimer: ReturnType<typeof setTimeout> | null = null;
 
+const difficultyConfig: Record<string, { color: string; label: string }> = {
+  Easy: { color: '#22C55E', label: '易' },
+  Hard: { color: '#EF4444', label: '難' },
+  Medium: { color: '#F97316', label: '中' },
+  None: { color: '', label: '' },
+};
+
 async function handleToggle() {
   isAnimating.value = true;
   await store.toggleComplete(props.item.id);
@@ -67,16 +74,54 @@ function handleRowClick() {
       </svg>
     </button>
 
-    <!-- Title -->
-    <span
-      class="flex-1 truncate text-sm text-foreground transition-all duration-200"
-      :class="item.status === 'Done' ? 'line-through text-muted-foreground' : ''"
-    >
-      {{ item.title }}
-    </span>
+    <!-- Title + project badge -->
+    <div class="flex min-w-0 flex-1 flex-col gap-0.5">
+      <span
+        class="truncate text-sm text-foreground transition-all duration-200"
+        :class="item.status === 'Done' ? 'line-through text-muted-foreground' : ''"
+      >
+        {{ item.title }}
+      </span>
+      <!-- Project badge (shown when viewing all/search) -->
+      <div
+        v-if="item.projectName && (store.currentView === 'all' || store.currentView === 'search')"
+        class="flex items-center gap-1"
+      >
+        <span
+          class="size-2 rounded-full flex-shrink-0"
+          :style="{ backgroundColor: item.projectColor ?? '#94A3B8' }"
+        />
+        <span class="truncate text-xs text-muted-foreground">{{ item.projectName }}</span>
+      </div>
+    </div>
 
     <!-- Badges -->
-    <div class="flex items-center gap-1.5">
+    <div class="flex items-center gap-1.5 flex-shrink-0">
+      <!-- Tags (max 2) -->
+      <span
+        v-for="tag in item.tags.slice(0, 2)"
+        :key="tag.id"
+        class="rounded-full px-1.5 py-0.5 text-xs text-white"
+        :style="{ backgroundColor: tag.color ?? '#64748B' }"
+      >
+        {{ tag.name }}
+      </span>
+      <span
+        v-if="item.tags.length > 2"
+        class="rounded-full bg-accent px-1.5 py-0.5 text-xs text-muted-foreground"
+      >
+        +{{ item.tags.length - 2 }}
+      </span>
+
+      <!-- Difficulty badge -->
+      <span
+        v-if="item.difficulty !== 'None'"
+        class="rounded px-1 py-0.5 text-xs text-white font-medium"
+        :style="{ backgroundColor: difficultyConfig[item.difficulty]?.color ?? '#94A3B8' }"
+      >
+        {{ difficultyConfig[item.difficulty]?.label }}
+      </span>
+
       <TodoDateBadge :due-date="item.dueDate" />
       <TodoPriorityFlag :priority="item.priority" />
     </div>

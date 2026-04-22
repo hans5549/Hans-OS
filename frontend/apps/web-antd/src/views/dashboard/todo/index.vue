@@ -17,9 +17,14 @@ function syncViewFromRoute(path: string) {
   if (path.includes('/todo/inbox')) store.setView('inbox');
   else if (path.includes('/todo/upcoming')) store.setView('upcoming');
   else if (path.includes('/todo/all')) store.setView('all');
+  else if (path.includes('/todo/trash')) store.setView('trash');
+  else if (path.includes('/todo/week')) store.setView('week');
   else if (path.match(/\/todo\/project\/(.+)/)) {
     const id = route.params['id'] as string;
     store.setView('project', id);
+  } else if (path.match(/\/todo\/tag\/(.+)/)) {
+    const id = route.params['id'] as string;
+    store.setView('tag', undefined, id);
   } else {
     store.setView('today');
   }
@@ -49,8 +54,8 @@ function handleKeydown(e: KeyboardEvent) {
     <TodoSidebar />
     <TodoList class="flex-1" />
     <Transition name="slide-right">
-      <div v-if="store.isDetailOpen && store.selectedItem" class="w-80 flex-shrink-0">
-        <TodoDetail :item="store.selectedItem" @close="store.closeDetail" />
+      <div v-if="store.isDetailOpen && store.selectedItemDetail" class="w-80 flex-shrink-0">
+        <TodoDetail :item="store.selectedItemDetail" @close="store.closeDetail" />
       </div>
     </Transition>
   </div>
