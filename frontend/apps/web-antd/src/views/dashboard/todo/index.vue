@@ -2,6 +2,9 @@
 import { onMounted, onUnmounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 
+import { useTabs } from '@vben/hooks';
+import { useTabbarStore } from '@vben/stores';
+
 import { useTodoStore } from '#/store/todo';
 
 import TodoDetail from './components/TodoDetail.vue';
@@ -12,6 +15,8 @@ defineOptions({ name: 'TodoPage' });
 
 const store = useTodoStore();
 const route = useRoute();
+const tabbarStore = useTabbarStore();
+const { closeTabByKey } = useTabs();
 
 function syncViewFromQuery() {
   const view = (route.query['view'] as string) ?? '';
@@ -29,6 +34,14 @@ function syncViewFromQuery() {
 watch(() => route.query, syncViewFromQuery, { deep: true });
 
 onMounted(async () => {
+  // Remove stale Todo tabs from the old path-based routing (e.g. /todo/today, /todo/inbox)
+  const staleTabs = tabbarStore.getTabs.filter(
+    (tab) => tab.name === 'Todo' && tab.path !== '/todo',
+  );
+  for (const tab of staleTabs) {
+    await closeTabByKey(tab.key as string);
+  }
+
   await store.init();
   syncViewFromQuery();
   document.addEventListener('keydown', handleKeydown);
