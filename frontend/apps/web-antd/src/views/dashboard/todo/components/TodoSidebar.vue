@@ -16,7 +16,6 @@ type SmartFilter = {
   countKey?: 'all' | 'inbox' | 'today' | 'upcoming';
   iconPath: string;
   label: string;
-  path: string;
   view: 'all' | 'inbox' | 'today' | 'trash' | 'upcoming' | 'week';
 };
 
@@ -25,54 +24,48 @@ const smartFilters: SmartFilter[] = [
     countKey: 'inbox',
     iconPath: 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',
     label: 'page.todo.inbox',
-    path: '/todo/inbox',
     view: 'inbox',
   },
   {
     countKey: 'today',
     iconPath: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',
     label: 'page.todo.today',
-    path: '/todo/today',
     view: 'today',
   },
   {
     countKey: 'upcoming',
     iconPath: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
     label: 'page.todo.upcoming',
-    path: '/todo/upcoming',
     view: 'upcoming',
   },
   {
     iconPath: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2',
     label: 'page.todo.week',
-    path: '/todo/week',
     view: 'week',
   },
   {
     countKey: 'all',
     iconPath: 'M4 6h16M4 10h16M4 14h16M4 18h16',
     label: 'page.todo.all',
-    path: '/todo/all',
     view: 'all',
   },
   {
     iconPath: 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16',
     label: 'page.todo.trash',
-    path: '/todo/trash',
     view: 'trash',
   },
 ];
 
 function handleFilterClick(filter: SmartFilter) {
-  router.push(filter.path);
+  router.replace({ name: 'Todo', query: { view: filter.view } });
 }
 
 function handleProjectClick(projectId: string) {
-  router.push(`/todo/project/${projectId}`);
+  router.replace({ name: 'Todo', query: { view: 'project', id: projectId } });
 }
 
 function handleTagClick(tagId: string) {
-  router.push(`/todo/tag/${tagId}`);
+  router.replace({ name: 'Todo', query: { view: 'tag', id: tagId } });
 }
 </script>
 

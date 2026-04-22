@@ -57,6 +57,8 @@ lerna-debug.log*
 .agents/
 .claude/
 .codex/
+!.Codex/
+!.Codex/**
 .codex-temp/
 .config/
 skills-lock.json

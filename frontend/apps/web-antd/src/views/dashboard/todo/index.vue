@@ -13,28 +13,24 @@ defineOptions({ name: 'TodoPage' });
 const store = useTodoStore();
 const route = useRoute();
 
-function syncViewFromRoute(path: string) {
-  if (path.includes('/todo/inbox')) store.setView('inbox');
-  else if (path.includes('/todo/upcoming')) store.setView('upcoming');
-  else if (path.includes('/todo/all')) store.setView('all');
-  else if (path.includes('/todo/trash')) store.setView('trash');
-  else if (path.includes('/todo/week')) store.setView('week');
-  else if (path.match(/\/todo\/project\/(.+)/)) {
-    const id = route.params['id'] as string;
-    store.setView('project', id);
-  } else if (path.match(/\/todo\/tag\/(.+)/)) {
-    const id = route.params['id'] as string;
-    store.setView('tag', undefined, id);
-  } else {
-    store.setView('today');
-  }
+function syncViewFromQuery() {
+  const view = route.query['view'] as string;
+  const id = route.query['id'] as string;
+  if (view === 'inbox') store.setView('inbox');
+  else if (view === 'upcoming') store.setView('upcoming');
+  else if (view === 'all') store.setView('all');
+  else if (view === 'trash') store.setView('trash');
+  else if (view === 'week') store.setView('week');
+  else if (view === 'project' && id) store.setView('project', id);
+  else if (view === 'tag' && id) store.setView('tag', undefined, id);
+  else store.setView('today');
 }
 
-watch(() => route.fullPath, syncViewFromRoute);
+watch(() => route.query, syncViewFromQuery, { deep: true });
 
 onMounted(async () => {
   await store.init();
-  syncViewFromRoute(route.path);
+  syncViewFromQuery();
   document.addEventListener('keydown', handleKeydown);
 });
 onUnmounted(() => document.removeEventListener('keydown', handleKeydown));
