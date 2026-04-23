@@ -1,8 +1,16 @@
 // ============================================================================
-// workflow-state.mjs - Workflow State Management Module
+// workflow-state.mjs - Workflow State Management Module (v2 schema)
 // ============================================================================
 // Provides state tracking for modified files and completed workflow steps.
-// Supports both Planning Phase (CEO/Eng/Linus review) and Coding Phase.
+// Supports Plan Phase (4 reviewers) and Code Phase (5 gates).
+//
+// UPDATED (pipeline redesign):
+// - schemaVersion: 2
+// - New completedSteps schema with gate{A,B,C,D} + gateX + plan codex
+// - v1 → v2 auto-migration on read
+// - overrides{} tracks workflow override <target> <reason> state
+// - Legacy 6 fields removed (simplifier / specCheck / codeReviewer / ...)
+// - Gate completion judgment moved to workflow-gates.mjs
 // ============================================================================
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
@@ -21,10 +29,13 @@ const CODE_EXTENSIONS = new Set([
 ]);
 const DOC_EXTENSIONS = new Set(['.md', '.txt', '.rst', '.yml', '.yaml']);
 
-// ── Default state ──────────────────────────────────────────────────────────
+const SMART_RESET_THRESHOLD = 10;
+
+// ── Default state (v2 schema) ──────────────────────────────────────────────
 
 function getDefaultState() {
   return {
+    schemaVersion: 2,
     modifiedFiles: [],
     completedSteps: {
       // Planning phase
@@ -32,15 +43,23 @@ function getDefaultState() {
       ceoReview: false,
       engReview: false,
       planLinusReview: false,
-      // Coding phase
-      codeReview: false,
-      linusReview: false,
+      planCodexReview: false,
+      planCodexVerdict: null,        // "approve" | "needs-attention" | "degraded" | null
+      // Coding phase (5 gates)
+      gateSafetyDone: false,
+      gateProjectFitDone: false,
+      gateTasteDone: false,
+      gateCleanupDone: false,
+      gateXCodexDone: false,
+      gateXCodexVerdict: null,       // "approve" | "needs-attention" | "degraded" | null
       buildPassed: false,
     },
+    overrides: {},                    // { gateX: {reason, timestamp}, "unblock-next": {active, reason}, ... }
     buildRetryCount: 0,
     lastModified: '',
     sessionId: '',
     currentPlanFile: '',
+    currentTask: '',
     lineChangeSinceReview: 0,
   };
 }
@@ -51,6 +70,46 @@ function ensureWorkflowDir() {
   if (!existsSync(WORKFLOW_DIR)) {
     mkdirSync(WORKFLOW_DIR, { recursive: true });
   }
+}
+
+// ── v1 → v2 migration ──────────────────────────────────────────────────────
+
+function migrateV1ToV2(state) {
+  const defaults = getDefaultState();
+  state.completedSteps ??= {};
+
+  // Map old booleans to new gate flags
+  if (state.completedSteps.codeReview === true) {
+    state.completedSteps.gateSafetyDone = true;
+    state.completedSteps.gateProjectFitDone = true;
+    state.completedSteps.gateCleanupDone = true;
+  }
+  if (state.completedSteps.linusReview === true) {
+    state.completedSteps.gateTasteDone = true;
+  }
+
+  // Remove legacy keys
+  const legacyKeys = [
+    'codeReview', 'linusReview',
+    'simplifier', 'specCheck', 'codeReviewer',
+    'securityReviewer', 'linusGreen', 'mergeBackPending',
+  ];
+  for (const key of legacyKeys) {
+    delete state.completedSteps[key];
+    delete state[key];
+  }
+
+  // Fill defaults for all new v2 fields
+  for (const [key, val] of Object.entries(defaults.completedSteps)) {
+    if (state.completedSteps[key] === undefined) {
+      state.completedSteps[key] = val;
+    }
+  }
+  state.overrides ??= {};
+  state.currentTask ??= '';
+  state.schemaVersion = 2;
+
+  return state;
 }
 
 // ── Read / Write state ─────────────────────────────────────────────────────
@@ -64,27 +123,29 @@ export function getWorkflowState() {
 
   try {
     const content = readFileSync(STATE_FILE, 'utf-8');
-    const state = JSON.parse(content);
-    const defaults = getDefaultState();
+    let state = JSON.parse(content);
 
-    // Ensure all required fields exist
-    if (!Array.isArray(state.modifiedFiles)) {
-      state.modifiedFiles = [];
+    // v1 → v2 migration
+    if (!state.schemaVersion || state.schemaVersion < 2) {
+      state = migrateV1ToV2(state);
+      setWorkflowState(state);
     }
 
+    // Defensive: ensure required fields exist even after migration
+    const defaults = getDefaultState();
+    if (!Array.isArray(state.modifiedFiles)) state.modifiedFiles = [];
     if (!state.completedSteps || typeof state.completedSteps !== 'object') {
       state.completedSteps = defaults.completedSteps;
-    } else {
-      for (const step of Object.keys(defaults.completedSteps)) {
-        if (state.completedSteps[step] === undefined) {
-          state.completedSteps[step] = false;
-        }
+    }
+    for (const step of Object.keys(defaults.completedSteps)) {
+      if (state.completedSteps[step] === undefined) {
+        state.completedSteps[step] = defaults.completedSteps[step];
       }
     }
-
-    // Ensure other fields exist
     if (state.currentPlanFile === undefined) state.currentPlanFile = '';
+    if (state.currentTask === undefined) state.currentTask = '';
     if (state.lineChangeSinceReview === undefined) state.lineChangeSinceReview = 0;
+    if (!state.overrides || typeof state.overrides !== 'object') state.overrides = {};
 
     return state;
   } catch {
@@ -116,7 +177,7 @@ export function isDocFile(filePath) {
   return DOC_EXTENSIONS.has(extname(filePath).toLowerCase());
 }
 
-// ── File tracking ──────────────────────────────────────────────────────────
+// ── File tracking (with gate-aware smart reset) ────────────────────────────
 
 export function addModifiedFile(filePath, lineCount = 0) {
   const state = getWorkflowState();
@@ -132,22 +193,34 @@ export function addModifiedFile(filePath, lineCount = 0) {
     state.modifiedFiles.push(normalized);
   }
 
-  // If code file, handle review step resets
   if (isCodeFile(filePath)) {
     state.lineChangeSinceReview = (state.lineChangeSinceReview || 0) + lineCount;
 
-    if (state.completedSteps.codeReview) {
-      // Code review done → small changes (< 10 lines) warn but preserve
-      if (state.lineChangeSinceReview >= 10) {
-        state.completedSteps.codeReview = false;
-        state.completedSteps.linusReview = false;
+    // Smart reset: if any gate is complete, apply threshold
+    const anyGateDone = state.completedSteps.gateSafetyDone ||
+                       state.completedSteps.gateProjectFitDone ||
+                       state.completedSteps.gateTasteDone ||
+                       state.completedSteps.gateCleanupDone;
+
+    if (anyGateDone) {
+      if (state.lineChangeSinceReview >= SMART_RESET_THRESHOLD) {
+        // Reset all coding phase gates + build
+        state.completedSteps.gateSafetyDone = false;
+        state.completedSteps.gateProjectFitDone = false;
+        state.completedSteps.gateTasteDone = false;
+        state.completedSteps.gateCleanupDone = false;
+        state.completedSteps.gateXCodexDone = false;
+        state.completedSteps.gateXCodexVerdict = null;
         state.completedSteps.buildPassed = false;
         state.lineChangeSinceReview = 0;
       }
     } else {
-      // Code review not done → reset all coding steps
-      state.completedSteps.codeReview = false;
-      state.completedSteps.linusReview = false;
+      // No gate done yet → reset ensures fresh start
+      state.completedSteps.gateSafetyDone = false;
+      state.completedSteps.gateProjectFitDone = false;
+      state.completedSteps.gateTasteDone = false;
+      state.completedSteps.gateCleanupDone = false;
+      state.completedSteps.gateXCodexDone = false;
       state.completedSteps.buildPassed = false;
     }
   }
@@ -159,8 +232,12 @@ export function addModifiedFile(filePath, lineCount = 0) {
 // ── Step management ────────────────────────────────────────────────────────
 
 const VALID_STEPS = [
-  'planner', 'ceoReview', 'engReview', 'planLinusReview',
-  'codeReview', 'linusReview', 'buildPassed',
+  // Planning
+  'planner', 'ceoReview', 'engReview', 'planLinusReview', 'planCodexReview',
+  // Coding (5 gates)
+  'gateSafetyDone', 'gateProjectFitDone', 'gateTasteDone',
+  'gateCleanupDone', 'gateXCodexDone',
+  'buildPassed',
 ];
 
 export function completeStep(stepName) {
@@ -169,8 +246,8 @@ export function completeStep(stepName) {
   }
   const state = getWorkflowState();
   state.completedSteps[stepName] = true;
-  // Reset cumulative line counter when review completes
-  if (stepName === 'codeReview') {
+  // Reset cumulative line counter when Gate A (first gate) completes
+  if (stepName === 'gateSafetyDone') {
     state.lineChangeSinceReview = 0;
   }
   setWorkflowState(state);
@@ -193,18 +270,17 @@ export function resetWorkflowState() {
   return state;
 }
 
-// ── Query helpers ──────────────────────────────────────────────────────────
-
-export function getCodingMissingSteps() {
-  const state = getWorkflowState();
-  const required = ['codeReview', 'linusReview'];
-  return required.filter((step) => !state.completedSteps[step]);
-}
+// ── Query helpers (kept for backward compat; prefer workflow-gates.mjs) ────
 
 export function getPlanningMissingSteps() {
   const state = getWorkflowState();
-  const required = ['ceoReview', 'engReview', 'planLinusReview'];
-  return required.filter((step) => !state.completedSteps[step]);
+  const required = [
+    ['ceoReview', 'CEO Review'],
+    ['engReview', 'Eng Review'],
+    ['planLinusReview', 'Plan Linus Review'],
+    ['planCodexReview', 'Plan Codex Adversarial Review'],
+  ];
+  return required.filter(([key]) => !state.completedSteps[key]).map(([, name]) => name);
 }
 
 export function hasCodeFiles() {
@@ -219,7 +295,7 @@ export function showWorkflowStatus() {
   const log = (msg) => process.stderr.write(msg + '\n');
 
   log('');
-  log('====== Workflow Status ======');
+  log('====== Workflow Status (v2 schema) ======');
   log('');
 
   // Modified files
@@ -237,23 +313,30 @@ export function showWorkflowStatus() {
   // Step status
   log('Completed Steps:');
 
-  log('  -- Planning Phase --');
+  log('  -- Planning Phase (4 reviewers) --');
   const planSteps = [
     { key: 'planner', name: 'Planner (optional)' },
     { key: 'ceoReview', name: 'CEO Review' },
     { key: 'engReview', name: 'Eng Review' },
     { key: 'planLinusReview', name: 'Plan Linus Review' },
+    { key: 'planCodexReview', name: 'Plan Codex Adversarial Review' },
   ];
   for (const { key, name } of planSteps) {
     const done = state.completedSteps[key];
     const icon = done ? '[x]' : '[ ]';
     log(`  ${icon} ${name}`);
   }
+  if (state.completedSteps.planCodexVerdict) {
+    log(`       planCodexVerdict: ${state.completedSteps.planCodexVerdict}`);
+  }
 
-  log('  -- Coding Phase --');
+  log('  -- Coding Phase (5 gates) --');
   const codeSteps = [
-    { key: 'codeReview', name: 'Combined Code Review' },
-    { key: 'linusReview', name: 'Linus Review' },
+    { key: 'gateSafetyDone', name: 'Gate A — Safety' },
+    { key: 'gateProjectFitDone', name: 'Gate B — Project Fit' },
+    { key: 'gateTasteDone', name: 'Gate C — Taste' },
+    { key: 'gateCleanupDone', name: 'Gate D — Cleanup' },
+    { key: 'gateXCodexDone', name: 'Gate X — Cross-Model' },
     { key: 'buildPassed', name: 'Build Passed' },
   ];
   for (const { key, name } of codeSteps) {
@@ -261,13 +344,34 @@ export function showWorkflowStatus() {
     const icon = done ? '[x]' : '[ ]';
     log(`  ${icon} ${name}`);
   }
+  if (state.completedSteps.gateXCodexVerdict) {
+    log(`       gateXCodexVerdict: ${state.completedSteps.gateXCodexVerdict}`);
+  }
+
+  // Active overrides
+  const overrides = Object.entries(state.overrides || {}).filter(([, v]) => {
+    if (!v) return false;
+    if (typeof v === 'object' && v.active === false) return false;
+    return true;
+  });
+  if (overrides.length > 0) {
+    log('');
+    log('  -- Active Overrides --');
+    for (const [target, data] of overrides) {
+      const reason = typeof data === 'object' ? data.reason : data;
+      log(`  ! ${target}: ${String(reason).slice(0, 80)}${String(reason).length > 80 ? '...' : ''}`);
+    }
+  }
 
   if (state.currentPlanFile) {
     log('');
     log(`  Active Plan: ${state.currentPlanFile}`);
   }
+  if (state.currentTask) {
+    log(`  Active Task: ${state.currentTask}`);
+  }
 
   log('');
-  log('================================');
+  log('=========================================');
   log('');
 }

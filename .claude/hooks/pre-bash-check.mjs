@@ -1,18 +1,25 @@
 // ============================================================================
-// pre-bash-check.mjs - PreToolUse Hook: Bash Command Interceptor & Commit Gate
+// pre-bash-check.mjs - PreToolUse Hook: Bash Interceptor + Commit Gate (v2)
 // ============================================================================
-// Protected file detection, git conventions, tiered commit gating.
-// Dangerous command blocking (EF migrations, git add .) moved to deny permissions.
+// Protected file detection, git conventions, v2 5-gate commit gating with
+// Findings Ledger validation.
+//
+// UPDATED (pipeline redesign):
+// - Commit gate now validates: 5 gates complete + Codex verdict OK + all Code
+//   phase ledger MEDIUM+ findings disposed + build passed
+// - Uses commit-gate-validator.mjs helper for separation of concerns
+// - Keeps: protected files, git merge --no-ff reminder, conventional commits,
+//   final backend+frontend build, reset after success
 // ============================================================================
 
 import { execSync } from 'child_process';
 import {
   getWorkflowState,
-  isCodeFile,
   resetStep,
   resetWorkflowState,
-  getCodingMissingSteps,
+  isCodeFile,
 } from './workflow-state.mjs';
+import { validateCommitPreconditions } from './commit-gate-validator.mjs';
 import { parseHookInput, log } from './hook-utils.mjs';
 
 // ── Main ───────────────────────────────────────────────────────────────────
@@ -86,18 +93,13 @@ if (!isHeredoc && msgMatch) {
 }
 
 // ============================================================================
-// 2. Get workflow state
+// 2. Get workflow state + check for tracked code files
 // ============================================================================
 
 const state = getWorkflowState();
 
-// ============================================================================
-// 3. Check for tracked code files
-// ============================================================================
-
 let codeFilesExist = state.modifiedFiles.some((f) => isCodeFile(f));
 
-// If no tracked code files, check git staged files
 if (!codeFilesExist && state.modifiedFiles.length === 0) {
   try {
     const staged = execSync('git diff --cached --name-only', { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
@@ -108,12 +110,9 @@ if (!codeFilesExist && state.modifiedFiles.length === 0) {
         .filter(f => !f.startsWith('.claude/'))
         .some((f) => codeExts.has(extname(f).toLowerCase()));
     }
-  } catch {
-    // Git not available
-  }
+  } catch { /* git not available */ }
 }
 
-// Pure doc modification, skip workflow checks
 if (!codeFilesExist) {
   log('');
   log('[Workflow] No code files detected - skipping workflow checks');
@@ -122,41 +121,35 @@ if (!codeFilesExist) {
 }
 
 // ============================================================================
-// 4. Commit gating — all code changes require full pipeline
+// 3. Commit gating — validate preconditions via helper
 // ============================================================================
 
-const missingSteps = getCodingMissingSteps();
-
-if (missingSteps.length > 0) {
-  const stepDisplayNames = {
-    codeReview: 'Combined Code Review (run code-simplifier + code-review-specialist + security-vuln-scanner)',
-    linusReview: 'Linus Review (run linus-reviewer agent)',
-  };
-
-  const stepList = missingSteps.map((s) => `  [ ] ${stepDisplayNames[s] || s}`).join('\n');
-
-  const message = `COMMIT BLOCKED - Workflow steps incomplete!
-
-Missing steps:
-${stepList}
-
-Complete these steps, then commit will be allowed.
-
-Commands:
-- 'workflow status' - View current status
-- 'workflow reset' - Reset all steps
-- 'workflow skip <step>' - Skip a step (not recommended)`;
-
+const result = validateCommitPreconditions();
+if (!result.ok) {
+  const message = `COMMIT BLOCKED - Workflow preconditions not met!\n\n${result.blocker}\n\n` +
+                  `Commands:\n` +
+                  `- 'workflow status'                          View current status + ledger progress\n` +
+                  `- 'workflow override <target> <reason ≥ 20>' Emergency override\n`;
   process.stderr.write(message);
   process.exit(2);
 }
 
+// Show warnings (non-blocking)
+if (result.warnings && result.warnings.length > 0) {
+  log('');
+  log('[Workflow] Commit allowed with warnings:');
+  for (const w of result.warnings) {
+    log(`  ⚠️  ${w}`);
+  }
+  log('');
+}
+
 // ============================================================================
-// 5. All steps complete, run final Build verification
+// 4. Run final Build verification
 // ============================================================================
 
 log('');
-log('[Workflow] All steps completed! Running final build verification...');
+log('[Workflow] All 5 gates completed + ledger disposed! Running final build verification...');
 log('');
 
 // Backend build
@@ -176,14 +169,7 @@ try {
   let output = (err.stdout || '') + (err.stderr || '');
   if (output.length > 800) output = output.substring(0, 800) + '...';
 
-  const message = `FINAL BUILD FAILED (backend) - Cannot commit!
-
-Build output:
-${output}
-
-Please fix the build errors and try again.
-The workflow will need to re-verify the build.`;
-
+  const message = `FINAL BUILD FAILED (backend) - Cannot commit!\n\nBuild output:\n${output}\n\nPlease fix the build errors and try again.\nThe workflow will need to re-verify the build.`;
   process.stderr.write(message);
   process.exit(2);
 }
@@ -210,25 +196,19 @@ if (hasFrontendFiles) {
     let output = (err.stdout || '') + (err.stderr || '');
     if (output.length > 800) output = output.substring(0, 800) + '...';
 
-    const message = `FINAL BUILD FAILED (frontend) - Cannot commit!
-
-Type check output:
-${output}
-
-Please fix the type errors and try again.`;
-
+    const message = `FINAL BUILD FAILED (frontend) - Cannot commit!\n\nType check output:\n${output}\n\nPlease fix the type errors and try again.`;
     process.stderr.write(message);
     process.exit(2);
   }
 }
 
 // ============================================================================
-// 6. Build success, allow commit
+// 5. Build success, allow commit
 // ============================================================================
 
 log('');
 log('[Workflow] Final build passed!');
-log('[Workflow] All workflow steps completed - commit allowed');
+log('[Workflow] All workflow gates + build completed - commit allowed');
 
 // Reset workflow state after successful commit
 resetWorkflowState();

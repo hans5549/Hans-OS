@@ -160,6 +160,16 @@
             "timeout": 10
           }
         ]
+      },
+      {
+        "matcher": "Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/pre-agent-gate-check.mjs",
+            "timeout": 10
+          }
+        ]
       }
     ],
     "PostToolUse": [

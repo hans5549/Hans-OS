@@ -74,3 +74,6 @@ skills-lock.json
 .claude/specs/
 .claude/settings.local.json
 .claude/agent-memory/
+
+# Local hook backups (from pipeline migrations)
+.claude/hooks.backup-*/

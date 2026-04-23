@@ -1,9 +1,13 @@
 // ============================================================================
-// pre-edit-check.mjs - PreToolUse Hook: File Edit Tracker
+// pre-edit-check.mjs - PreToolUse Hook: File Edit Tracker (v2)
 // ============================================================================
 // Tracks code file modifications, maintains main branch protection,
 // records currentPlanFile when .claude/plans/*.md is written.
-// Supports: Edit, MultiEdit, Write, mcp__filesystem__edit_file, mcp__filesystem__write_file
+//
+// UPDATED (pipeline redesign):
+// - Main branch check is now fail-closed (detached HEAD etc. blocks unless
+//   HANS_OS_SKIP_BRANCH_CHECK=1 env var set)
+// - Logging messages updated to reference gate schema (not old codeReview)
 // ============================================================================
 
 import { execSync } from 'child_process';
@@ -18,17 +22,15 @@ if (!parsed) process.exit(0);
 const toolName = parsed.tool_name;
 if (!toolName) process.exit(0);
 
-// Check if this is a tool we want to track
 const trackedTools = ['Edit', 'MultiEdit', 'Write', 'mcp__filesystem__edit_file', 'mcp__filesystem__write_file'];
 if (!trackedTools.includes(toolName)) {
   process.exit(0);
 }
 
 // ============================================================================
-// 1. Main Branch Protection + Worktree Enforcement
+// 1. Main Branch Protection (fail-closed on branch check failure)
 // ============================================================================
 
-// Allow workflow file writes on main (plans, reviews, specs, test-plans, workflow)
 const _ti = parsed.tool_input || {};
 const _targetPath = (_ti.file_path || _ti.path || '').replace(/\\/g, '/');
 const isWorkflowFile = /\.claude\/(plans|reviews|test-plans|specs|workflow)\//i.test(_targetPath);
@@ -47,7 +49,17 @@ try {
     process.exit(2);
   }
 } catch (err) {
-  log(`[WARNING] Git branch check failed: ${err.message || 'unknown error'}. Main branch protection skipped.`);
+  // Fail-closed: block edits when branch check fails (e.g., detached HEAD)
+  // unless explicit opt-out via env var
+  if (process.env.HANS_OS_SKIP_BRANCH_CHECK !== '1' && !isWorkflowFile) {
+    process.stderr.write(
+      `BLOCKED: Unable to verify git branch (${err.message || 'unknown error'}).\n` +
+      `This typically means detached HEAD or git unavailable.\n` +
+      `Set HANS_OS_SKIP_BRANCH_CHECK=1 to bypass this check for legitimate cases.\n`
+    );
+    process.exit(2);
+  }
+  log(`[WARNING] Git branch check failed but bypass env set: ${err.message || 'unknown error'}.`);
 }
 
 // ============================================================================
@@ -74,7 +86,7 @@ try {
 }
 
 // ============================================================================
-// 2. Extract File Path (MUST come before Sensitive File Warning)
+// 2. Extract File Path
 // ============================================================================
 
 let filePath = null;
@@ -99,7 +111,7 @@ switch (toolName) {
 {
   const fp = input.file_path || input.path || '';
   if (fp && /appsettings.*\.json$/i.test(fp)) {
-    log('[WARNING] Editing appsettings.json — connection strings, JWT keys should be set via environment variables.');
+    log('[WARNING] Editing appsettings.json — connection strings, JWT signing keys should be set via environment variables.');
   }
 }
 
@@ -126,7 +138,7 @@ if (filePath) {
   const isDoc = isDocFile(filePath);
 
   if (isCode || isDoc) {
-    // Estimate line count from edit (rough: count newlines in new_string)
+    // Estimate line count from edit
     let lineCount = 0;
     if (input.new_string) {
       lineCount = (input.new_string.match(/\n/g) || []).length;
@@ -139,18 +151,21 @@ if (filePath) {
     if (isCode) {
       const codeCount = state.modifiedFiles.filter((f) => isCodeFile(f)).length;
       const cumLines = state.lineChangeSinceReview || 0;
+      const anyGateDone = state.completedSteps.gateSafetyDone ||
+                         state.completedSteps.gateProjectFitDone ||
+                         state.completedSteps.gateTasteDone ||
+                         state.completedSteps.gateCleanupDone;
 
-      if (state.completedSteps.codeReview && cumLines > 0 && cumLines < 10) {
-        log(`[Workflow] Tracking code edit: ${filePath} (+${lineCount} lines, cumulative ${cumLines}/10 — reviews preserved)`);
+      if (anyGateDone && cumLines > 0 && cumLines < 10) {
+        log(`[Workflow] Tracking code edit: ${filePath} (+${lineCount} lines, cumulative ${cumLines}/10 — gates preserved)`);
       } else {
         log(`[Workflow] Tracking code file: ${filePath} | Total code files: ${codeCount}`);
-        if (!state.completedSteps.codeReview || cumLines >= 10) {
-          log('[Workflow] Review steps have been reset');
+        if (!anyGateDone || cumLines >= 10) {
+          log('[Workflow] Coding phase gate steps have been reset');
         }
       }
     }
   }
 }
 
-// Allow operation to continue
 process.exit(0);

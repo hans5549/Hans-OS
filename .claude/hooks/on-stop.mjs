@@ -4,6 +4,11 @@
 // On session end:
 // 1. Clean up stale .build-lock directory
 // 2. Remind about pending workflow steps (non-blocking)
+// 3. Auto-write session summary to progress.md
+//
+// UPDATED (pipeline redesign):
+// - stepNames migrated from legacy schema (codeReview/linusReview)
+//   to new schema (gateSafetyDone / gateProjectFitDone / gateTasteDone / gateCleanupDone / gateXCodexDone / planCodexReview)
 // ============================================================================
 
 import { existsSync, readFileSync, appendFileSync, rmdirSync } from 'fs';
@@ -39,11 +44,17 @@ if (existsSync(STATE_FILE)) {
 
     if (files.length > 0) {
       const stepNames = [
+        // Planning phase
         ['ceoReview', 'CEO Review'],
         ['engReview', 'Eng Review'],
         ['planLinusReview', 'Plan Linus'],
-        ['codeReview', 'Code Review'],
-        ['linusReview', 'Linus Review'],
+        ['planCodexReview', 'Plan Codex'],
+        // Coding phase (5 gates)
+        ['gateSafetyDone', 'Gate A Safety'],
+        ['gateProjectFitDone', 'Gate B Project Fit'],
+        ['gateTasteDone', 'Gate C Taste'],
+        ['gateCleanupDone', 'Gate D Cleanup'],
+        ['gateXCodexDone', 'Gate X Codex'],
         ['buildPassed', 'Build'],
       ];
 
@@ -61,7 +72,7 @@ if (existsSync(STATE_FILE)) {
   } catch { /* ignore */ }
 }
 
-// ── Area 2c: Auto-write session summary to progress.md ───────────────────
+// ── Auto-write session summary to progress.md ─────────────────────────────
 
 const progressPath = resolve(PROJECT_ROOT, '.claude', 'workflow', 'progress.md');
 
@@ -79,7 +90,7 @@ if (existsSync(STATE_FILE)) {
     } catch { /* git not available */ }
 
     const completedStepNames = Object.entries(state.completedSteps || {})
-      .filter(([, v]) => v)
+      .filter(([, v]) => v === true) // only boolean-true, not null/objects
       .map(([k]) => k);
 
     const summary = [

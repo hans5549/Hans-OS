@@ -1,9 +1,13 @@
 // ============================================================================
 // pre-compact.mjs - PreCompact Hook: Context Preservation + Reboot Test
 // ============================================================================
-// Merged from project pre-compact + global pre-compact-context.
-// Injects: git context, workflow state, reboot test, plan/findings/progress
+// Injects: git context, workflow state, reboot test, plan / deferred / progress
 // BEFORE context compaction, so Claude retains key information after compression.
+//
+// UPDATED (pipeline redesign):
+// - stepNames migrated to new 5-gate schema
+// - findings.md dead code REMOVED (never written by any hook)
+// - Replaced by reading deferred.md (future TODO tracking per Findings Ledger)
 // ============================================================================
 
 import { execSync } from 'child_process';
@@ -16,7 +20,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const PROJECT_ROOT = resolve(__dirname, '..', '..');
 
-// ── 1. Reboot Test (from global pre-compact-context) ─────────────────────
+// ── 1. Reboot Test ────────────────────────────────────────────────────────
 
 log('');
 log('[Reboot Test — PreCompact]');
@@ -66,9 +70,13 @@ if (existsSync(STATE_FILE)) {
     const steps = state.completedSteps || {};
 
     if (files.length > 0) {
+      // New 5-gate schema
       const stepNames = [
-        ['codeReview', 'Review'],
-        ['linusReview', 'Linus'],
+        ['gateSafetyDone', 'A-Safety'],
+        ['gateProjectFitDone', 'B-ProjectFit'],
+        ['gateTasteDone', 'C-Taste'],
+        ['gateCleanupDone', 'D-Cleanup'],
+        ['gateXCodexDone', 'X-Codex'],
         ['buildPassed', 'Build'],
       ];
 
@@ -115,28 +123,34 @@ if (activePlan) {
   }
 }
 
-// ── 5. Findings summary (from global pre-compact-context) ────────────────
+// ── 5. Deferred findings summary (replaces old findings.md dead code) ─────
 
-const findingsPath = resolve(PROJECT_ROOT, '.claude', 'workflow', 'findings.md');
-if (existsSync(findingsPath)) {
-  const findings = readFileSync(findingsPath, 'utf-8');
-  if (findings.trim().split('\n').length > 3) {
-    log('[Findings Summary]');
-    log(readFirstNLines(findingsPath, 20));
-    log('');
-  }
+const deferredPath = resolve(PROJECT_ROOT, '.claude', 'workflow', 'deferred.md');
+if (existsSync(deferredPath)) {
+  try {
+    const deferred = readFileSync(deferredPath, 'utf-8');
+    // Count open entries: entries with `Status: open`
+    const openEntries = (deferred.match(/^## entry-\d+[\s\S]*?Status:\s*open/gm) || []).length;
+    if (openEntries > 0) {
+      log(`[Context] ${openEntries} deferred findings awaiting future handling`);
+      log(readFirstNLines(deferredPath, 20));
+      log('');
+    }
+  } catch { /* non-critical */ }
 }
 
-// ── 6. Progress summary (from global pre-compact-context) ────────────────
+// ── 6. Progress summary ────────────────────────────────────────────────────
 
 const progressPath = resolve(PROJECT_ROOT, '.claude', 'workflow', 'progress.md');
 if (existsSync(progressPath)) {
-  const progress = readFileSync(progressPath, 'utf-8');
-  if (progress.trim().split('\n').length > 3) {
-    log('[Progress Summary]');
-    log(readFirstNLines(progressPath, 15));
-    log('');
-  }
+  try {
+    const progress = readFileSync(progressPath, 'utf-8');
+    if (progress.trim().split('\n').length > 3) {
+      log('[Progress Summary]');
+      log(readFirstNLines(progressPath, 15));
+      log('');
+    }
+  } catch { /* non-critical */ }
 }
 
 process.exit(0);
