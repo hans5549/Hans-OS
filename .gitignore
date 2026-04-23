@@ -55,10 +55,22 @@ lerna-debug.log*
 # Local agent / tool state
 .agent/
 .agents/
-.claude/
 .codex/
 !.Codex/
 !.Codex/**
 .codex-temp/
 .config/
 skills-lock.json
+
+# .claude/ — track design artifacts (agents, rules, hooks, CLAUDE.md docs)
+#            ignore runtime state (state.json, build-lock, reviews, plans, specs, ledgers, local settings, agent memory)
+.claude/workflow/state.json
+.claude/workflow/.build-lock/
+.claude/workflow/skip-log.md
+.claude/workflow/ledger-*.md
+.claude/workflow/findings.md
+.claude/reviews/
+.claude/plans/
+.claude/specs/
+.claude/settings.local.json
+.claude/agent-memory/

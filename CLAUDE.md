@@ -139,18 +139,24 @@ Model: `claude-opus-4.6`
 
 ### Phase 2: Plan Mode (Hard Gate, **required** for code changes)
 
-Claude Code's built-in plan mode. System prevents code edits. Plan review agents validate before exit.
+Claude Code's built-in plan mode. System prevents code edits. **4 plan reviewers** validate before exit.
 
 | Step | Agent | Model |
 |------|-------|-------|
 | CEO Review | `plan-ceo-reviewer` | `claude-opus-4.6` |
 | Eng Review | `plan-eng-reviewer` | `claude-opus-4.6` |
 | Plan Linus Review | `plan-linus-reviewer` | `gpt-5.4` |
+| **Plan Codex Adversarial Review** | `plan-codex-adversarial-reviewer`（wrapper） | `sonnet` (wrapper) + `gpt-5.4` (Codex actual) |
 
-Dispatch all 3 **in parallel** (one message, multiple Agent tool calls).
-`pre-exit-plan-check` hook blocks ExitPlanMode until all 3 complete.
+Dispatch all **4 in parallel** (single message, 4 Agent tool calls).
+`pre-exit-plan-check` hook blocks ExitPlanMode until:
+- All 4 reviewers complete
+- `planCodexVerdict !== "needs-attention"`
+- All Plan Ledgers (`.claude/workflow/ledger-plan-*.md`) have MEDIUM+ findings disposed (FIXED/INCORPORATED/DISMISSED/DEFERRED)
 
-**Review Conflict Resolution**: When CEO review and Linus review conflict (e.g., CEO suggests expansion, Linus flags over-engineering), do NOT auto-resolve. Present both positions to the user for decision.
+**Review Conflict Resolution**: When reviewers conflict (e.g., CEO suggests expansion, Linus flags over-engineering, Codex raises unseen failure mode), do NOT auto-resolve. Present all positions to the user for decision.
+
+**Plan Codex Degradation**: 若 Codex wrapper 回傳 verdict=`DEGRADED`（未登入/timeout/quota），使用 `workflow override planCodex <reason>` 跳過（reason ≥ 20 字，記入 skip-log.md）。
 
 ### Phase 3: Task Execution (TDD required)
 
@@ -165,21 +171,40 @@ Dispatch all 3 **in parallel** (one message, multiple Agent tool calls).
 
 只有純文件、純註解、純環境設定且不改 runtime 行為的變更，才可跳過 RED/GREEN；若是行為變更，必須有測試。
 
-### Phase 4: Task Review Pipeline (hooks enforced)
+### Phase 4: Task Review Pipeline (hooks enforced, mission-based gates)
 
 ```
-[Combined Code Review] all 3 parallel (gpt-5.4) → Linus (gpt-5.4) → Build → Task Commit
+Gate A (Safety) → Gate B (Project Fit) → Gate C (Taste) → Gate D (Cleanup) → Gate X (Cross-Model) → Build → stop-review-gate → Task Commit
 ```
 
-| Step | Agents | Model | Completion Signal |
-|------|--------|-------|-------------------|
-| Combined Code Review | `code-simplifier` + `code-review-specialist` + `security-vuln-scanner` | `gpt-5.4` | auto-completed by hook (any of the 3 agents marks step done) |
-| Linus Review | `linus-reviewer` | `gpt-5.4` | after Combined Code Review |
-| Build | Auto-verified on commit | — | Automatic |
+每個 gate 依序執行，**前一關 findings 全部 disposition 才能 dispatch 下一關**（`pre-agent-gate-check` hook 強制）。
 
-**Dispatch pattern**: Dispatch all 3 Code Review agents **in parallel** (one message, multiple Agent tool calls). After all complete, dispatch Linus Review. Do not dispatch sequentially.
+| Gate | Mission | Agent | Model |
+|------|---------|-------|-------|
+| **Gate A** | Safety（OWASP 專精） | `security-vuln-scanner` | `claude-opus-4.6` |
+| **Gate B** | Project Fit（Hans-OS 架構/spec/慣例） | `code-review-specialist` | `claude-opus-4.6` |
+| **Gate C** | Taste & Back-compat（Linus 品味） | `linus-reviewer` | `claude-opus-4.6` |
+| **Gate D** | Post-AI Cleanup（簡化） | `code-simplifier` | `sonnet` |
+| **Gate X** | Cross-Model Verification（跨模型） | `gatex-codex-reviewer`（wrapper） | `sonnet` (wrapper) + `gpt-5.4` (Codex actual) |
+| Build | 自動 build 驗證 | — | Automatic |
+| stop-review-gate | Codex verdict 最終 safety net | OpenAI Codex | `gpt-5.4` |
 
-**Task commit rule**: 單一 task 完成後才能 commit；commit 前要確認 TDD 步驟、review pipeline、build / typecheck / tests 都已完成，且 commit 內容只涵蓋目前 task。
+**Dispatch pattern**:
+- 依序 dispatch 單一訊息一個 agent（不是平行）
+- 每關完成後必須處理 Findings Ledger 的 MEDIUM+ findings 才能進下一關
+- Gate X 必須在 Gate A-D 全完成後才能 dispatch（`pre-agent-gate-check` 強制）
+
+**Findings Ledger 機制**：每個 agent 跑完自動生成 `.claude/workflow/ledger-{gate}-*.md`。主 Claude 對 MEDIUM+ findings 選擇 disposition：
+- `FIXED` + commit hash / file reference
+- `DISMISSED` + reason（false positive / not applicable）
+- `DEFERRED` + 連結到 `.claude/workflow/deferred.md#entry-{id}`
+- LOW/INFO 自動 DISMISSED
+
+`pre-bash-check` 在 commit 時檢查所有 ledger disposition；commit message 自動帶 `Ledger-Refs:` 欄位。
+
+**Override 逃生閥**：`workflow override <target> <reason>` 可跳過某個 gate 的完成要求（target: gateA/gateB/gateC/gateD/gateX/planCodex/unblock-next；reason ≥ 20 字；記入 skip-log.md；commit message 強制含 `Override-{target}-Reason:`）。
+
+**Task commit rule**: 單一 task 完成後才能 commit；commit 前要確認 TDD 步驟、5 個 gate、Ledger disposition、build / typecheck / tests 都已完成，且 commit 內容只涵蓋目前 task。
 
 ### Skip Rules (Binary)
 
@@ -205,11 +230,34 @@ No file-count tiers. Any code change = full pipeline.
 
 | Command | Description |
 |---------|-------------|
-| `workflow status` | View current workflow state, pending steps, current task |
+| `workflow status` | View current state, pending steps, ledger progress, deferred count |
 | `workflow reset` | Reset all workflow state (start fresh) |
 | `workflow skip <step>` | Skip a specific step (not recommended) |
+| `workflow override <target> <reason>` | 跳過特定 gate / plan reviewer 的完成要求（reason ≥ 20 字） |
 | `code-review` | Run full review workflow for current task without commit |
 | `commit this` | Run full workflow for current task and create git commit |
+
+### Workflow 檔案時間軸分工
+
+| 檔案 | 時間軸 | 寫入 | 讀取 |
+|------|-------|------|------|
+| `.claude/workflow/progress.md` | **過去**（session 總結） | `on-stop.mjs` | `pre-compact.mjs` |
+| `.claude/workflow/ledger-*.md` | **現在**（當前 task findings） | `post-agent-verify.mjs` | `pre-exit-plan-check` / `pre-agent-gate-check` / `pre-bash-check` |
+| `.claude/workflow/deferred.md` | **未來**（待處理 TODO） | 主 Claude（via Ledger disposition） | `pre-compact.mjs` / `workflow status` |
+| `.claude/workflow/skip-log.md` | override / skip 留痕 | workflow-orchestrator | 人工審計 |
+
+### Codex stop-review-gate 警示
+
+Pipeline 末端啟用了 OpenAI Codex 的 `stop-review-gate`——Claude 每次 Stop 時會觸發 Codex 對前一輪編輯做 targeted review，verdict=needs-attention 時會擋 Stop 直到問題處理完。
+
+**⚠️ 官方警告**：此 gate 會引發 Claude↔Codex loop，可能快速耗用 OpenAI API quota。**只建議在主動監控的 session 啟用**。
+
+**啟用**：`/codex:setup --enable-review-gate`
+**緊急關閉**：`/codex:setup --disable-review-gate`
+
+**費用監控**：定期檢查 OpenAI dashboard。每日 Hans-OS 開發估計 $1-5 USD。若異常偏高，先關閉 gate 排查。
+
+詳見 `.claude/rules/codex-integration.md`。
 
 ### Workflow Rules
 
