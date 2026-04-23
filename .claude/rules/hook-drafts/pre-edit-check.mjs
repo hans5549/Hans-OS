@@ -1,0 +1,171 @@
+// ============================================================================
+// pre-edit-check.mjs - PreToolUse Hook: File Edit Tracker (v2)
+// ============================================================================
+// Tracks code file modifications, maintains main branch protection,
+// records currentPlanFile when .claude/plans/*.md is written.
+//
+// UPDATED (pipeline redesign):
+// - Main branch check is now fail-closed (detached HEAD etc. blocks unless
+//   HANS_OS_SKIP_BRANCH_CHECK=1 env var set)
+// - Logging messages updated to reference gate schema (not old codeReview)
+// ============================================================================
+
+import { execSync } from 'child_process';
+import { getWorkflowState, setWorkflowState, addModifiedFile, isCodeFile, isDocFile } from './workflow-state.mjs';
+import { parseHookInput, log } from './hook-utils.mjs';
+
+// ── Main ───────────────────────────────────────────────────────────────────
+
+const parsed = await parseHookInput();
+if (!parsed) process.exit(0);
+
+const toolName = parsed.tool_name;
+if (!toolName) process.exit(0);
+
+const trackedTools = ['Edit', 'MultiEdit', 'Write', 'mcp__filesystem__edit_file', 'mcp__filesystem__write_file'];
+if (!trackedTools.includes(toolName)) {
+  process.exit(0);
+}
+
+// ============================================================================
+// 1. Main Branch Protection (fail-closed on branch check failure)
+// ============================================================================
+
+const _ti = parsed.tool_input || {};
+const _targetPath = (_ti.file_path || _ti.path || '').replace(/\\/g, '/');
+const isWorkflowFile = /\.claude\/(plans|reviews|test-plans|specs|workflow)\//i.test(_targetPath);
+
+try {
+  const branch = execSync('git branch --show-current', { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
+  if ((branch === 'main' || branch === 'master') && !isWorkflowFile) {
+    const state = getWorkflowState();
+    const hasPlan = state.currentPlanFile && state.currentPlanFile.length > 0;
+
+    process.stderr.write(
+      hasPlan
+        ? 'BLOCKED: Plan approved but you are on main branch. Create a feature branch first.\n\n  git checkout -b feature/your-feature-name'
+        : 'BLOCKED: Cannot edit files on main branch. Create a feature branch first.\n\n  git checkout -b feature/xxx'
+    );
+    process.exit(2);
+  }
+} catch (err) {
+  // Fail-closed: block edits when branch check fails (e.g., detached HEAD)
+  // unless explicit opt-out via env var
+  if (process.env.HANS_OS_SKIP_BRANCH_CHECK !== '1' && !isWorkflowFile) {
+    process.stderr.write(
+      `BLOCKED: Unable to verify git branch (${err.message || 'unknown error'}).\n` +
+      `This typically means detached HEAD or git unavailable.\n` +
+      `Set HANS_OS_SKIP_BRANCH_CHECK=1 to bypass this check for legitimate cases.\n`
+    );
+    process.exit(2);
+  }
+  log(`[WARNING] Git branch check failed but bypass env set: ${err.message || 'unknown error'}.`);
+}
+
+// ============================================================================
+// 1.5. Protected Files — prevent Claude from modifying hooks/state/settings
+// ============================================================================
+
+{
+  const ti = parsed.tool_input || {};
+  const targetPath = (ti.file_path || ti.path || '').replace(/\\/g, '/');
+  const PROTECTED_PATTERNS = [
+    /\.claude\/hooks\//i,
+    /\.claude\/workflow\/state\.json$/i,
+    /\.claude\/settings\.local\.json$/i,
+  ];
+
+  if (PROTECTED_PATTERNS.some(p => p.test(targetPath))) {
+    process.stderr.write(
+      `BLOCKED: "${targetPath}" is a protected workflow file.\n` +
+      `Hook files, workflow state, and settings cannot be modified during a session.\n` +
+      `If you need to modify hooks, ask the user to do it manually.`
+    );
+    process.exit(2);
+  }
+}
+
+// ============================================================================
+// 2. Extract File Path
+// ============================================================================
+
+let filePath = null;
+const input = parsed.tool_input || {};
+
+switch (toolName) {
+  case 'Edit':
+  case 'MultiEdit':
+  case 'Write':
+    filePath = input.file_path || null;
+    break;
+  case 'mcp__filesystem__edit_file':
+  case 'mcp__filesystem__write_file':
+    filePath = input.path || null;
+    break;
+}
+
+// ============================================================================
+// 2.5. Sensitive File Warning
+// ============================================================================
+
+{
+  const fp = input.file_path || input.path || '';
+  if (fp && /appsettings.*\.json$/i.test(fp)) {
+    log('[WARNING] Editing appsettings.json — connection strings, JWT signing keys should be set via environment variables.');
+  }
+}
+
+// ============================================================================
+// 3. Record currentPlanFile when writing to .claude/plans/*.md
+// ============================================================================
+
+if (filePath) {
+  const normalized = filePath.replace(/\\/g, '/');
+  if (/\.claude\/plans\/.*\.md$/i.test(normalized)) {
+    const state = getWorkflowState();
+    state.currentPlanFile = normalized;
+    setWorkflowState(state);
+    log(`[Workflow] Plan file recorded: ${normalized}`);
+  }
+}
+
+// ============================================================================
+// 4. Track File Modification
+// ============================================================================
+
+if (filePath) {
+  const isCode = isCodeFile(filePath);
+  const isDoc = isDocFile(filePath);
+
+  if (isCode || isDoc) {
+    // Estimate line count from edit
+    let lineCount = 0;
+    if (input.new_string) {
+      lineCount = (input.new_string.match(/\n/g) || []).length;
+    } else if (input.content) {
+      lineCount = (input.content.match(/\n/g) || []).length;
+    }
+
+    const state = addModifiedFile(filePath, lineCount);
+
+    if (isCode) {
+      const codeCount = state.modifiedFiles.filter((f) => isCodeFile(f)).length;
+      const cumLines = state.lineChangeSinceReview || 0;
+      const anyGateDone = state.completedSteps.gateSafetyDone ||
+                         state.completedSteps.gateProjectFitDone ||
+                         state.completedSteps.gateTasteDone ||
+                         state.completedSteps.gateCleanupDone;
+
+      if (anyGateDone && cumLines > 0 && cumLines < 10) {
+        log(`[Workflow] Tracking code edit: ${filePath} (+${lineCount} lines, cumulative ${cumLines}/10 — gates preserved)`);
+      } else {
+        log(`[Workflow] Tracking code file: ${filePath} | Total code files: ${codeCount}`);
+        if (!anyGateDone || cumLines >= 10) {
+          log('[Workflow] Coding phase gate steps have been reset');
+        }
+      }
+    }
+  }
+}
+
+process.exit(0);
