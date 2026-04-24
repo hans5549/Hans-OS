@@ -38,7 +38,7 @@ jobs:
         run: dotnet publish ${{ env.PROJECT_PATH }} --no-build -c Release -o ./publish
 
       - name: Zip artifact
-        run: zip -r release.zip ./publish
+        run: cd ./publish && zip -r ../release.zip . && cd ..
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
