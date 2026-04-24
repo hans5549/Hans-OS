@@ -185,7 +185,7 @@ const statusOptions: { color: string; label: string; value: TodoStatus }[] = [
 
 <template>
   <div
-    class="flex h-full flex-col border-l border-border bg-background"
+    class="flex h-full flex-col border-l border-border bg-background/80 backdrop-blur-xl"
     @keydown.esc.stop="emit('close')"
   >
     <!-- Header -->

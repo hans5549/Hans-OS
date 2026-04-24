@@ -4,8 +4,8 @@
   /* Default background color of <body />...etc */
   --background: 222deg 16% 11%;
 
-  /* 主体区域背景色 — deep navy for tech gradient base */
-  --background-deep: 222deg 50% 6%;
+  /* 主体区域背景色 — Apple near-black (#1d1d1f-like) deep dark */
+  --background-deep: 220deg 14% 5%;
   --foreground: 0 0% 95%;
 
   /* Background color for <Card /> */

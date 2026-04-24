@@ -70,7 +70,7 @@ function handleTagClick(tagId: string) {
 </script>
 
 <template>
-  <aside class="flex h-full w-56 flex-shrink-0 flex-col border-r border-border bg-background">
+  <aside class="flex h-full w-56 flex-shrink-0 flex-col border-r border-border bg-background/80 backdrop-blur-xl">
     <div class="flex-1 overflow-y-auto p-3">
       <!-- Smart Filters -->
       <div class="mb-4">

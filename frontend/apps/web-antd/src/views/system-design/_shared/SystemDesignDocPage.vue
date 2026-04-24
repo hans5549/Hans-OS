@@ -360,24 +360,20 @@ const selfTestActiveKeys = computed(() =>
 .hero-section {
   border: 1px solid hsl(var(--border));
   border-radius: 1rem;
-  background: linear-gradient(
-    180deg,
-    hsl(var(--card)) 0%,
-    hsl(var(--background)) 100%
-  );
+  background: var(--glass-card-bg);
+  backdrop-filter: blur(var(--glass-blur)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(180%);
   padding: 2rem;
-  box-shadow: 0 24px 64px -56px hsl(var(--foreground) / 0.35);
+  box-shadow: var(--glass-card-shadow);
 }
 
 /* ── 卡片共用 ── */
 .case-panel {
-  border: 1px solid hsl(var(--border));
-  background: linear-gradient(
-    180deg,
-    hsl(var(--card)) 0%,
-    hsl(var(--background)) 100%
-  );
-  box-shadow: 0 24px 64px -56px hsl(var(--foreground) / 0.35);
+  border: 1px solid hsl(var(--border)) !important;
+  background: var(--glass-card-bg) !important;
+  backdrop-filter: blur(var(--glass-blur)) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(180%) !important;
+  box-shadow: var(--glass-card-shadow) !important;
 }
 
 /* ── Kickers / Labels ── */
@@ -542,7 +538,9 @@ const selfTestActiveKeys = computed(() =>
   padding: 1.5rem;
   border-radius: 0.75rem;
   border: 1px solid hsl(var(--border));
-  background-color: hsl(var(--card));
+  background: var(--glass-card-bg);
+  backdrop-filter: blur(var(--glass-blur)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(180%);
 }
 
 /* ── Sidebar ── */

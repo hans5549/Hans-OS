@@ -1,58 +1,98 @@
 /**
- * Glass Tech Design System
- * Glassmorphism + Dark Tech aesthetic — applies on top of existing design tokens
+ * Glass Tech Design System — Apple Vibrancy Edition
+ * macOS/iOS-inspired frosted glass aesthetic applied on top of existing design tokens.
+ * Values calibrated to Apple's macOS vibrancy / iOS 18 material specs.
  */
 
 /* ── CSS Custom Properties ── */
 :root {
-  --glass-card-bg: rgba(255, 255, 255, 0.68);
-  --glass-card-border: rgba(148, 163, 184, 0.25);
-  --glass-card-bg-hover: rgba(255, 255, 255, 0.80);
-  --glass-blur: 12px;
+  /* Apple macOS Vibrancy — Light mode: high-opacity frosted white */
+  --glass-card-bg: rgba(255, 255, 255, 0.78);
+  --glass-card-border: rgba(0, 0, 0, 0.06);
+  --glass-card-bg-hover: rgba(255, 255, 255, 0.90);
+  --glass-card-shadow:
+    0 2px 20px rgba(0, 0, 0, 0.06),
+    0 1px 4px rgba(0, 0, 0, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.60);
+  --glass-blur: 24px;
+
+  /* Glass Panel — stronger Apple sheet / sidebar material */
+  --glass-panel-bg: rgba(255, 255, 255, 0.84);
+  --glass-panel-border: rgba(0, 0, 0, 0.07);
+  --glass-panel-shadow:
+    0 4px 32px rgba(0, 0, 0, 0.08),
+    0 1px 8px rgba(0, 0, 0, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.70);
+  --glass-panel-blur: 32px;
 }
 
 .dark {
-  --glass-card-bg: rgba(255, 255, 255, 0.05);
+  /* Apple macOS Vibrancy — Dark mode: graphite frosted surface (#1C1C1E) */
+  --glass-card-bg: rgba(28, 28, 30, 0.88);
   --glass-card-border: rgba(255, 255, 255, 0.10);
-  --glass-card-bg-hover: rgba(255, 255, 255, 0.08);
+  --glass-card-bg-hover: rgba(40, 40, 44, 0.92);
+  --glass-card-shadow:
+    0 2px 20px rgba(0, 0, 0, 0.45),
+    0 1px 4px rgba(0, 0, 0, 0.30),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --glass-blur: 28px;
+
+  /* Glass Panel dark */
+  --glass-panel-bg: rgba(22, 22, 24, 0.92);
+  --glass-panel-border: rgba(255, 255, 255, 0.08);
+  --glass-panel-shadow:
+    0 4px 32px rgba(0, 0, 0, 0.65),
+    0 1px 8px rgba(0, 0, 0, 0.40),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  --glass-panel-blur: 36px;
 }
 
-/* ── Tech Gradient Background (body layer) ── */
-/* Provides the visual layer that the glass sidebar/header blurs against */
+/* ── Apple-Inspired Background (body layer) ── */
+/* Subtle neutral base with a single Apple-blue tint orb — provides backdrop for vibrancy */
 body {
   background:
-    radial-gradient(ellipse at 15% 15%, rgba(59, 130, 246, 0.04) 0%, transparent 50%),
-    radial-gradient(ellipse at 85% 80%, rgba(139, 92, 246, 0.03) 0%, transparent 50%),
+    radial-gradient(ellipse at 20% 15%, rgba(0, 113, 227, 0.04) 0%, transparent 55%),
+    radial-gradient(ellipse at 82% 85%, rgba(0, 113, 227, 0.025) 0%, transparent 55%),
     hsl(var(--background-deep));
 }
 
 .dark body {
   background:
-    radial-gradient(ellipse at 15% 15%, rgba(59, 130, 246, 0.15) 0%, transparent 52%),
-    radial-gradient(ellipse at 82% 82%, rgba(139, 92, 246, 0.10) 0%, transparent 52%),
+    radial-gradient(ellipse at 15% 15%, rgba(0, 133, 255, 0.12) 0%, transparent 52%),
+    radial-gradient(ellipse at 85% 82%, rgba(10, 132, 255, 0.07) 0%, transparent 52%),
     hsl(var(--background-deep));
 }
 
 /* ── Sidebar & Header Glass Effect ── */
-/* backdrop-filter blurs the tech gradient visible through the semi-transparent bg-sidebar / bg-header */
+/* Stronger blur for main structural glass surfaces */
 .bg-sidebar {
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+}
+
+.bg-header {
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
 }
 
-.bg-header {
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+/* ── Tabbar Glass Effect ── */
+.bg-tabbar {
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 
-/* ── Glass Card (content area utility) ── */
+/* ── Glass Card (primary content card utility) ── */
+/* Apple vibrancy: high-opacity frosted material with subtle inset highlight */
 .glass-card {
   background: var(--glass-card-bg);
   backdrop-filter: blur(var(--glass-blur));
   -webkit-backdrop-filter: blur(var(--glass-blur));
   border: 1px solid var(--glass-card-border);
-  border-radius: var(--radius-lg, 0.5rem);
-  transition: background 200ms ease;
+  border-radius: var(--radius-lg, 0.75rem);
+  box-shadow: var(--glass-card-shadow);
+  transition:
+    background 200ms ease,
+    box-shadow 200ms ease;
 }
 
 .glass-card:hover,
@@ -60,37 +100,95 @@ body {
   background: var(--glass-card-bg-hover);
 }
 
+/* ── Glass Panel (Apple sidebar/sheet material — stronger) ── */
+.glass-panel {
+  background: var(--glass-panel-bg);
+  backdrop-filter: blur(var(--glass-panel-blur));
+  -webkit-backdrop-filter: blur(var(--glass-panel-blur));
+  border: 1px solid var(--glass-panel-border);
+  border-radius: var(--radius-xl, 1rem);
+  box-shadow: var(--glass-panel-shadow);
+  transition: background 200ms ease;
+}
+
 /* ── Glass Input ── */
 .glass-input {
-  background: rgba(255, 255, 255, 0.60);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(148, 163, 184, 0.30);
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 0, 0, 0.08);
   transition: background 150ms ease, border-color 150ms ease;
 }
 
 .dark .glass-input {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(28, 28, 30, 0.80);
+  border-color: rgba(255, 255, 255, 0.10);
 }
 
-/* ── Tech Badge ── */
+/* ── Global: Ant Design Card Glass Override ── */
+/* Applies Apple vibrancy frosted material to all ant-card components */
+.ant-card {
+  background: var(--glass-card-bg) !important;
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-card-border) !important;
+  box-shadow: var(--glass-card-shadow) !important;
+}
+
+.ant-card .ant-card-body {
+  background: transparent !important;
+}
+
+/* ── .card-box Glass Override ── */
+.card-box {
+  background: var(--glass-card-bg) !important;
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-card-border) !important;
+  box-shadow: var(--glass-card-shadow);
+}
+
+/* ── Apple Pill Badge ── */
+/* Apple capsule geometry with action-blue tint */
+.glass-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  background: rgba(0, 113, 227, 0.10);
+  color: #0071e3;
+  border: 1px solid rgba(0, 113, 227, 0.18);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.dark .glass-badge {
+  background: rgba(10, 132, 255, 0.15);
+  color: #0a84ff;
+  border-color: rgba(10, 132, 255, 0.25);
+}
+
+/* ── Tech Badge (retained, upgraded to Apple pill spec) ── */
 .tech-badge {
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-  padding: 0.125rem 0.625rem;
+  padding: 0.25rem 0.625rem;
   border-radius: 9999px;
   font-size: 0.6875rem;
   font-weight: 600;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   background: hsl(var(--primary) / 0.12);
   color: hsl(var(--primary));
   border: 1px solid hsl(var(--primary) / 0.25);
 }
 
-/* ── Tech Glow ── */
+/* ── Tech Glow (retained) ── */
 .tech-glow {
   filter: drop-shadow(0 0 6px hsl(var(--primary) / 0.50));
 }
@@ -103,9 +201,13 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .glass-card,
   .glass-card-hover,
+  .glass-panel,
   .glass-input,
+  .card-box,
+  .ant-card,
   .bg-sidebar,
-  .bg-header {
+  .bg-header,
+  .bg-tabbar {
     transition: none !important;
   }
 }
