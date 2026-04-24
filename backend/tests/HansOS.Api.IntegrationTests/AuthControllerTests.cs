@@ -210,7 +210,11 @@ public class AuthControllerTests(HansOsWebApplicationFactory factory)
             password = "x"
         });
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.BadRequest, HttpStatusCode.Unauthorized);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        body.GetProperty("code").GetInt32().Should().Be(-1);
+        body.GetProperty("message").GetString().Should().Be("驗證失敗");
+        body.GetProperty("error").GetString().Should().NotBeNullOrWhiteSpace();
     }
 
     /// <summary>

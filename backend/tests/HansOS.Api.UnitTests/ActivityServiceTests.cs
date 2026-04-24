@@ -3,7 +3,9 @@ using HansOS.Api.Data;
 using HansOS.Api.Data.Entities;
 using HansOS.Api.Models.Activities;
 using HansOS.Api.Services;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 
 namespace HansOS.Api.UnitTests;
 
@@ -185,6 +187,58 @@ public class ActivityServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Update_WhenSaveFailsAfterDeletingExpenses_RollsBackExistingData()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+
+        var interceptor = new FailAfterSuccessfulSavesInterceptor();
+        var dbOptions = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connection)
+            .AddInterceptors(interceptor)
+            .Options;
+
+        var departmentId = Guid.NewGuid();
+        var activityId = Guid.NewGuid();
+        await using (var seedDb = new ApplicationDbContext(dbOptions))
+        {
+            await CreateActivityTablesAsync(seedDb);
+            await SeedSqliteActivityWithExpensesAsync(seedDb, departmentId, activityId);
+        }
+
+        interceptor.Enable(successfulSavesBeforeThrow: 1);
+        await using (var updateDb = new ApplicationDbContext(dbOptions))
+        {
+            var sut = new ActivityService(updateDb);
+            var request = new UpdateActivityRequest(
+                Name: "失敗更新",
+                Description: "不應寫入",
+                Month: null,
+                Groups: null,
+                Expenses:
+                [
+                    new ActivityExpenseInput(null, "新開銷", 999m, null, 1, null),
+                ]);
+
+            var act = () => sut.UpdateAsync(activityId, request);
+
+            await act.Should().ThrowAsync<InvalidOperationException>()
+                .WithMessage("*forced save failure*");
+        }
+
+        await using var verifyDb = new ApplicationDbContext(dbOptions);
+        var activity = await verifyDb.Activities.SingleAsync(a => a.Id == activityId);
+        activity.Name.Should().Be("原始活動");
+
+        var expenses = await verifyDb.ActivityExpenses
+            .Where(e => e.ActivityId == activityId)
+            .OrderBy(e => e.Sequence)
+            .ToListAsync();
+        expenses.Should().HaveCount(2);
+        expenses.Select(e => e.Description).Should().Equal("開銷1", "開銷2");
+    }
+
+    [Fact]
     public async Task Update_NotFound_ThrowsKeyNotFoundException()
     {
         var request = new UpdateActivityRequest(
@@ -296,7 +350,7 @@ public class ActivityServiceTests : IDisposable
         _db.AnnualBudgets.Add(annualBudget);
         _db.DepartmentBudgets.Add(departmentBudget);
         _db.BudgetItems.Add(budgetItem);
-        _db.SaveChanges();
+        await _db.SaveChangesAsync();
         return budgetItem.Id;
     }
 
@@ -352,6 +406,143 @@ public class ActivityServiceTests : IDisposable
         _db.Activities.Add(activity);
         await _db.SaveChangesAsync();
         return activity.Id;
+    }
+
+    private static async Task CreateActivityTablesAsync(ApplicationDbContext db)
+    {
+        var statements = new[]
+        {
+            """
+            CREATE TABLE SportsDepartments (
+                Id TEXT NOT NULL PRIMARY KEY,
+                Name TEXT NOT NULL,
+                Note TEXT NULL,
+                CreatedAt TEXT NOT NULL,
+                UpdatedAt TEXT NOT NULL
+            )
+            """,
+            """
+            CREATE TABLE Activities (
+                Id TEXT NOT NULL PRIMARY KEY,
+                DepartmentId TEXT NOT NULL,
+                Year INTEGER NOT NULL,
+                Month INTEGER NOT NULL,
+                Name TEXT NOT NULL,
+                Description TEXT NULL,
+                Sequence INTEGER NOT NULL,
+                CreatedAt TEXT NOT NULL,
+                UpdatedAt TEXT NOT NULL
+            )
+            """,
+            """
+            CREATE TABLE ActivityGroups (
+                Id TEXT NOT NULL PRIMARY KEY,
+                ActivityId TEXT NOT NULL,
+                Name TEXT NOT NULL,
+                Sequence INTEGER NOT NULL,
+                CreatedAt TEXT NOT NULL,
+                UpdatedAt TEXT NOT NULL
+            )
+            """,
+            """
+            CREATE TABLE ActivityExpenses (
+                Id TEXT NOT NULL PRIMARY KEY,
+                ActivityId TEXT NOT NULL,
+                ActivityGroupId TEXT NULL,
+                BudgetItemId TEXT NULL,
+                Description TEXT NOT NULL,
+                Amount TEXT NOT NULL,
+                Note TEXT NULL,
+                Sequence INTEGER NOT NULL,
+                CreatedAt TEXT NOT NULL,
+                UpdatedAt TEXT NOT NULL
+            )
+            """,
+        };
+
+        foreach (var statement in statements)
+        {
+            await db.Database.ExecuteSqlRawAsync(statement);
+        }
+    }
+
+    private static async Task SeedSqliteActivityWithExpensesAsync(
+        ApplicationDbContext db,
+        Guid departmentId,
+        Guid activityId)
+    {
+        var now = DateTime.UtcNow;
+        db.SportsDepartments.Add(new SportsDepartment
+        {
+            Id = departmentId,
+            Name = "SQLite 測試部門",
+            CreatedAt = now,
+            UpdatedAt = now,
+        });
+
+        db.Activities.Add(new Activity
+        {
+            Id = activityId,
+            DepartmentId = departmentId,
+            Year = 2026,
+            Month = 7,
+            Name = "原始活動",
+            Sequence = 1,
+            CreatedAt = now,
+            UpdatedAt = now,
+            Expenses =
+            [
+                new ActivityExpense
+                {
+                    Id = Guid.NewGuid(),
+                    ActivityId = activityId,
+                    Description = "開銷1",
+                    Amount = 1000m,
+                    Sequence = 1,
+                    CreatedAt = now,
+                    UpdatedAt = now,
+                },
+                new ActivityExpense
+                {
+                    Id = Guid.NewGuid(),
+                    ActivityId = activityId,
+                    Description = "開銷2",
+                    Amount = 2000m,
+                    Sequence = 2,
+                    CreatedAt = now,
+                    UpdatedAt = now,
+                },
+            ],
+        });
+
+        await db.SaveChangesAsync();
+    }
+
+    private sealed class FailAfterSuccessfulSavesInterceptor : SaveChangesInterceptor
+    {
+        private bool _enabled;
+        private int _successfulSavesBeforeThrow;
+        private int _saveAttempts;
+
+        public void Enable(int successfulSavesBeforeThrow)
+        {
+            _enabled = true;
+            _successfulSavesBeforeThrow = successfulSavesBeforeThrow;
+            _saveAttempts = 0;
+        }
+
+        public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
+            DbContextEventData eventData,
+            InterceptionResult<int> result,
+            CancellationToken cancellationToken = default)
+        {
+            if (_enabled && _saveAttempts++ >= _successfulSavesBeforeThrow)
+            {
+                throw new InvalidOperationException("forced save failure");
+            }
+
+            return base.SavingChangesAsync(eventData, result, cancellationToken);
+        }
     }
 
     public void Dispose()

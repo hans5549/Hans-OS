@@ -9,6 +9,7 @@ using HansOS.Api.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
@@ -23,9 +24,13 @@ builder.Host.UseSerilog((ctx, cfg) => cfg.ReadFrom.Configuration(ctx.Configurati
 // ── Options ──────────────────────────────────────
 builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(JwtOptions.SectionName));
 builder.Services.Configure<FrontendOptions>(builder.Configuration.GetSection(FrontendOptions.SectionName));
+builder.Services.Configure<IdentitySeedOptions>(builder.Configuration.GetSection(IdentitySeedOptions.SectionName));
 
-var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>()!;
-var frontendOptions = builder.Configuration.GetSection(FrontendOptions.SectionName).Get<FrontendOptions>()!;
+var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>() ?? new JwtOptions();
+var frontendOptions = builder.Configuration.GetSection(FrontendOptions.SectionName).Get<FrontendOptions>() ?? new FrontendOptions();
+var identitySeedOptions = builder.Configuration.GetSection(IdentitySeedOptions.SectionName).Get<IdentitySeedOptions>()
+    ?? new IdentitySeedOptions();
+ValidateRuntimeOptions(builder.Environment, jwtOptions, frontendOptions, identitySeedOptions);
 
 // ── EF Core + Identity ───────────────────────────
 builder.Services.AddSingleton<SlowQueryInterceptor>();
@@ -108,7 +113,20 @@ builder.Services.AddScoped<ITodoCategoryService, TodoCategoryService>();
 builder.Services.AddScoped<ITodoTagService, TodoTagService>();
 
 // ── Controllers + Swagger ────────────────────────
-builder.Services.AddControllers();
+builder.Services
+    .AddControllers()
+    .ConfigureApiBehaviorOptions(opt =>
+    {
+        opt.InvalidModelStateResponseFactory = context =>
+        {
+            var error = context.ModelState.Values
+                .SelectMany(v => v.Errors)
+                .Select(e => string.IsNullOrWhiteSpace(e.ErrorMessage) ? "請求資料驗證失敗" : e.ErrorMessage)
+                .FirstOrDefault() ?? "請求資料驗證失敗";
+
+            return new BadRequestObjectResult(ApiEnvelope<object>.Fail(error, "驗證失敗"));
+        };
+    });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(opt =>
 {
@@ -189,5 +207,46 @@ app.MapHealthChecks("/readyz", new HealthCheckOptions
 app.MapHealthChecks("/health"); // 保留給既有監控腳本，執行所有檢查
 
 app.Run();
+
+static void ValidateRuntimeOptions(
+    IHostEnvironment environment,
+    JwtOptions jwtOptions,
+    FrontendOptions frontendOptions,
+    IdentitySeedOptions identitySeedOptions)
+{
+    if (string.IsNullOrWhiteSpace(jwtOptions.Issuer)
+        || string.IsNullOrWhiteSpace(jwtOptions.Audience)
+        || string.IsNullOrWhiteSpace(jwtOptions.SigningKey)
+        || jwtOptions.SigningKey.Length < 32)
+    {
+        throw new InvalidOperationException("Jwt 設定不完整或 SigningKey 長度不足");
+    }
+
+    if (!environment.IsDevelopment()
+        && jwtOptions.SigningKey == JwtOptions.DevelopmentSigningKey)
+    {
+        throw new InvalidOperationException("非 Development 環境不可使用預設 Jwt:SigningKey");
+    }
+
+    if (frontendOptions.AllowedOrigins.Length == 0)
+    {
+        throw new InvalidOperationException("Frontend:AllowedOrigins 至少需要設定一個來源");
+    }
+
+    if (string.IsNullOrWhiteSpace(identitySeedOptions.AdminRoleName)
+        || string.IsNullOrWhiteSpace(identitySeedOptions.AdminUserName)
+        || string.IsNullOrWhiteSpace(identitySeedOptions.AdminRealName)
+        || string.IsNullOrWhiteSpace(identitySeedOptions.AdminEmail)
+        || string.IsNullOrWhiteSpace(identitySeedOptions.AdminHomePath))
+    {
+        throw new InvalidOperationException("IdentitySeed 設定不完整");
+    }
+
+    if (!environment.IsDevelopment()
+        && string.IsNullOrWhiteSpace(identitySeedOptions.AdminPassword))
+    {
+        throw new InvalidOperationException("非 Development 環境必須設定 IdentitySeed:AdminPassword");
+    }
+}
 
 public partial class Program;

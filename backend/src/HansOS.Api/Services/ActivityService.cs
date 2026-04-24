@@ -134,6 +134,10 @@ public class ActivityService(ApplicationDbContext db) : IActivityService
             ?? throw new KeyNotFoundException("活動不存在");
         await ValidateBudgetItemsAsync(activity.DepartmentId, activity.Year, request.Groups, request.Expenses, ct);
 
+        await using var transaction = db.Database.IsRelational()
+            ? await db.Database.BeginTransactionAsync(ct)
+            : null;
+
         var now = DateTime.UtcNow;
 
         // 刪除所有現有開銷（不管有無分組）
@@ -203,6 +207,11 @@ public class ActivityService(ApplicationDbContext db) : IActivityService
         }
 
         await db.SaveChangesAsync(ct);
+
+        if (transaction is not null)
+        {
+            await transaction.CommitAsync(ct);
+        }
 
         return await GetDetailAsync(id, ct);
     }
