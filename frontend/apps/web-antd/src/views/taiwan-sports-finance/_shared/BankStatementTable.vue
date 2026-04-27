@@ -754,51 +754,68 @@ async function handleBatchUpdateDepartment() {
       </div>
 
       <section class="tsf-table-panel mt-4">
-        <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <div
-            v-if="selectedRowKeys.length > 0"
-            class="flex items-center gap-2"
-          >
-            <Tag color="blue">已選取 {{ selectedRowKeys.length }} 筆</Tag>
-            <Select
-              v-model:value="batchDepartmentId"
-              allow-clear
-              placeholder="選擇部門"
-              style="width: 160px"
-            >
-              <SelectOption
-                v-for="dept in departments"
-                :key="dept.id"
-                :value="dept.id"
-              >
-                {{ dept.name }}
-              </SelectOption>
-            </Select>
-            <Popconfirm
-              :title="`確定要將 ${selectedRowKeys.length} 筆交易${batchDepartmentId ? '指定' : '清除'}歸屬部門？`"
-              ok-text="確認"
-              cancel-text="取消"
-              @confirm="handleBatchUpdateDepartment"
-            >
-              <Button :loading="batchSubmitting" type="primary">
-                套用
-              </Button>
-            </Popconfirm>
-            <Button @click="clearBatchSelection">取消選取</Button>
+        <div class="tsf-section-header">
+          <div class="tsf-section-title-group">
+            <span class="tsf-section-kicker">交易台帳</span>
+            <h3 class="tsf-section-title">銀行交易明細</h3>
+            <p class="tsf-section-description">
+              以日期、歸屬部門、收支與收據狀態檢視本期交易紀錄。
+            </p>
           </div>
-          <div v-else />
+          <div class="tsf-section-meta">
+            <span class="tsf-meta-pill">
+              {{ currentMonth === undefined ? '全年' : `${currentMonth} 月` }}
+            </span>
+            <span class="tsf-meta-pill">共 {{ transactions.length }} 筆</span>
+          </div>
         </div>
 
-        <Table
-          :columns="columns"
-          :data-source="transactions"
-          :loading="loading"
-          :pagination="{ pageSize: 50, showTotal: (total: number) => `共 ${total} 筆` }"
-          row-key="id"
-          :row-selection="rowSelection"
-          :scroll="{ x: 1100 }"
-          size="middle"
-        >
+        <div class="tsf-table-body">
+          <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <div
+              v-if="selectedRowKeys.length > 0"
+              class="flex items-center gap-2"
+            >
+              <Tag color="blue">已選取 {{ selectedRowKeys.length }} 筆</Tag>
+              <Select
+                v-model:value="batchDepartmentId"
+                allow-clear
+                placeholder="選擇部門"
+                style="width: 160px"
+              >
+                <SelectOption
+                  v-for="dept in departments"
+                  :key="dept.id"
+                  :value="dept.id"
+                >
+                  {{ dept.name }}
+                </SelectOption>
+              </Select>
+              <Popconfirm
+                :title="`確定要將 ${selectedRowKeys.length} 筆交易${batchDepartmentId ? '指定' : '清除'}歸屬部門？`"
+                ok-text="確認"
+                cancel-text="取消"
+                @confirm="handleBatchUpdateDepartment"
+              >
+                <Button :loading="batchSubmitting" type="primary">
+                  套用
+                </Button>
+              </Popconfirm>
+              <Button @click="clearBatchSelection">取消選取</Button>
+            </div>
+            <div v-else />
+          </div>
+
+          <Table
+            :columns="columns"
+            :data-source="transactions"
+            :loading="loading"
+            :pagination="{ pageSize: 50, showTotal: (total: number) => `共 ${total} 筆` }"
+            row-key="id"
+            :row-selection="rowSelection"
+            :scroll="{ x: 1100 }"
+            size="middle"
+          >
           <template #bodyCell="{ column, record }">
             <template v-if="column.dataIndex === 'transactionDate'">
               {{ (record as BankTransactionResponse).transactionDate }}
@@ -917,7 +934,8 @@ async function handleBatchUpdateDepartment() {
               本期間尚無交易記錄，請點擊「新增交易」按鈕建立
             </div>
           </template>
-        </Table>
+          </Table>
+        </div>
       </section>
     </Spin>
 

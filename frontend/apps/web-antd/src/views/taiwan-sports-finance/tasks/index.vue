@@ -425,18 +425,35 @@ async function handleToggleReceipt(
       </div>
 
       <section class="tsf-table-panel mt-4">
-        <Table
-          :columns="columns"
-          :data-source="tasks"
-          :loading="loading"
-          :pagination="{
-            pageSize: 50,
-            showTotal: (total: number) => `共 ${total} 筆`,
-          }"
-          row-key="id"
-          :scroll="{ x: 900 }"
-          size="middle"
-        >
+        <div class="tsf-section-header">
+          <div class="tsf-section-title-group">
+            <span class="tsf-section-kicker">任務台帳</span>
+            <h3 class="tsf-section-title">任務處理明細</h3>
+            <p class="tsf-section-description">
+              依類型、優先度、狀態與部門整理，方便快速判斷待處理事項。
+            </p>
+          </div>
+          <div class="tsf-section-meta">
+            <span class="tsf-meta-pill">
+              {{ currentMonth === undefined ? '全年' : `${currentMonth} 月` }}
+            </span>
+            <span class="tsf-meta-pill">共 {{ tasks.length }} 筆</span>
+          </div>
+        </div>
+
+        <div class="tsf-table-body">
+          <Table
+            :columns="columns"
+            :data-source="tasks"
+            :loading="loading"
+            :pagination="{
+              pageSize: 50,
+              showTotal: (total: number) => `共 ${total} 筆`,
+            }"
+            row-key="id"
+            :scroll="{ x: 900 }"
+            size="middle"
+          >
           <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'type'">
               <Tag
@@ -576,7 +593,8 @@ async function handleToggleReceipt(
               目前沒有待處理的任務
             </div>
           </template>
-        </Table>
+          </Table>
+        </div>
       </section>
     </Spin>
 

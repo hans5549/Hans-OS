@@ -276,15 +276,32 @@ onMounted(fetchOverview);
     </div>
 
     <section class="tsf-table-panel">
-      <Table
-        :columns="columns"
-        :data-source="overview?.departments ?? []"
-        :loading="loading"
-        :pagination="false"
-        row-key="departmentBudgetId"
-        size="middle"
-        :scroll="{ x: 860 }"
-      >
+      <div class="tsf-section-header">
+        <div class="tsf-section-title-group">
+          <span class="tsf-section-kicker">預算分配</span>
+          <h3 class="tsf-section-title">部門預算明細</h3>
+          <p class="tsf-section-description">
+            依部門比較需求、核定、實際支出與執行率，欄位以財務報表層級呈現。
+          </p>
+        </div>
+        <div class="tsf-section-meta">
+          <span class="tsf-meta-pill">{{ selectedYear }} 年度</span>
+          <span class="tsf-meta-pill">
+            共 {{ overview?.departments.length ?? 0 }} 個部門
+          </span>
+        </div>
+      </div>
+
+      <div class="tsf-table-body">
+        <Table
+          :columns="columns"
+          :data-source="overview?.departments ?? []"
+          :loading="loading"
+          :pagination="false"
+          row-key="departmentBudgetId"
+          size="middle"
+          :scroll="{ x: 860 }"
+        >
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'action'">
             <Button
@@ -326,7 +343,8 @@ onMounted(fetchOverview);
             尚無部門資料，請先至「設定」新增體育部門
           </div>
         </template>
-      </Table>
+        </Table>
+      </div>
     </section>
 
     <!-- 部門預算編輯 Drawer -->
