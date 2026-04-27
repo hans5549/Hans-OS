@@ -3,6 +3,9 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using FluentAssertions;
+using HansOS.Api.Data.Entities;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace HansOS.Api.IntegrationTests;
 
@@ -91,7 +94,6 @@ public class TodoItemControllerTests(HansOsWebApplicationFactory factory)
         var data = body.GetProperty("data");
         data.GetProperty("title").GetString().Should().Be("詳情任務_Detail");
         data.GetProperty("children").ValueKind.Should().Be(JsonValueKind.Array);
-        data.GetProperty("checklistItems").ValueKind.Should().Be(JsonValueKind.Array);
     }
 
     [Fact]
@@ -175,7 +177,7 @@ public class TodoItemControllerTests(HansOsWebApplicationFactory factory)
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await ReadBody(response);
         var data = body.GetProperty("data");
-        data.GetProperty("status").GetString().Should().Be("Completed");
+        data.GetProperty("status").GetString().Should().Be("Done");
         data.GetProperty("completedAt").GetString().Should().NotBeNullOrEmpty();
     }
 
@@ -224,7 +226,7 @@ public class TodoItemControllerTests(HansOsWebApplicationFactory factory)
         var childResp = await AuthPost("/todo/items", token, new
         {
             title = "子任務_Hierarchy",
-            parentId = parentId,
+            parentId,
         });
 
         childResp.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -238,6 +240,218 @@ public class TodoItemControllerTests(HansOsWebApplicationFactory factory)
     }
 
     [Fact]
+    public async Task GetItems_IncludeChildren_ReturnsParentWithSubtasks()
+    {
+        var token = await LoginAsync();
+        var uniqueTitle = $"父任務_IncludeChildren_{Guid.NewGuid():N}";
+        var parentId = await CreateItemAndGetIdAsync(token, uniqueTitle);
+        await CreateChildAndGetIdAsync(token, parentId, "子任務_IncludeChildren");
+
+        var response = await AuthGet($"/todo/items?includeChildren=true&search={uniqueTitle}", token);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await ReadBody(response);
+        var items = body.GetProperty("data").GetProperty("items").EnumerateArray().ToList();
+        var parent = items.Single(i => i.GetProperty("id").GetString() == parentId);
+        parent.GetProperty("children").GetArrayLength().Should().Be(1);
+    }
+
+    [Fact]
+    public async Task GetItems_IncludeChildren_AfterChildDeleted_ExcludesDeletedSubtask()
+    {
+        var token = await LoginAsync();
+        var uniqueTitle = $"父任務_DeletedChildList_{Guid.NewGuid():N}";
+        var parentId = await CreateItemAndGetIdAsync(token, uniqueTitle);
+        var childId = await CreateChildAndGetIdAsync(token, parentId, "子任務_DeletedChildList");
+        await AuthDelete($"/todo/items/{childId}", token);
+
+        var response = await AuthGet($"/todo/items?includeChildren=true&search={uniqueTitle}", token);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await ReadBody(response);
+        var parent = body.GetProperty("data").GetProperty("items").EnumerateArray()
+            .Single(i => i.GetProperty("id").GetString() == parentId);
+        parent.GetProperty("children").EnumerateArray()
+            .Should().NotContain(i => i.GetProperty("id").GetString() == childId);
+    }
+
+    [Fact]
+    public async Task GetItem_AfterChildDeleted_ExcludesDeletedSubtask()
+    {
+        var token = await LoginAsync();
+        var parentId = await CreateItemAndGetIdAsync(token, "父任務_DeletedChildDetail");
+        var childId = await CreateChildAndGetIdAsync(token, parentId, "子任務_DeletedChildDetail");
+        await AuthDelete($"/todo/items/{childId}", token);
+
+        var response = await AuthGet($"/todo/items/{parentId}", token);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var detail = (await ReadBody(response)).GetProperty("data");
+        detail.GetProperty("children").EnumerateArray()
+            .Should().NotContain(i => i.GetProperty("id").GetString() == childId);
+    }
+
+    [Fact]
+    public async Task CreateItem_WithParentId_InheritsParentCategory()
+    {
+        var token = await LoginAsync();
+        var categoryId = await CreateCategoryAndGetIdAsync(token, "分類_ParentInheritance");
+        var parentId = await CreateItemAndGetIdAsync(token, "父任務_ParentCategory", categoryId: categoryId);
+
+        var childId = await CreateChildAndGetIdAsync(token, parentId, "子任務_ParentCategory");
+
+        var response = await AuthGet($"/todo/items/{childId}", token);
+        var detail = (await ReadBody(response)).GetProperty("data");
+        detail.GetProperty("categoryId").GetString().Should().Be(categoryId);
+    }
+
+    [Fact]
+    public async Task CreateItem_WithForeignCategory_Returns404()
+    {
+        var ownerToken = await LoginAsync();
+        var otherToken = await CreateUserAndGetTokenAsync();
+        var categoryId = await CreateCategoryAndGetIdAsync(ownerToken, "分類_ForeignCategory");
+
+        var response = await AuthPost("/todo/items", otherToken, new
+        {
+            title = "任務_ForeignCategory",
+            categoryId,
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task CreateItem_WithForeignTag_Returns404()
+    {
+        var ownerToken = await LoginAsync();
+        var otherToken = await CreateUserAndGetTokenAsync();
+        var tagId = await CreateTagAndGetIdAsync(ownerToken, "標籤_ForeignTag");
+
+        var response = await AuthPost("/todo/items", otherToken, new
+        {
+            title = "任務_ForeignTag",
+            tagIds = new[] { tagId },
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task ReorderChildren_ValidIds_UpdatesOrder()
+    {
+        var token = await LoginAsync();
+        var parentId = await CreateItemAndGetIdAsync(token, "父任務_ReorderChildren");
+        var childA = await CreateChildAndGetIdAsync(token, parentId, "子任務_A");
+        var childB = await CreateChildAndGetIdAsync(token, parentId, "子任務_B");
+
+        var response = await AuthPut($"/todo/items/{parentId}/children/reorder", token, new
+        {
+            orderedChildIds = new[] { childB, childA },
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await ReadBody(response);
+        var children = body.GetProperty("data").EnumerateArray().ToList();
+        children.Select(c => c.GetProperty("id").GetString()).Should().Equal(childB, childA);
+        children.Select(c => c.GetProperty("order").GetInt32()).Should().Equal(0, 1);
+    }
+
+    [Fact]
+    public async Task ReorderChildren_WithDeletedChild_UpdatesVisibleChildrenOnly()
+    {
+        var token = await LoginAsync();
+        var parentId = await CreateItemAndGetIdAsync(token, "父任務_ReorderDeletedChild");
+        var childA = await CreateChildAndGetIdAsync(token, parentId, "子任務_ReorderDeleted_A");
+        var childB = await CreateChildAndGetIdAsync(token, parentId, "子任務_ReorderDeleted_B");
+        var childDeleted = await CreateChildAndGetIdAsync(token, parentId, "子任務_ReorderDeleted_C");
+        await AuthDelete($"/todo/items/{childDeleted}", token);
+
+        var response = await AuthPut($"/todo/items/{parentId}/children/reorder", token, new
+        {
+            orderedChildIds = new[] { childB, childA },
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var children = (await ReadBody(response)).GetProperty("data").EnumerateArray().ToList();
+        children.Select(c => c.GetProperty("id").GetString()).Should().Equal(childB, childA);
+    }
+
+    [Fact]
+    public async Task ReorderChildren_WithForeignChild_Returns403()
+    {
+        var token = await LoginAsync();
+        var otherToken = await CreateUserAndGetTokenAsync();
+        var parentId = await CreateItemAndGetIdAsync(token, "父任務_ForeignChild");
+        var otherParentId = await CreateItemAndGetIdAsync(otherToken, "其他父任務_ForeignChild");
+        var otherChildId = await CreateChildAndGetIdAsync(otherToken, otherParentId, "其他子任務_ForeignChild");
+
+        var response = await AuthPut($"/todo/items/{parentId}/children/reorder", token, new
+        {
+            orderedChildIds = new[] { otherChildId },
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task ReorderChildren_Unauthorized_Returns401()
+    {
+        var fakeId = Guid.NewGuid();
+        var response = await _client.PutAsJsonAsync($"/todo/items/{fakeId}/children/reorder", new
+        {
+            orderedChildIds = new[] { Guid.NewGuid() },
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task ReorderChildren_WithInvalidChild_Returns400()
+    {
+        var token = await LoginAsync();
+        var parentId = await CreateItemAndGetIdAsync(token, "父任務_InvalidChild");
+
+        var response = await AuthPut($"/todo/items/{parentId}/children/reorder", token, new
+        {
+            orderedChildIds = new[] { Guid.NewGuid() },
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task ReorderChildren_WithMissingChild_Returns400()
+    {
+        var token = await LoginAsync();
+        var parentId = await CreateItemAndGetIdAsync(token, "父任務_MissingChild");
+        var childA = await CreateChildAndGetIdAsync(token, parentId, "子任務_Missing_A");
+        await CreateChildAndGetIdAsync(token, parentId, "子任務_Missing_B");
+
+        var response = await AuthPut($"/todo/items/{parentId}/children/reorder", token, new
+        {
+            orderedChildIds = new[] { childA },
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task ReorderChildren_WithDuplicateChild_Returns400()
+    {
+        var token = await LoginAsync();
+        var parentId = await CreateItemAndGetIdAsync(token, "父任務_DuplicateChild");
+        var childA = await CreateChildAndGetIdAsync(token, parentId, "子任務_Duplicate_A");
+
+        var response = await AuthPut($"/todo/items/{parentId}/children/reorder", token, new
+        {
+            orderedChildIds = new[] { childA, childA },
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
     public async Task CreateItem_SelfAsParent_Returns400()
     {
         var token = await LoginAsync();
@@ -247,6 +461,23 @@ public class TodoItemControllerTests(HansOsWebApplicationFactory factory)
         {
             title = "自我父任務",
             parentId = itemId,
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task UpdateItem_WithActiveChildrenAndParentId_Returns400()
+    {
+        var token = await LoginAsync();
+        var grandParentId = await CreateItemAndGetIdAsync(token, "祖任務_NoGrandchildren");
+        var parentId = await CreateItemAndGetIdAsync(token, "父任務_NoGrandchildren");
+        await CreateChildAndGetIdAsync(token, parentId, "子任務_NoGrandchildren");
+
+        var response = await AuthPut($"/todo/items/{parentId}", token, new
+        {
+            title = "父任務_NoGrandchildren",
+            parentId = grandParentId,
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -278,6 +509,49 @@ public class TodoItemControllerTests(HansOsWebApplicationFactory factory)
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await ReadBody(response);
         body.GetProperty("data").GetProperty("archivedAt").GetString().Should().NotBeNullOrEmpty();
+    }
+
+    [Fact]
+    public async Task ArchiveItem_WithActiveChild_CascadesAndRestoresChild()
+    {
+        var token = await LoginAsync();
+        var parentId = await CreateItemAndGetIdAsync(token, "歸檔父任務_Cascade");
+        var childId = await CreateChildAndGetIdAsync(token, parentId, "歸檔子任務_Cascade");
+
+        var archiveResp = await AuthPut($"/todo/items/{parentId}/archive", token, new { archive = true });
+
+        archiveResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var archivedParent = (await ReadBody(archiveResp)).GetProperty("data");
+        archivedParent.GetProperty("children").GetArrayLength().Should().Be(0);
+
+        var unarchiveResp = await AuthPut($"/todo/items/{parentId}/archive", token, new { archive = false });
+
+        unarchiveResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var restoredParent = (await ReadBody(unarchiveResp)).GetProperty("data");
+        restoredParent.GetProperty("children").EnumerateArray()
+            .Should().Contain(i => i.GetProperty("id").GetString() == childId);
+    }
+
+    [Fact]
+    public async Task ArchiveItem_UnarchiveParent_DoesNotRestorePreviouslyArchivedChild()
+    {
+        var token = await LoginAsync();
+        var parentId = await CreateItemAndGetIdAsync(token, "歸檔父任務_PreArchivedChild");
+        var childId = await CreateChildAndGetIdAsync(token, parentId, "預先歸檔子任務");
+
+        await AuthPut($"/todo/items/{childId}/archive", token, new { archive = true });
+        await AuthPut($"/todo/items/{parentId}/archive", token, new { archive = true });
+
+        var unarchiveResp = await AuthPut($"/todo/items/{parentId}/archive", token, new { archive = false });
+
+        unarchiveResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var restoredParent = (await ReadBody(unarchiveResp)).GetProperty("data");
+        restoredParent.GetProperty("children").EnumerateArray()
+            .Should().NotContain(i => i.GetProperty("id").GetString() == childId);
+
+        var childResp = await AuthGet($"/todo/items/{childId}", token);
+        var child = (await ReadBody(childResp)).GetProperty("data");
+        child.GetProperty("archivedAt").GetString().Should().NotBeNullOrEmpty();
     }
 
     [Fact]
@@ -334,6 +608,42 @@ public class TodoItemControllerTests(HansOsWebApplicationFactory factory)
     }
 
     [Fact]
+    public async Task Trash_DeleteAndRestoreParent_CascadesToActiveChild()
+    {
+        var token = await LoginAsync();
+        var parentId = await CreateItemAndGetIdAsync(token, "垃圾桶父任務_Cascade");
+        var childId = await CreateChildAndGetIdAsync(token, parentId, "垃圾桶子任務_Cascade");
+
+        await AuthDelete($"/todo/items/{parentId}", token);
+
+        var childAfterDelete = await AuthGet($"/todo/items/{childId}", token);
+        childAfterDelete.StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+        var restoreResp = await AuthPut($"/todo/items/{parentId}/restore", token, new { });
+        restoreResp.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var childAfterRestore = await AuthGet($"/todo/items/{childId}", token);
+        childAfterRestore.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task Trash_RestoreParent_DoesNotRestorePreviouslyDeletedChild()
+    {
+        var token = await LoginAsync();
+        var parentId = await CreateItemAndGetIdAsync(token, "垃圾桶父任務_PreDeletedChild");
+        var childId = await CreateChildAndGetIdAsync(token, parentId, "預先刪除子任務");
+
+        await AuthDelete($"/todo/items/{childId}", token);
+        await AuthDelete($"/todo/items/{parentId}", token);
+
+        var restoreResp = await AuthPut($"/todo/items/{parentId}/restore", token, new { });
+
+        restoreResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var childAfterRestore = await AuthGet($"/todo/items/{childId}", token);
+        childAfterRestore.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
     public async Task PermanentDelete_RemovesPermanently()
     {
         var token = await LoginAsync();
@@ -351,75 +661,22 @@ public class TodoItemControllerTests(HansOsWebApplicationFactory factory)
             .Should().NotContain(x => x.GetProperty("id").GetString() == itemId);
     }
 
-    // ══════════════════════════════════════════════════
-    //  Checklist — 核取清單
-    // ══════════════════════════════════════════════════
-
     [Fact]
-    public async Task Checklist_Unauthorized_Returns401()
-    {
-        var fakeId = Guid.NewGuid();
-        var response = await _client.PostAsJsonAsync($"/todo/items/{fakeId}/checklist", new { title = "test" });
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-    }
-
-    [Fact]
-    public async Task Checklist_AddAndUpdate_Works()
+    public async Task PermanentDelete_WithChild_RemovesParentAndChild()
     {
         var token = await LoginAsync();
-        var itemId = await CreateItemAndGetIdAsync(token, "核取清單_Checklist");
+        var parentId = await CreateItemAndGetIdAsync(token, "永久刪除父任務_Cascade");
+        var childId = await CreateChildAndGetIdAsync(token, parentId, "永久刪除子任務_Cascade");
 
-        // 新增
-        var addResp = await AuthPost($"/todo/items/{itemId}/checklist", token, new
-        {
-            title = "清單項目 1",
-        });
-        addResp.StatusCode.Should().Be(HttpStatusCode.OK);
-        var addBody = await ReadBody(addResp);
-        var checklistId = addBody.GetProperty("data").GetProperty("id").GetString();
-        addBody.GetProperty("data").GetProperty("isCompleted").GetBoolean().Should().BeFalse();
+        await AuthDelete($"/todo/items/{parentId}", token);
 
-        // 更新（完成）
-        var updateResp = await AuthPut(
-            $"/todo/items/{itemId}/checklist/{checklistId}", token, new
-            {
-                isCompleted = true,
-            });
-        updateResp.StatusCode.Should().Be(HttpStatusCode.OK);
-        var updateBody = await ReadBody(updateResp);
-        updateBody.GetProperty("data").GetProperty("isCompleted").GetBoolean().Should().BeTrue();
-    }
+        var permResp = await AuthDelete($"/todo/items/{parentId}/permanent", token);
+        permResp.StatusCode.Should().Be(HttpStatusCode.OK);
 
-    [Fact]
-    public async Task Checklist_Delete_Works()
-    {
-        var token = await LoginAsync();
-        var itemId = await CreateItemAndGetIdAsync(token, "核取清單_Delete");
-
-        var addResp = await AuthPost($"/todo/items/{itemId}/checklist", token, new
-        {
-            title = "待刪清單項目",
-        });
-        var addBody = await ReadBody(addResp);
-        var checklistId = addBody.GetProperty("data").GetProperty("id").GetString();
-
-        var delResp = await AuthDelete($"/todo/items/{itemId}/checklist/{checklistId}", token);
-        delResp.StatusCode.Should().Be(HttpStatusCode.OK);
-    }
-
-    [Fact]
-    public async Task Checklist_ItemNotFound_Returns404()
-    {
-        var token = await LoginAsync();
-        var itemId = await CreateItemAndGetIdAsync(token, "核取_NotFound");
-        var fakeCheckId = Guid.NewGuid();
-
-        var response = await AuthPut(
-            $"/todo/items/{itemId}/checklist/{fakeCheckId}", token, new
-            {
-                title = "不存在",
-            });
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        var trashResp = await AuthGet("/todo/items/trash", token);
+        var trashItems = (await ReadBody(trashResp)).GetProperty("data").EnumerateArray();
+        trashItems.Should().NotContain(x => x.GetProperty("id").GetString() == parentId);
+        trashItems.Should().NotContain(x => x.GetProperty("id").GetString() == childId);
     }
 
     // ══════════════════════════════════════════════════
@@ -692,7 +949,7 @@ public class TodoItemControllerTests(HansOsWebApplicationFactory factory)
         await AuthPost("/todo/items", token, new
         {
             title = "子層_TopLevel",
-            parentId = parentId,
+            parentId,
         });
 
         var response = await AuthGet("/todo/items?topLevelOnly=true", token);
@@ -717,9 +974,58 @@ public class TodoItemControllerTests(HansOsWebApplicationFactory factory)
         return body.GetProperty("data").GetProperty("accessToken").GetString()!;
     }
 
-    private async Task<string> CreateItemAndGetIdAsync(string token, string title)
+    private async Task<string> CreateUserAndGetTokenAsync()
     {
-        var response = await AuthPost("/todo/items", token, new { title });
+        var username = $"todo_user_{Guid.NewGuid():N}";
+        const string password = "P@ssw0rd!123";
+        await EnsureUserAsync(username, password);
+        var response = await _client.PostAsJsonAsync("/auth/login", new { username, password });
+        var body = await ReadBody(response);
+        return body.GetProperty("data").GetProperty("accessToken").GetString()!;
+    }
+
+    private async Task EnsureUserAsync(string username, string password)
+    {
+        using var scope = factory.Services.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+
+        var user = new ApplicationUser
+        {
+            UserName = username,
+            Email = $"{username}@example.com",
+            EmailConfirmed = true,
+            RealName = username,
+            IsActive = true,
+        };
+
+        var result = await userManager.CreateAsync(user, password);
+        result.Succeeded.Should().BeTrue();
+    }
+
+    private async Task<string> CreateItemAndGetIdAsync(string token, string title, string? categoryId = null)
+    {
+        var response = await AuthPost("/todo/items", token, new { title, categoryId });
+        var body = await ReadBody(response);
+        return body.GetProperty("data").GetProperty("id").GetString()!;
+    }
+
+    private async Task<string> CreateCategoryAndGetIdAsync(string token, string name)
+    {
+        var response = await AuthPost("/todo/categories", token, new { name });
+        var body = await ReadBody(response);
+        return body.GetProperty("data").GetProperty("id").GetString()!;
+    }
+
+    private async Task<string> CreateTagAndGetIdAsync(string token, string name)
+    {
+        var response = await AuthPost("/todo/tags", token, new { name });
+        var body = await ReadBody(response);
+        return body.GetProperty("data").GetProperty("id").GetString()!;
+    }
+
+    private async Task<string> CreateChildAndGetIdAsync(string token, string parentId, string title)
+    {
+        var response = await AuthPost("/todo/items", token, new { title, parentId });
         var body = await ReadBody(response);
         return body.GetProperty("data").GetProperty("id").GetString()!;
     }

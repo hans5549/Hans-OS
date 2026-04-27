@@ -40,5 +40,6 @@ public class TodoItemConfiguration : IEntityTypeConfiguration<TodoItem>
         e.HasIndex(t => new { t.UserId, t.DueDate });
         e.HasIndex(t => new { t.UserId, t.ProjectId });
         e.HasIndex(t => new { t.UserId, t.DeletedAt });
+        e.HasIndex(t => new { t.ParentId, t.Order });
     }
 }

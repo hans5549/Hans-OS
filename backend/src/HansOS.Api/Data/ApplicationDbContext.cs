@@ -32,7 +32,6 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<TodoItem> TodoItems => Set<TodoItem>();
     public DbSet<TodoCategory> TodoCategories => Set<TodoCategory>();
     public DbSet<TodoTag> TodoTags => Set<TodoTag>();
-    public DbSet<TodoChecklistItem> TodoChecklistItems => Set<TodoChecklistItem>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

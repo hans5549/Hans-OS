@@ -117,13 +117,14 @@ public class TodoController(
         [FromQuery] string? view,
         [FromQuery] Guid? projectId,
         [FromQuery] bool topLevelOnly = false,
+        [FromQuery] bool includeChildren = false,
         [FromQuery] string? search = null,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 50,
         CancellationToken ct = default)
         => ApiEnvelope<PagedItemsResponse>.Success(
             await itemService.GetItemsAsync(
-                new PagedItemsQuery(CurrentUserId, status, priority, view, projectId, topLevelOnly, search, page, pageSize),
+                new PagedItemsQuery(CurrentUserId, status, priority, view, projectId, topLevelOnly, includeChildren, search, page, pageSize),
                 ct));
 
     /// <summary>取得各視圖待辦數量</summary>
@@ -203,28 +204,10 @@ public class TodoController(
         return ApiEnvelope<object?>.Success(null);
     }
 
-    // ──────────── Checklist ────────────
-
-    /// <summary>新增清單子項目</summary>
-    [HttpPost("items/{id:guid}/checklist")]
-    public async Task<ApiEnvelope<ChecklistItemResponse>> AddChecklistItem(
-        Guid id, [FromBody] CreateChecklistItemRequest request, CancellationToken ct)
-        => ApiEnvelope<ChecklistItemResponse>.Success(
-            await itemService.AddChecklistItemAsync(CurrentUserId, id, request, ct));
-
-    /// <summary>更新清單子項目</summary>
-    [HttpPut("items/{id:guid}/checklist/{checklistId:guid}")]
-    public async Task<ApiEnvelope<ChecklistItemResponse>> UpdateChecklistItem(
-        Guid id, Guid checklistId, [FromBody] UpdateChecklistItemRequest request, CancellationToken ct)
-        => ApiEnvelope<ChecklistItemResponse>.Success(
-            await itemService.UpdateChecklistItemAsync(CurrentUserId, id, checklistId, request, ct));
-
-    /// <summary>刪除清單子項目</summary>
-    [HttpDelete("items/{id:guid}/checklist/{checklistId:guid}")]
-    public async Task<ApiEnvelope<object?>> DeleteChecklistItem(
-        Guid id, Guid checklistId, CancellationToken ct)
-    {
-        await itemService.DeleteChecklistItemAsync(CurrentUserId, id, checklistId, ct);
-        return ApiEnvelope<object?>.Success(null);
-    }
+    /// <summary>重新排序直接子任務</summary>
+    [HttpPut("items/{id:guid}/children/reorder")]
+    public async Task<ApiEnvelope<List<ItemResponse>>> ReorderChildren(
+        Guid id, [FromBody] ReorderChildrenRequest request, CancellationToken ct)
+        => ApiEnvelope<List<ItemResponse>>.Success(
+            await itemService.ReorderChildrenAsync(CurrentUserId, id, request.OrderedChildIds, ct));
 }

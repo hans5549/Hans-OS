@@ -74,11 +74,15 @@ public record ItemResponse(
     string? ProjectName,
     string? ProjectColor,
     Guid? ParentId,
+    Guid? CategoryId,
     int Order,
+    string RecurrencePattern,
+    int RecurrenceInterval,
     DateTime CreatedAt,
     DateTime? CompletedAt,
     DateTime? ArchivedAt,
-    List<TagResponse> Tags);
+    List<TagResponse> Tags,
+    List<ItemResponse> Children);
 
 public record ItemDetailResponse(
     Guid Id,
@@ -102,7 +106,6 @@ public record ItemDetailResponse(
     DateTime? CompletedAt,
     DateTime? ArchivedAt,
     List<ItemResponse> Children,
-    List<ChecklistItemResponse> ChecklistItems,
     List<TagResponse> Tags);
 
 public record PagedItemsResponse(
@@ -138,6 +141,9 @@ public record BatchUpdateRequest(
 
 public record SortRequest(
     [Required] List<Guid> OrderedIds);
+
+public record ReorderChildrenRequest(
+    [Required] List<Guid> OrderedChildIds);
 
 // ──────────── Category ────────────
 
@@ -175,23 +181,6 @@ public record UpdateTagRequest(
     [Required][StringLength(50)] string Name,
     [StringLength(20)] string? Color = null);
 
-// ──────────── Checklist ────────────
-
-public record ChecklistItemResponse(
-    Guid Id,
-    string Title,
-    bool IsCompleted,
-    int Order);
-
-public record CreateChecklistItemRequest(
-    [Required][StringLength(500)] string Title,
-    int Order = 0);
-
-public record UpdateChecklistItemRequest(
-    [StringLength(500)] string? Title = null,
-    bool? IsCompleted = null,
-    int? Order = null);
-
 // ──────────── Query ────────────
 
 public record PagedItemsQuery(
@@ -201,6 +190,7 @@ public record PagedItemsQuery(
     string? View = null,
     Guid? ProjectId = null,
     bool TopLevelOnly = false,
+    bool IncludeChildren = false,
     string? Search = null,
     int Page = 1,
     int PageSize = 50);

@@ -3,8 +3,6 @@ import { computed, ref } from 'vue';
 import { defineStore } from 'pinia';
 
 import type {
-  ChecklistItem,
-  CreateChecklistItemRequest,
   CreateItemRequest,
   CreateProjectRequest,
   CreateTagRequest,
@@ -19,13 +17,11 @@ import type {
   UpdateProjectRequest,
 } from '#/api/core/todos';
 import {
-  addChecklistItemApi,
   archiveItemApi,
   batchUpdateApi,
   createItemApi,
   createProjectApi,
   createTagApi,
-  deleteChecklistItemApi,
   deleteItemApi,
   deleteProjectApi,
   deleteTagApi,
@@ -37,15 +33,15 @@ import {
   getTagsApi,
   getTrashApi,
   permanentDeleteItemApi,
+  reorderChildrenApi,
   restoreItemApi,
   searchItemsApi,
   toggleCompleteApi,
-  updateChecklistItemApi,
   updateItemApi,
   updateProjectApi,
 } from '#/api/core/todos';
 
-export type TodoView = 'all' | 'project' | 'search' | 'trash' | 'week' | TodoViewFilter;
+export type TodoView = 'all' | 'project' | 'search' | 'tag' | 'trash' | 'week' | TodoViewFilter;
 
 export const useTodoStore = defineStore('todo', () => {
   // ── State ──────────────────────────────────────────
@@ -145,7 +141,13 @@ export const useTodoStore = defineStore('todo', () => {
   async function fetchItems(view?: TodoViewFilter, projectId?: string, tagId?: string) {
     loading.value.items = true;
     try {
-      const res = await getItemsApi({ projectId, tagId, view });
+      const res = await getItemsApi({
+        includeChildren: true,
+        projectId,
+        tagId,
+        topLevelOnly: true,
+        view,
+      });
       items.value = res.items;
     } finally {
       loading.value.items = false;
@@ -189,8 +191,7 @@ export const useTodoStore = defineStore('todo', () => {
     loading.value.saving = true;
     try {
       const updated = await updateItemApi(id, data);
-      const idx = items.value.findIndex((i: TodoItem) => i.id === id);
-      if (idx !== -1) items.value[idx] = updated;
+      replaceItemEverywhere(updated);
       // 同步更新 detail
       if (selectedItemDetail.value?.id === id) {
         await fetchItemDetail(id);
@@ -202,26 +203,23 @@ export const useTodoStore = defineStore('todo', () => {
   }
 
   async function toggleComplete(id: string) {
-    const idx = items.value.findIndex((i: TodoItem) => i.id === id);
-    if (idx === -1) return;
+    const original = findItemEverywhere(id);
+    if (!original) return;
 
-    const original = items.value[idx];
-    const isCurrentlyDone = original?.status === 'Done';
-    if (original) {
-      items.value[idx] = {
-        ...original,
-        completedAt: isCurrentlyDone ? null : new Date().toISOString(),
-        status: isCurrentlyDone ? 'Pending' : 'Done',
-      };
-    }
+    const isCurrentlyDone = original.status === 'Done';
+    replaceItemEverywhere({
+      ...original,
+      completedAt: isCurrentlyDone ? null : new Date().toISOString(),
+      status: isCurrentlyDone ? 'Pending' : 'Done',
+    });
 
     try {
       const updated = await toggleCompleteApi(id);
-      items.value[idx] = updated;
+      replaceItemEverywhere(updated);
       if (selectedItemDetail.value?.id === id) await fetchItemDetail(id);
       await fetchCounts();
     } catch {
-      if (original) items.value[idx] = original;
+      replaceItemEverywhere(original);
     }
   }
 
@@ -253,6 +251,7 @@ export const useTodoStore = defineStore('todo', () => {
   async function deleteItem(id: string) {
     await deleteItemApi(id);
     items.value = items.value.filter((i: TodoItem) => i.id !== id);
+    removeChildEverywhere(id);
     if (selectedItemId.value === id) {
       selectedItemId.value = null;
       selectedItemDetail.value = null;
@@ -266,41 +265,114 @@ export const useTodoStore = defineStore('todo', () => {
     await fetchCounts();
   }
 
-  // ── Checklist Actions ──────────────────────────────
-
-  async function addChecklistItem(itemId: string, data: CreateChecklistItemRequest) {
-    const item = await addChecklistItemApi(itemId, data);
-    if (selectedItemDetail.value?.id === itemId) {
-      selectedItemDetail.value = {
-        ...selectedItemDetail.value,
-        checklistItems: [...selectedItemDetail.value.checklistItems, item],
-      };
+  function findItemEverywhere(id: string) {
+    for (const item of items.value) {
+      if (item.id === id) return item;
+      const child = item.children.find((c: TodoItem) => c.id === id);
+      if (child) return child;
     }
-    return item;
+    return selectedItemDetail.value?.children.find((child: TodoItem) => child.id === id) ?? null;
   }
 
-  async function toggleChecklistItem(itemId: string, checklistItem: ChecklistItem) {
-    const updated = await updateChecklistItemApi(itemId, checklistItem.id, {
-      isCompleted: !checklistItem.isCompleted,
+  function replaceItemEverywhere(updated: TodoItem) {
+    items.value = items.value.map((item: TodoItem) => {
+      if (item.id === updated.id) return { ...updated, children: item.children };
+      return {
+        ...item,
+        children: item.children.map((child: TodoItem) =>
+          child.id === updated.id ? { ...updated, children: child.children } : child,
+        ),
+      };
     });
-    if (selectedItemDetail.value?.id === itemId) {
+
+    if (selectedItemDetail.value?.id === updated.id) return;
+    if (selectedItemDetail.value) {
       selectedItemDetail.value = {
         ...selectedItemDetail.value,
-        checklistItems: selectedItemDetail.value.checklistItems.map((c: ChecklistItem) =>
-          c.id === checklistItem.id ? updated : c,
+        children: selectedItemDetail.value.children.map((child: TodoItem) =>
+          child.id === updated.id ? { ...updated, children: child.children } : child,
         ),
       };
     }
   }
 
-  async function deleteChecklistItem(itemId: string, checklistId: string) {
-    await deleteChecklistItemApi(itemId, checklistId);
-    if (selectedItemDetail.value?.id === itemId) {
+  function appendChildEverywhere(parentId: string, child: TodoItem) {
+    replaceChildrenEverywhere(parentId, [...findParentChildren(parentId), child]);
+  }
+
+  function removeChildEverywhere(childId: string) {
+    items.value = items.value.map((item: TodoItem) => ({
+      ...item,
+      children: item.children.filter((child: TodoItem) => child.id !== childId),
+    }));
+
+    if (selectedItemDetail.value) {
       selectedItemDetail.value = {
         ...selectedItemDetail.value,
-        checklistItems: selectedItemDetail.value.checklistItems.filter((c: ChecklistItem) => c.id !== checklistId),
+        children: selectedItemDetail.value.children.filter((child: TodoItem) => child.id !== childId),
       };
     }
+  }
+
+  function findParentChildren(parentId: string) {
+    const parent = items.value.find((item: TodoItem) => item.id === parentId);
+    if (parent) return parent.children;
+    if (selectedItemDetail.value?.id === parentId) return selectedItemDetail.value.children;
+    return [];
+  }
+
+  function replaceChildrenEverywhere(parentId: string, children: TodoItem[]) {
+    items.value = items.value.map((item: TodoItem) =>
+      item.id === parentId ? { ...item, children } : item,
+    );
+
+    if (selectedItemDetail.value?.id === parentId) {
+      selectedItemDetail.value = { ...selectedItemDetail.value, children };
+    }
+  }
+
+  // ── Child item actions ─────────────────────────────
+
+  async function createChildItem(parentId: string, data: Omit<CreateItemRequest, 'parentId'>) {
+    loading.value.saving = true;
+    try {
+      const child = await createItemApi({ ...data, parentId });
+      appendChildEverywhere(parentId, child);
+      await fetchCounts();
+      return child;
+    } finally {
+      loading.value.saving = false;
+    }
+  }
+
+  async function reorderChildren(parentId: string, orderedChildIds: string[]) {
+    const original = findParentChildren(parentId);
+    const nextChildren = [...original].sort(
+      (a, b) => orderedChildIds.indexOf(a.id) - orderedChildIds.indexOf(b.id),
+    );
+    replaceChildrenEverywhere(parentId, nextChildren);
+
+    try {
+      const updated = await reorderChildrenApi(parentId, orderedChildIds);
+      replaceChildrenEverywhere(parentId, updated);
+    } catch (error) {
+      replaceChildrenEverywhere(parentId, original);
+      throw error;
+    }
+  }
+
+  function reorderChildBefore(parentId: string, draggedId: string, targetId: string) {
+    if (draggedId === targetId) return;
+    const children = [...findParentChildren(parentId)];
+    const from = children.findIndex((child: TodoItem) => child.id === draggedId);
+    const to = children.findIndex((child: TodoItem) => child.id === targetId);
+    if (from < 0 || to < 0) return;
+
+    const [moved] = children.splice(from, 1);
+    if (!moved) return;
+
+    children.splice(to, 0, moved);
+    reorderChildren(parentId, children.map((child: TodoItem) => child.id));
   }
 
   // ── Tags Actions ───────────────────────────────────
@@ -426,19 +498,18 @@ export const useTodoStore = defineStore('todo', () => {
     archiveItem,
     batchUpdate,
     createItem,
+    createChildItem,
     deleteItem,
     fetchCounts,
     fetchItemDetail,
     fetchItems,
     fetchTrash,
     permanentDeleteItem,
+    reorderChildren,
+    reorderChildBefore,
     restoreItem,
     toggleComplete,
     updateItem,
-    // Checklist actions
-    addChecklistItem,
-    deleteChecklistItem,
-    toggleChecklistItem,
     // Tags actions
     createTag,
     deleteTag,

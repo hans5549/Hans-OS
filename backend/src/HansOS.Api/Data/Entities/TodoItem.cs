@@ -108,7 +108,6 @@ public class TodoItem
     public TodoItem? Parent { get; set; }
     public TodoCategory? Category { get; set; }
     public ICollection<TodoItem> Children { get; set; } = [];
-    public ICollection<TodoChecklistItem> ChecklistItems { get; set; } = [];
     public ICollection<TodoItemTag> TodoItemTags { get; set; } = [];
 }
 
@@ -151,15 +150,3 @@ public class TodoItemTag
 }
 
 /// <summary>待辦事項檢查清單項目</summary>
-public class TodoChecklistItem
-{
-    public Guid Id { get; set; }
-    public Guid TodoItemId { get; set; }
-    public string Title { get; set; } = string.Empty;
-    public bool IsCompleted { get; set; }
-    public int Order { get; set; }
-    public DateTime CreatedAt { get; set; }
-    public DateTime UpdatedAt { get; set; }
-
-    public TodoItem TodoItem { get; set; } = null!;
-}
