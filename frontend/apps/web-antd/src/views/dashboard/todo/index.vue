@@ -7,13 +7,17 @@ import { useTabbarStore } from '@vben/stores';
 
 import { useTodoStore } from '#/store/todo';
 
-import TodoDetail from './components/TodoDetail.vue';
-import TodoList from './components/TodoList.vue';
+import { useTodoSelection } from './composables/useTodoSelection';
+import TodoListPanel from './components/TodoListPanel.vue';
 import TodoSidebar from './components/TodoSidebar.vue';
+import TodoWeekView from './components/TodoWeekView.vue';
+
+import './styles/todo-tokens.css';
 
 defineOptions({ name: 'TodoPage' });
 
 const store = useTodoStore();
+const selection = useTodoSelection();
 const route = useRoute();
 const tabbarStore = useTabbarStore();
 const { closeTabByKey } = useTabs();
@@ -29,12 +33,26 @@ function syncViewFromQuery() {
   else if (view === 'project' && id) store.setView('project', id);
   else if (view === 'tag' && id) store.setView('tag', undefined, id);
   else store.setView('today');
+  selection.clear();
 }
 
 watch(() => route.query, syncViewFromQuery, { deep: true });
 
+function handleKeydown(e: KeyboardEvent) {
+  const tag = (e.target as HTMLElement).tagName;
+  if (['INPUT', 'TEXTAREA'].includes(tag)) return;
+  if (e.key === 'n' || e.key === 'N') {
+    e.preventDefault();
+    document.dispatchEvent(new CustomEvent('todo:add'));
+  }
+  if (e.key === 'Escape') {
+    if (selection.hasSelection.value) selection.clear();
+    else store.closeDetail();
+  }
+}
+
 onMounted(async () => {
-  // Remove stale Todo tabs from the old path-based routing (e.g. /todo/today, /todo/inbox)
+  // 移除舊版以路徑為基礎的 stale tabs
   const staleTabs = tabbarStore.getTabs.filter(
     (tab) => tab.name === 'Todo' && tab.path !== '/todo',
   );
@@ -46,38 +64,16 @@ onMounted(async () => {
   syncViewFromQuery();
   document.addEventListener('keydown', handleKeydown);
 });
-onUnmounted(() => document.removeEventListener('keydown', handleKeydown));
 
-function handleKeydown(e: KeyboardEvent) {
-  const tag = (e.target as HTMLElement).tagName;
-  if (['INPUT', 'TEXTAREA'].includes(tag)) return;
-  if (e.key === 'n' || e.key === 'N') {
-    document.dispatchEvent(new CustomEvent('todo:add'));
-  }
-  if (e.key === 'Escape') store.closeDetail();
-}
+onUnmounted(() => {
+  document.removeEventListener('keydown', handleKeydown);
+});
 </script>
 
 <template>
   <div class="flex h-full overflow-hidden bg-background">
     <TodoSidebar />
-    <TodoList class="flex-1" />
-    <Transition name="slide-right">
-      <div v-if="store.isDetailOpen && store.selectedItemDetail" class="w-80 flex-shrink-0">
-        <TodoDetail :item="store.selectedItemDetail" @close="store.closeDetail" />
-      </div>
-    </Transition>
+    <TodoWeekView v-if="store.currentView === 'week'" class="flex-1" />
+    <TodoListPanel v-else class="flex-1" />
   </div>
 </template>
-
-<style scoped>
-.slide-right-enter-active,
-.slide-right-leave-active {
-  transition: transform 0.22s ease-out, opacity 0.22s ease-out;
-}
-.slide-right-enter-from,
-.slide-right-leave-to {
-  transform: translateX(100%);
-  opacity: 0;
-}
-</style>

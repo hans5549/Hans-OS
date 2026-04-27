@@ -1,129 +1,240 @@
 <script setup lang="ts">
 import type { TodoItem } from '#/api/core/todos';
 
-import { onUnmounted, ref } from 'vue';
+import { computed, onUnmounted, ref } from 'vue';
 
 import { useTodoStore } from '#/store/todo';
 
+import { useTodoSelection } from '../composables/useTodoSelection';
+import {
+  getDifficultyColor,
+  getDifficultyShortLabel,
+  todoIcons,
+} from '../composables/useTodoMeta';
 import TodoDateBadge from './TodoDateBadge.vue';
+import TodoItemInlineDetail from './TodoItemInlineDetail.vue';
 import TodoPriorityFlag from './TodoPriorityFlag.vue';
 
 const props = defineProps<{
   item: TodoItem;
-  isSelected: boolean;
 }>();
 
 const store = useTodoStore();
+const selection = useTodoSelection();
+
 const isAnimating = ref(false);
 let animationTimer: ReturnType<typeof setTimeout> | null = null;
 
-const difficultyConfig: Record<string, { color: string; label: string }> = {
-  Easy: { color: '#22C55E', label: '易' },
-  Hard: { color: '#EF4444', label: '難' },
-  Medium: { color: '#F97316', label: '中' },
-  None: { color: '', label: '' },
-};
+const isExpanded = computed(
+  () => store.selectedItemId === props.item.id && !!store.selectedItemDetail,
+);
+const isSelected = computed(() => selection.isSelected(props.item.id));
+const isDone = computed(() => props.item.status === 'Done');
 
-async function handleToggle() {
+const showProjectBadge = computed(() => {
+  const v = store.currentView;
+  return (
+    !!props.item.projectName &&
+    (v === 'all' || v === 'search' || v === 'today' || v === 'upcoming')
+  );
+});
+
+async function handleToggle(e: Event) {
+  e.stopPropagation();
   isAnimating.value = true;
   await store.toggleComplete(props.item.id);
   animationTimer = setTimeout(() => {
     isAnimating.value = false;
-  }, 300);
+  }, 280);
+}
+
+function handleRowClick(e: MouseEvent) {
+  // 多選熱鍵
+  if (e.metaKey || e.ctrlKey) {
+    e.preventDefault();
+    selection.toggle(props.item.id);
+    return;
+  }
+  if (e.shiftKey) {
+    e.preventDefault();
+    selection.selectRange(props.item.id);
+    return;
+  }
+  // 一般點擊：開合 inline detail
+  if (isExpanded.value) {
+    store.closeDetail();
+  } else {
+    store.selectItem(props.item.id);
+  }
+}
+
+function handleSelectionCheck(e: Event) {
+  e.stopPropagation();
+  selection.toggle(props.item.id);
 }
 
 onUnmounted(() => {
   if (animationTimer !== null) clearTimeout(animationTimer);
 });
-
-function handleRowClick() {
-  store.selectItem(props.item.id);
-}
 </script>
 
 <template>
   <div
-    class="group flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 transition-colors duration-150"
-    :class="[
-      isSelected ? 'bg-primary/10' : 'hover:bg-accent/50',
-      item.status === 'Done' ? 'opacity-50' : '',
-    ]"
+    class="todo-row group cursor-pointer"
+    :data-selected="isExpanded ? 'true' : 'false'"
+    :class="{ 'is-multi-selected': isSelected }"
     @click="handleRowClick"
   >
-    <!-- Checkbox -->
-    <button
-      class="relative flex size-5 flex-shrink-0 items-center justify-center rounded-full border-2 transition-all duration-150"
-      :class="[
-        item.status === 'Done'
-          ? 'border-green-500 bg-green-500'
-          : 'border-border hover:border-primary',
-        isAnimating ? 'scale-75' : 'scale-100',
-      ]"
-      type="button"
-      @click.stop="handleToggle"
-    >
-      <svg
-        v-if="item.status === 'Done'"
-        class="size-3 text-white"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="3"
-        viewBox="0 0 24 24"
+    <div class="flex items-center gap-2 px-3 py-2">
+      <!-- 多選 checkbox（hover or 已有選取時可見）-->
+      <button
+        class="flex size-4 flex-shrink-0 cursor-pointer items-center justify-center rounded border transition-all"
+        :class="[
+          isSelected
+            ? 'border-primary bg-primary text-primary-foreground opacity-100'
+            : 'border-border opacity-0 hover:border-primary group-hover:opacity-100',
+          selection.hasSelection.value ? '!opacity-100' : '',
+        ]"
+        title="多選"
+        type="button"
+        @click="handleSelectionCheck"
       >
-        <path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" />
-      </svg>
-    </button>
+        <svg
+          v-if="isSelected"
+          class="size-2.5"
+          fill="none"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="3"
+          viewBox="0 0 24 24"
+        >
+          <path :d="todoIcons.check" />
+        </svg>
+      </button>
 
-    <!-- Title + project badge -->
-    <div class="flex min-w-0 flex-1 flex-col gap-0.5">
-      <span
-        class="truncate text-sm text-foreground transition-all duration-200"
-        :class="item.status === 'Done' ? 'line-through text-muted-foreground' : ''"
+      <!-- 完成 checkbox -->
+      <button
+        class="relative flex size-5 flex-shrink-0 cursor-pointer items-center justify-center rounded-full border-2 transition-all"
+        :class="[
+          isDone
+            ? 'border-green-500 bg-green-500'
+            : 'border-border hover:border-primary',
+          isAnimating ? 'scale-90' : 'scale-100',
+        ]"
+        type="button"
+        @click="handleToggle"
       >
-        {{ item.title }}
-      </span>
-      <!-- Project badge (shown when viewing all/search) -->
-      <div
-        v-if="item.projectName && (store.currentView === 'all' || store.currentView === 'search')"
-        class="flex items-center gap-1"
-      >
+        <svg
+          v-if="isDone"
+          class="size-3 text-white"
+          fill="none"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="3"
+          viewBox="0 0 24 24"
+        >
+          <path :d="todoIcons.check" />
+        </svg>
+      </button>
+
+      <!-- 標題 + 副資訊 -->
+      <div class="flex min-w-0 flex-1 flex-col">
         <span
-          class="size-2 rounded-full flex-shrink-0"
-          :style="{ backgroundColor: item.projectColor ?? '#94A3B8' }"
-        />
-        <span class="truncate text-xs text-muted-foreground">{{ item.projectName }}</span>
+          class="truncate text-sm transition-all"
+          :class="
+            isDone
+              ? 'text-muted-foreground line-through'
+              : 'text-foreground'
+          "
+        >
+          {{ item.title }}
+        </span>
+        <div
+          v-if="showProjectBadge || item.tags.length > 0"
+          class="mt-0.5 flex flex-wrap items-center gap-1.5"
+        >
+          <span
+            v-if="showProjectBadge"
+            class="inline-flex items-center gap-1 text-xs text-muted-foreground"
+          >
+            <span
+              class="size-1.5 rounded-full"
+              :style="{ backgroundColor: item.projectColor ?? '#94A3B8' }"
+            />
+            {{ item.projectName }}
+          </span>
+          <span
+            v-for="tag in item.tags.slice(0, 3)"
+            :key="tag.id"
+            class="inline-flex items-center gap-1 rounded-full border px-1.5 py-px text-[10px]"
+            :style="{
+              borderColor: tag.color ?? '#94A3B8',
+              color: tag.color ?? '#64748B',
+            }"
+          >
+            #{{ tag.name }}
+          </span>
+          <span
+            v-if="item.tags.length > 3"
+            class="text-[10px] text-muted-foreground"
+          >
+            +{{ item.tags.length - 3 }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Right badges -->
+      <div class="flex flex-shrink-0 items-center gap-1.5">
+        <span
+          v-if="item.difficulty !== 'None'"
+          class="inline-flex size-5 items-center justify-center rounded text-[10px] font-bold text-white"
+          :style="{ backgroundColor: getDifficultyColor(item.difficulty) }"
+          :title="`難度：${getDifficultyShortLabel(item.difficulty)}`"
+        >
+          {{ getDifficultyShortLabel(item.difficulty) }}
+        </span>
+        <TodoDateBadge :due-date="item.dueDate" />
+        <TodoPriorityFlag :priority="item.priority" />
       </div>
     </div>
 
-    <!-- Badges -->
-    <div class="flex items-center gap-1.5 flex-shrink-0">
-      <!-- Tags (max 2) -->
-      <span
-        v-for="tag in item.tags.slice(0, 2)"
-        :key="tag.id"
-        class="rounded-full px-1.5 py-0.5 text-xs text-white"
-        :style="{ backgroundColor: tag.color ?? '#64748B' }"
-      >
-        {{ tag.name }}
-      </span>
-      <span
-        v-if="item.tags.length > 2"
-        class="rounded-full bg-accent px-1.5 py-0.5 text-xs text-muted-foreground"
-      >
-        +{{ item.tags.length - 2 }}
-      </span>
-
-      <!-- Difficulty badge -->
-      <span
-        v-if="item.difficulty !== 'None'"
-        class="rounded px-1 py-0.5 text-xs text-white font-medium"
-        :style="{ backgroundColor: difficultyConfig[item.difficulty]?.color ?? '#94A3B8' }"
-      >
-        {{ difficultyConfig[item.difficulty]?.label }}
-      </span>
-
-      <TodoDateBadge :due-date="item.dueDate" />
-      <TodoPriorityFlag :priority="item.priority" />
-    </div>
+    <!-- Inline Detail（同時最多一筆展開）-->
+    <Transition name="todo-expand">
+      <TodoItemInlineDetail
+        v-if="isExpanded && store.selectedItemDetail"
+        :item="store.selectedItemDetail"
+      />
+    </Transition>
   </div>
 </template>
+
+<style scoped>
+.todo-row {
+  border-radius: var(--todo-radius);
+  transition: background-color 180ms ease;
+}
+.todo-row:hover {
+  background: rgb(var(--todo-row-hover));
+}
+.todo-row[data-selected='true'] {
+  background: rgb(var(--todo-row-selected));
+}
+.todo-row.is-multi-selected {
+  background: rgb(var(--todo-row-selected));
+  box-shadow: inset 2px 0 0 0 hsl(var(--primary));
+}
+
+.todo-expand-enter-active,
+.todo-expand-leave-active {
+  transition: opacity 0.2s ease, max-height 0.25s ease;
+  overflow: hidden;
+  max-height: 800px;
+}
+.todo-expand-enter-from,
+.todo-expand-leave-to {
+  opacity: 0;
+  max-height: 0;
+}
+</style>

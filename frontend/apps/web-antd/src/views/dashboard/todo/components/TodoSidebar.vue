@@ -1,16 +1,24 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import type { TodoProject } from '#/api/core/todos';
+
+import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
+
+import { Dropdown, Menu, MenuItem, Tooltip } from 'ant-design-vue';
 
 import { $t } from '#/locales';
 import { useTodoStore } from '#/store/todo';
 
+import { todoIcons } from '../composables/useTodoMeta';
 import TodoProjectModal from './TodoProjectModal.vue';
 
 const store = useTodoStore();
 const router = useRouter();
-const isProjectModalOpen = ref(false);
-const isTagsExpanded = ref(false);
+
+const projectModalOpen = ref(false);
+const editingProject = ref<null | TodoProject>(null);
+const tagsExpanded = ref(true);
+const projectsExpanded = ref(true);
 
 type SmartFilter = {
   countKey?: 'all' | 'inbox' | 'today' | 'upcoming';
@@ -22,145 +30,264 @@ type SmartFilter = {
 const smartFilters: SmartFilter[] = [
   {
     countKey: 'inbox',
-    iconPath: 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',
-    label: 'page.todo.inbox',
+    iconPath: todoIcons.inbox,
+    label: $t('page.todo.inbox'),
     view: 'inbox',
   },
   {
     countKey: 'today',
-    iconPath: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',
-    label: 'page.todo.today',
+    iconPath: todoIcons.today,
+    label: $t('page.todo.today'),
     view: 'today',
   },
   {
     countKey: 'upcoming',
-    iconPath: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
-    label: 'page.todo.upcoming',
+    iconPath: todoIcons.upcoming,
+    label: $t('page.todo.upcoming'),
     view: 'upcoming',
   },
   {
-    iconPath: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2',
-    label: 'page.todo.week',
+    iconPath: todoIcons.week,
+    label: '週曆',
     view: 'week',
   },
   {
     countKey: 'all',
-    iconPath: 'M4 6h16M4 10h16M4 14h16M4 18h16',
-    label: 'page.todo.all',
+    iconPath: todoIcons.all,
+    label: $t('page.todo.all'),
     view: 'all',
-  },
-  {
-    iconPath: 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16',
-    label: 'page.todo.trash',
-    view: 'trash',
   },
 ];
 
-function handleFilterClick(filter: SmartFilter) {
-  router.replace({ path: '/todo', query: { view: filter.view } });
+const trashFilter: SmartFilter = {
+  iconPath: todoIcons.trash,
+  label: $t('page.todo.trash'),
+  view: 'trash',
+};
+
+const activeProjects = computed(() => store.projects.filter((p: TodoProject) => !p.isArchived));
+
+function go(view: SmartFilter['view']) {
+  router.replace({ path: '/todo', query: { view } });
 }
 
-function handleProjectClick(projectId: string) {
+function goProject(projectId: string) {
   router.replace({ path: '/todo', query: { id: projectId, view: 'project' } });
 }
 
-function handleTagClick(tagId: string) {
+function goTag(tagId: string) {
   router.replace({ path: '/todo', query: { id: tagId, view: 'tag' } });
+}
+
+function newProject() {
+  editingProject.value = null;
+  projectModalOpen.value = true;
+}
+
+function editProject(project: TodoProject) {
+  editingProject.value = project;
+  projectModalOpen.value = true;
+}
+
+function isFilterActive(view: SmartFilter['view']) {
+  return store.currentView === view;
+}
+
+function isProjectActive(projectId: string) {
+  return store.currentView === 'project' && store.currentProjectId === projectId;
 }
 </script>
 
 <template>
-  <aside class="flex h-full w-56 flex-shrink-0 flex-col border-r border-border bg-background/80 backdrop-blur-xl">
-    <div class="flex-1 overflow-y-auto p-3">
-      <!-- Smart Filters -->
-      <div class="mb-4">
+  <aside
+    class="flex h-full w-60 flex-shrink-0 flex-col border-r border-border bg-background/70 backdrop-blur-xl"
+  >
+    <div class="flex-1 overflow-y-auto px-3 py-4">
+      <!-- ── Smart Filters ────────────────────── -->
+      <nav class="space-y-0.5">
         <button
-          v-for="filter in smartFilters"
-          :key="filter.view"
-          class="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors"
-          :class="[
-            store.currentView === filter.view
+          v-for="f in smartFilters"
+          :key="f.view"
+          class="group flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors duration-150"
+          :class="
+            isFilterActive(f.view)
               ? 'bg-primary/10 font-semibold text-primary'
-              : 'text-foreground hover:bg-accent',
-            filter.view === 'trash' ? 'mt-1 text-red-500/70 hover:text-red-500' : '',
-          ]"
+              : 'text-foreground hover:bg-accent'
+          "
           type="button"
-          @click="handleFilterClick(filter)"
+          @click="go(f.view)"
         >
-          <svg class="size-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path :d="filter.iconPath" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" />
-          </svg>
-          <span class="flex-1 text-left">{{ $t(filter.label) }}</span>
-          <span
-            v-if="filter.countKey && store.counts[filter.countKey] > 0"
-            class="min-w-[20px] rounded-full bg-accent px-1.5 text-center text-xs font-medium text-muted-foreground"
-            :class="store.currentView === filter.view ? 'bg-primary/15 text-primary' : ''"
-          >
-            {{ store.counts[filter.countKey] }}
-          </span>
-        </button>
-      </div>
-
-      <!-- Projects -->
-      <div class="mb-2 flex items-center gap-2 px-2">
-        <span class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">專案</span>
-      </div>
-
-      <button
-        v-for="project in store.projects.filter((p) => !p.isArchived)"
-        :key="project.id"
-        class="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors"
-        :class="
-          store.currentView === 'project' && store.currentProjectId === project.id
-            ? 'bg-primary/10 font-semibold text-primary'
-            : 'text-foreground hover:bg-accent'
-        "
-        type="button"
-        @click="handleProjectClick(project.id)"
-      >
-        <span
-          class="size-3 flex-shrink-0 rounded-full"
-          :style="{ backgroundColor: project.color }"
-        />
-        <span class="flex-1 truncate text-left">{{ project.name }}</span>
-        <span
-          v-if="project.itemCount > 0"
-          class="min-w-[20px] rounded-full bg-accent px-1.5 text-center text-xs font-medium text-muted-foreground"
-        >
-          {{ project.itemCount }}
-        </span>
-      </button>
-
-      <!-- Tags section -->
-      <div v-if="store.tags.length > 0" class="mt-4">
-        <button
-          class="mb-1 flex w-full items-center gap-2 px-2"
-          type="button"
-          @click="isTagsExpanded = !isTagsExpanded"
-        >
-          <span class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">標籤</span>
           <svg
-            class="ml-auto size-3 text-muted-foreground transition-transform"
-            :class="isTagsExpanded ? 'rotate-180' : ''"
+            class="size-[18px] flex-shrink-0"
             fill="none"
             stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="1.8"
             viewBox="0 0 24 24"
           >
-            <path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" />
+            <path :d="f.iconPath" />
           </svg>
+          <span class="flex-1 text-left">{{ f.label }}</span>
+          <span
+            v-if="f.countKey && store.counts[f.countKey] > 0"
+            class="min-w-[22px] rounded-md bg-muted px-1.5 text-center text-xs font-medium text-muted-foreground"
+            :class="
+              isFilterActive(f.view) ? 'bg-primary/15 text-primary' : ''
+            "
+          >
+            {{ store.counts[f.countKey] }}
+          </span>
         </button>
-        <div v-if="isTagsExpanded">
+      </nav>
+
+      <!-- ── Projects ─────────────────────────── -->
+      <div class="mt-6">
+        <div class="mb-2 flex items-center px-2">
+          <button
+            class="flex flex-1 cursor-pointer items-center gap-1.5 text-left"
+            type="button"
+            @click="projectsExpanded = !projectsExpanded"
+          >
+            <svg
+              class="size-3 text-muted-foreground transition-transform"
+              :class="projectsExpanded ? '' : '-rotate-90'"
+              fill="none"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2.5"
+              viewBox="0 0 24 24"
+            >
+              <path :d="todoIcons.chevronDown" />
+            </svg>
+            <span
+              class="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+            >
+              專案
+            </span>
+          </button>
+          <Tooltip placement="right" title="新增專案">
+            <button
+              class="flex size-5 cursor-pointer items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              type="button"
+              @click="newProject"
+            >
+              <svg
+                class="size-3.5"
+                fill="none"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+              >
+                <path :d="todoIcons.plus" />
+              </svg>
+            </button>
+          </Tooltip>
+        </div>
+
+        <div v-if="projectsExpanded" class="space-y-0.5">
+          <Dropdown
+            v-for="project in activeProjects"
+            :key="project.id"
+            :trigger="['contextmenu']"
+          >
+            <button
+              class="group flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-3 py-1.5 text-sm transition-colors duration-150"
+              :class="
+                isProjectActive(project.id)
+                  ? 'bg-primary/10 font-semibold text-primary'
+                  : 'text-foreground hover:bg-accent'
+              "
+              type="button"
+              @click="goProject(project.id)"
+            >
+              <span
+                class="size-2.5 flex-shrink-0 rounded-full"
+                :style="{ backgroundColor: project.color }"
+              />
+              <span class="flex-1 truncate text-left">{{ project.name }}</span>
+              <span
+                v-if="project.itemCount > 0"
+                class="text-xs text-muted-foreground"
+              >
+                {{ project.itemCount }}
+              </span>
+            </button>
+            <template #overlay>
+              <Menu>
+                <MenuItem key="edit" @click="editProject(project)">
+                  編輯
+                </MenuItem>
+              </Menu>
+            </template>
+          </Dropdown>
+
+          <button
+            v-if="activeProjects.length === 0"
+            class="flex w-full cursor-pointer items-center gap-2 rounded-lg px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            type="button"
+            @click="newProject"
+          >
+            <svg
+              class="size-3.5"
+              fill="none"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+            >
+              <path :d="todoIcons.plus" />
+            </svg>
+            建立第一個專案
+          </button>
+        </div>
+      </div>
+
+      <!-- ── Tags ─────────────────────────────── -->
+      <div v-if="store.tags.length > 0" class="mt-6">
+        <button
+          class="mb-2 flex w-full cursor-pointer items-center gap-1.5 px-2 text-left"
+          type="button"
+          @click="tagsExpanded = !tagsExpanded"
+        >
+          <svg
+            class="size-3 text-muted-foreground transition-transform"
+            :class="tagsExpanded ? '' : '-rotate-90'"
+            fill="none"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2.5"
+            viewBox="0 0 24 24"
+          >
+            <path :d="todoIcons.chevronDown" />
+          </svg>
+          <span
+            class="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+          >
+            標籤
+          </span>
+        </button>
+        <div v-if="tagsExpanded" class="space-y-0.5">
           <button
             v-for="tag in store.tags"
             :key="tag.id"
-            class="flex w-full items-center gap-2.5 rounded-lg px-3 py-1.5 text-sm transition-colors hover:bg-accent"
-            :class="store.currentTagId === tag.id ? 'bg-primary/10 font-semibold text-primary' : 'text-foreground'"
+            class="flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-3 py-1.5 text-sm transition-colors duration-150"
+            :class="
+              store.currentTagId === tag.id
+                ? 'bg-primary/10 font-semibold text-primary'
+                : 'text-foreground hover:bg-accent'
+            "
             type="button"
-            @click="handleTagClick(tag.id)"
+            @click="goTag(tag.id)"
           >
             <span
-              class="size-2.5 flex-shrink-0 rounded-full"
-              :style="{ backgroundColor: tag.color ?? '#64748B' }"
+              class="size-2 flex-shrink-0 rounded-full"
+              :style="{ backgroundColor: tag.color ?? '#94A3B8' }"
             />
             <span class="flex-1 truncate text-left">{{ tag.name }}</span>
           </button>
@@ -168,20 +295,33 @@ function handleTagClick(tagId: string) {
       </div>
     </div>
 
-    <!-- Add Project button -->
-    <div class="border-t border-border p-3">
+    <!-- ── Footer：Trash ──────────────────────── -->
+    <div class="border-t border-border px-3 py-2">
       <button
-        class="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+        class="flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors duration-150"
+        :class="
+          isFilterActive('trash')
+            ? 'bg-red-500/10 font-semibold text-red-500'
+            : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+        "
         type="button"
-        @click="isProjectModalOpen = true"
+        @click="go('trash')"
       >
-        <svg class="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path d="M12 5v14m-7-7h14" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" />
+        <svg
+          class="size-[18px] flex-shrink-0"
+          fill="none"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="1.8"
+          viewBox="0 0 24 24"
+        >
+          <path :d="trashFilter.iconPath" />
         </svg>
-        {{ $t('page.todo.addProject') }}
+        {{ trashFilter.label }}
       </button>
     </div>
 
-    <TodoProjectModal v-model:open="isProjectModalOpen" />
+    <TodoProjectModal v-model:open="projectModalOpen" :project="editingProject" />
   </aside>
 </template>

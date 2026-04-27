@@ -1,31 +1,52 @@
 <script setup lang="ts">
 import type { TodoPriority } from '#/api/core/todos';
 
-const props = defineProps<{
-  priority: TodoPriority;
-  size?: 'sm' | 'md';
-}>();
-
-const priorityConfig: Record<TodoPriority, { color: string; label: string }> = {
-  High: { color: '#EF4444', label: 'P1' },
-  Medium: { color: '#F97316', label: 'P2' },
-  Low: { color: '#3B82F6', label: 'P3' },
-  None: { color: '#94A3B8', label: 'P4' },
-};
-
-const config = computed(() => priorityConfig[props.priority]);
-</script>
-
-<script lang="ts">
 import { computed } from 'vue';
+
+import {
+  getPriorityColor,
+  getPriorityShortLabel,
+  todoIcons,
+} from '../composables/useTodoMeta';
+
+const props = withDefaults(
+  defineProps<{
+    priority: TodoPriority;
+    /** 'flag' = 旗幟圖示；'chip' = 文字徽章 */
+    variant?: 'chip' | 'flag';
+  }>(),
+  { variant: 'flag' },
+);
+
+const color = computed(() => getPriorityColor(props.priority));
+const label = computed(() => getPriorityShortLabel(props.priority));
+const visible = computed(() => props.priority !== 'None');
 </script>
 
 <template>
   <span
-    v-if="priority !== 'None'"
-    class="inline-flex items-center rounded px-1 text-xs font-medium text-white"
-    :style="{ backgroundColor: config.color }"
+    v-if="visible && variant === 'flag'"
+    class="inline-flex size-5 items-center justify-center"
+    :style="{ color }"
+    :title="label"
   >
-    {{ config.label }}
+    <svg
+      class="size-4"
+      fill="currentColor"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="1.6"
+      viewBox="0 0 24 24"
+    >
+      <path :d="todoIcons.flag" />
+    </svg>
+  </span>
+  <span
+    v-else-if="visible && variant === 'chip'"
+    class="inline-flex items-center rounded px-1.5 py-0.5 text-[11px] font-semibold text-white"
+    :style="{ backgroundColor: color }"
+  >
+    {{ label }}
   </span>
 </template>

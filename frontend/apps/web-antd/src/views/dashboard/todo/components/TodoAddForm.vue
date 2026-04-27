@@ -1,193 +1,305 @@
 <script setup lang="ts">
 import type { TodoDifficulty, TodoPriority, TodoProject } from '#/api/core/todos';
 
-import { ref } from 'vue';
+import { computed, nextTick, ref } from 'vue';
 
-import { $t } from '#/locales';
+import { DatePicker, Popover } from 'ant-design-vue';
+import dayjs, { type Dayjs } from 'dayjs';
+
 import { useTodoStore } from '#/store/todo';
 
-const props = defineProps<{
-  defaultProjectId?: null | string;
-}>();
-
-const emit = defineEmits<{
-  close: [];
-}>();
+import {
+  difficultyOptions,
+  getDifficultyColor,
+  getPriorityColor,
+  priorityOptions,
+  todoIcons,
+} from '../composables/useTodoMeta';
 
 const store = useTodoStore();
 
+const expanded = ref(false);
 const title = ref('');
 const description = ref('');
 const priority = ref<TodoPriority>('None');
 const difficulty = ref<TodoDifficulty>('None');
-const dueDate = ref<null | string>(null);
-const scheduledDate = ref<null | string>(null);
-const projectId = ref<null | string>(props.defaultProjectId ?? null);
-const isExpanded = ref(false);
+const dueDate = ref<Dayjs | undefined>(undefined);
+const scheduledDate = ref<Dayjs | undefined>(undefined);
+const projectId = ref<null | string>(null);
 
-const priorityOptions: { color: string; label: string; value: TodoPriority }[] = [
-  { color: '#7C3AED', label: 'P0', value: 'Urgent' },
-  { color: '#EF4444', label: 'P1', value: 'High' },
-  { color: '#F97316', label: 'P2', value: 'Medium' },
-  { color: '#3B82F6', label: 'P3', value: 'Low' },
-  { color: '#94A3B8', label: 'P4', value: 'None' },
-];
+const titleInputRef = ref<HTMLInputElement | null>(null);
 
-const difficultyOptions: { color: string; label: string; value: TodoDifficulty }[] = [
-  { color: '#EF4444', label: '難', value: 'Hard' },
-  { color: '#F97316', label: '中', value: 'Medium' },
-  { color: '#22C55E', label: '易', value: 'Easy' },
-  { color: '#94A3B8', label: '無', value: 'None' },
-];
+const projectOptions = computed(() => [
+  { value: null as null | string, label: 'Inbox', color: '#94A3B8' },
+  ...store.projects
+    .filter((p: TodoProject) => !p.isArchived)
+    .map((p: TodoProject) => ({ value: p.id, label: p.name, color: p.color })),
+]);
 
-async function submit() {
-  if (!title.value.trim()) return;
+const currentProject = computed(
+  () =>
+    projectOptions.value.find((o) => o.value === projectId.value) ??
+    projectOptions.value[0]!,
+);
 
-  await store.createItem({
-    categoryId: undefined,
-    description: description.value || null,
-    difficulty: difficulty.value,
-    dueDate: dueDate.value || undefined,
-    parentId: undefined,
-    priority: priority.value,
-    projectId: projectId.value,
-    scheduledDate: scheduledDate.value || undefined,
-    tagIds: [],
-    title: title.value.trim(),
-  });
+const currentPriorityMeta = computed(
+  () => priorityOptions.find((o) => o.value === priority.value)!,
+);
+const currentDifficultyMeta = computed(
+  () => difficultyOptions.find((o) => o.value === difficulty.value)!,
+);
 
+function reset() {
   title.value = '';
   description.value = '';
   priority.value = 'None';
   difficulty.value = 'None';
-  dueDate.value = null;
-  scheduledDate.value = null;
-  projectId.value = props.defaultProjectId ?? null;
-  isExpanded.value = false;
-  emit('close');
+  dueDate.value = undefined;
+  scheduledDate.value = undefined;
+  projectId.value = null;
+}
+
+async function handleExpand() {
+  expanded.value = true;
+  await nextTick();
+  titleInputRef.value?.focus();
+}
+
+function handleCollapse() {
+  expanded.value = false;
+  reset();
+}
+
+async function handleSubmit() {
+  const t = title.value.trim();
+  if (!t) return;
+  await store.createItem({
+    description: description.value.trim() || null,
+    difficulty: difficulty.value,
+    dueDate: dueDate.value ? dueDate.value.format('YYYY-MM-DD') : null,
+    priority: priority.value,
+    projectId: projectId.value,
+    scheduledDate: scheduledDate.value ? scheduledDate.value.format('YYYY-MM-DD') : null,
+    tagIds: [],
+    title: t,
+  });
+  // 連續輸入：清空但保留展開狀態
+  reset();
+  await nextTick();
+  titleInputRef.value?.focus();
 }
 
 function handleKeydown(e: KeyboardEvent) {
   if (e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault();
-    submit();
+    handleSubmit();
   } else if (e.key === 'Escape') {
-    emit('close');
+    e.stopPropagation();
+    handleCollapse();
   }
 }
+
+defineExpose({ expand: handleExpand });
 </script>
 
 <template>
   <div
-    class="glass-card p-3 transition-all"
-    @keydown.esc.stop="emit('close')"
+    class="rounded-xl border border-border/60 bg-card/40 px-3 py-2 transition-all"
+    :class="expanded ? 'border-primary/40 shadow-sm' : 'hover:border-border'"
   >
-    <input
-      v-model="title"
-      autofocus
-      class="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
-      :placeholder="$t('page.todo.addTask')"
-      @keydown="handleKeydown"
-      @focus="isExpanded = true"
-    />
+    <!-- Collapsed -->
+    <button
+      v-if="!expanded"
+      class="flex w-full cursor-pointer items-center gap-2 text-left text-sm text-muted-foreground transition-colors hover:text-foreground"
+      type="button"
+      @click="handleExpand"
+    >
+      <svg
+        class="size-4"
+        fill="none"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+      >
+        <path :d="todoIcons.plus" />
+      </svg>
+      <span>新增任務… <span class="ml-1 text-xs opacity-60">(N)</span></span>
+    </button>
 
-    <!-- Expanded fields -->
-    <div v-if="isExpanded" class="mt-2 space-y-2">
+    <!-- Expanded -->
+    <div v-else>
+      <input
+        ref="titleInputRef"
+        v-model="title"
+        class="w-full bg-transparent text-sm font-medium text-foreground placeholder:text-muted-foreground focus:outline-none"
+        placeholder="輸入任務標題…"
+        @keydown="handleKeydown"
+      />
       <textarea
         v-model="description"
-        class="w-full resize-none bg-transparent text-xs text-foreground placeholder:text-muted-foreground outline-none border border-border rounded px-2 py-1.5 focus:border-primary"
-        :placeholder="$t('page.todo.description')"
-        rows="2"
-        @keydown.enter.stop
+        class="mt-1 max-h-32 w-full resize-none bg-transparent text-xs text-foreground placeholder:text-muted-foreground focus:outline-none"
+        placeholder="描述（可選）…"
+        rows="1"
+        @keydown.esc.stop="handleCollapse"
       />
-    </div>
 
-    <div class="mt-2 flex flex-wrap items-center gap-2">
-      <!-- Priority selector -->
-      <div class="flex items-center gap-1">
-        <button
-          v-for="opt in priorityOptions"
-          :key="opt.value"
-          class="rounded px-1.5 py-0.5 text-xs font-medium text-white transition-opacity hover:opacity-80"
-          :class="priority === opt.value ? 'opacity-100 ring-2 ring-offset-1' : 'opacity-40'"
-          :style="{ backgroundColor: opt.color, outlineColor: opt.color }"
-          type="button"
-          @click="priority = opt.value"
-        >
-          {{ opt.label }}
-        </button>
-      </div>
-
-      <!-- Difficulty selector (show when expanded) -->
-      <div v-if="isExpanded" class="flex items-center gap-1">
-        <span class="text-xs text-muted-foreground">難度：</span>
-        <button
-          v-for="opt in difficultyOptions"
-          :key="opt.value"
-          class="rounded px-1.5 py-0.5 text-xs font-medium text-white transition-opacity hover:opacity-80"
-          :class="difficulty === opt.value ? 'opacity-100 ring-2 ring-offset-1' : 'opacity-40'"
-          :style="{ backgroundColor: opt.color, outlineColor: opt.color }"
-          type="button"
-          @click="difficulty = opt.value"
-        >
-          {{ opt.label }}
-        </button>
-      </div>
-
-      <!-- Due date -->
-      <div class="flex items-center gap-1">
-        <span class="text-xs text-muted-foreground">截止：</span>
-        <input
-          v-model="dueDate"
-          class="rounded border border-border px-2 py-0.5 text-xs text-muted-foreground outline-none focus:border-primary bg-transparent"
-          type="date"
-        />
-      </div>
-
-      <!-- Scheduled date (when expanded) -->
-      <div v-if="isExpanded" class="flex items-center gap-1">
-        <span class="text-xs text-muted-foreground">計劃：</span>
-        <input
-          v-model="scheduledDate"
-          class="rounded border border-border px-2 py-0.5 text-xs text-muted-foreground outline-none focus:border-primary bg-transparent"
-          type="date"
-        />
-      </div>
-
-      <!-- Project selector (when expanded and no fixed project) -->
-      <div v-if="isExpanded && !defaultProjectId" class="flex items-center gap-1">
-        <span class="text-xs text-muted-foreground">專案：</span>
-        <select
-          v-model="projectId"
-          class="rounded border border-border bg-transparent px-2 py-0.5 text-xs text-foreground outline-none focus:border-primary"
-        >
-          <option :value="null">Inbox</option>
-          <option
-            v-for="p in store.projects.filter((p: TodoProject) => !p.isArchived)"
-            :key="p.id"
-            :value="p.id"
+      <div class="mt-2 flex flex-wrap items-center gap-1.5">
+        <!-- Priority -->
+        <Popover :overlay-inner-style="{ padding: '6px' }" trigger="click">
+          <button
+            class="todo-chip cursor-pointer"
+            :style="{ color: getPriorityColor(priority) }"
+            type="button"
           >
-            {{ p.name }}
-          </option>
-        </select>
-      </div>
+            <svg
+              class="size-3"
+              fill="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path :d="todoIcons.flag" />
+            </svg>
+            {{ currentPriorityMeta.label }}
+          </button>
+          <template #content>
+            <div class="flex flex-col gap-1">
+              <button
+                v-for="opt in priorityOptions"
+                :key="opt.value"
+                class="flex cursor-pointer items-center gap-2 rounded px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-accent"
+                type="button"
+                @click="priority = opt.value"
+              >
+                <svg
+                  class="size-3.5"
+                  fill="currentColor"
+                  :style="{ color: getPriorityColor(opt.value) }"
+                  viewBox="0 0 24 24"
+                >
+                  <path :d="todoIcons.flag" />
+                </svg>
+                {{ opt.label }}
+              </button>
+            </div>
+          </template>
+        </Popover>
 
-      <div class="ml-auto flex gap-2">
-        <button
-          class="text-xs text-muted-foreground hover:text-foreground"
-          type="button"
-          @click="emit('close')"
+        <!-- Difficulty -->
+        <Popover :overlay-inner-style="{ padding: '6px' }" trigger="click">
+          <button
+            class="todo-chip cursor-pointer"
+            :style="{ color: getDifficultyColor(difficulty) }"
+            type="button"
+          >
+            難度：{{ currentDifficultyMeta.label }}
+          </button>
+          <template #content>
+            <div class="flex flex-col gap-1">
+              <button
+                v-for="opt in difficultyOptions"
+                :key="opt.value"
+                class="flex cursor-pointer items-center gap-2 rounded px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-accent"
+                type="button"
+                @click="difficulty = opt.value"
+              >
+                <span
+                  class="size-2.5 rounded-full"
+                  :style="{ backgroundColor: getDifficultyColor(opt.value) }"
+                />
+                {{ opt.label }}
+              </button>
+            </div>
+          </template>
+        </Popover>
+
+        <!-- Due -->
+        <DatePicker
+          v-model:value="dueDate"
+          format="YYYY-MM-DD"
+          placeholder="截止日"
+          size="small"
         >
-          {{ $t('page.todo.cancel') }}
-        </button>
-        <button
-          class="rounded bg-primary px-3 py-1 text-xs font-medium text-primary-foreground hover:bg-primary-hover disabled:opacity-40"
-          :disabled="!title.trim() || store.loading.saving"
-          type="button"
-          @click="submit"
-        >
-          {{ $t('page.todo.save') }}
-        </button>
+          <template #renderExtraFooter>
+            <div class="flex gap-2 py-1">
+              <button
+                class="cursor-pointer rounded px-2 py-1 text-xs text-primary hover:bg-accent"
+                type="button"
+                @click="dueDate = dayjs()"
+              >
+                今天
+              </button>
+              <button
+                class="cursor-pointer rounded px-2 py-1 text-xs text-primary hover:bg-accent"
+                type="button"
+                @click="dueDate = dayjs().add(1, 'day')"
+              >
+                明天
+              </button>
+              <button
+                class="cursor-pointer rounded px-2 py-1 text-xs text-primary hover:bg-accent"
+                type="button"
+                @click="dueDate = dayjs().add(7, 'day')"
+              >
+                下週
+              </button>
+            </div>
+          </template>
+        </DatePicker>
+
+        <!-- Scheduled -->
+        <DatePicker
+          v-model:value="scheduledDate"
+          format="YYYY-MM-DD"
+          placeholder="計畫日"
+          size="small"
+        />
+
+        <!-- Project -->
+        <Popover :overlay-inner-style="{ padding: '6px', width: '220px' }" trigger="click">
+          <button class="todo-chip cursor-pointer" type="button">
+            <span
+              class="size-2.5 rounded-full"
+              :style="{ backgroundColor: currentProject.color }"
+            />
+            {{ currentProject.label }}
+          </button>
+          <template #content>
+            <div class="flex max-h-64 flex-col gap-1 overflow-y-auto">
+              <button
+                v-for="opt in projectOptions"
+                :key="opt.value ?? 'inbox'"
+                class="flex cursor-pointer items-center gap-2 rounded px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-accent"
+                type="button"
+                @click="projectId = opt.value"
+              >
+                <span
+                  class="size-2.5 rounded-full"
+                  :style="{ backgroundColor: opt.color }"
+                />
+                <span class="flex-1 truncate">{{ opt.label }}</span>
+              </button>
+            </div>
+          </template>
+        </Popover>
+
+        <div class="ml-auto flex items-center gap-1.5">
+          <button
+            class="cursor-pointer rounded-md px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            type="button"
+            @click="handleCollapse"
+          >
+            取消
+          </button>
+          <button
+            class="cursor-pointer rounded-md bg-primary px-3 py-1 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+            :disabled="!title.trim() || store.loading.saving"
+            type="button"
+            @click="handleSubmit"
+          >
+            新增 ⏎
+          </button>
+        </div>
       </div>
     </div>
   </div>
