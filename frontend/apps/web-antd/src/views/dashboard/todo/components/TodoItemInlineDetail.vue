@@ -385,36 +385,70 @@ function currentDifficultyMeta() {
       </Popover>
 
       <!-- 截止日 -->
-      <DatePicker
-        :value="dueDateValue"
-        format="YYYY-MM-DD"
-        :placeholder="$t('page.todo.dueDate')"
-        size="small"
-        @change="setDueDate"
-      >
-        <template #renderExtraFooter>
-          <div class="flex gap-2 py-1">
-            <button
-              v-for="p in dueQuickPresets()"
-              :key="p.label"
-              class="cursor-pointer rounded px-2 py-1 text-xs text-primary transition-colors hover:bg-accent"
-              type="button"
-              @click="setDueDate(p.value())"
-            >
-              {{ p.label }}
-            </button>
-          </div>
-        </template>
-      </DatePicker>
+      <div class="inline-flex items-center gap-1.5 rounded-md border border-border/60 bg-background/40 pl-2">
+        <span class="inline-flex items-center gap-1 text-xs text-muted-foreground" title="截止日">
+          <svg
+            aria-hidden="true"
+            class="size-3.5"
+            fill="none"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+          >
+            <path d="M8 2v4M16 2v4M3 10h18M5 6h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z" />
+          </svg>
+          截止
+        </span>
+        <DatePicker
+          :value="dueDateValue"
+          format="YYYY-MM-DD"
+          :placeholder="$t('page.todo.dueDate')"
+          size="small"
+          @change="setDueDate"
+        >
+          <template #renderExtraFooter>
+            <div class="flex gap-2 py-1">
+              <button
+                v-for="p in dueQuickPresets()"
+                :key="p.label"
+                class="cursor-pointer rounded px-2 py-1 text-xs text-primary transition-colors hover:bg-accent"
+                type="button"
+                @click="setDueDate(p.value())"
+              >
+                {{ p.label }}
+              </button>
+            </div>
+          </template>
+        </DatePicker>
+      </div>
 
       <!-- 計畫日 -->
-      <DatePicker
-        :value="scheduledDateValue"
-        format="YYYY-MM-DD"
-        placeholder="計畫日期"
-        size="small"
-        @change="setScheduledDate"
-      />
+      <div class="inline-flex items-center gap-1.5 rounded-md border border-border/60 bg-background/40 pl-2">
+        <span class="inline-flex items-center gap-1 text-xs text-muted-foreground" title="計畫日">
+          <svg
+            aria-hidden="true"
+            class="size-3.5"
+            fill="none"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+          >
+            <path d="M12 8v4l3 2M12 22a10 10 0 1 1 0-20 10 10 0 0 1 0 20z" />
+          </svg>
+          計畫
+        </span>
+        <DatePicker
+          :value="scheduledDateValue"
+          format="YYYY-MM-DD"
+          placeholder="計畫日期"
+          size="small"
+          @change="setScheduledDate"
+        />
+      </div>
 
       <!-- 專案 -->
       <Popover :overlay-inner-style="{ padding: '6px', width: '220px' }" trigger="click">
