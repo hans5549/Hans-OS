@@ -1,15 +1,24 @@
 .tsf-glass-page {
-  --tsf-surface: color-mix(in srgb, var(--ant-color-bg-container) 68%, transparent);
-  --tsf-surface-strong: color-mix(in srgb, var(--ant-color-bg-container) 82%, transparent);
-  --tsf-border: color-mix(in srgb, var(--ant-color-border) 68%, transparent);
-  --tsf-border-strong: color-mix(in srgb, var(--ant-color-primary) 36%, var(--ant-color-border));
+  --tsf-surface: color-mix(in srgb, var(--ant-color-bg-container) 76%, transparent);
+  --tsf-surface-strong: color-mix(in srgb, var(--ant-color-bg-container) 88%, transparent);
+  --tsf-surface-soft: color-mix(in srgb, var(--ant-color-bg-layout) 68%, transparent);
+  --tsf-control-bg: color-mix(in srgb, var(--ant-color-bg-container) 84%, transparent);
+  --tsf-control-hover: color-mix(in srgb, var(--ant-color-primary) 10%, var(--tsf-control-bg));
+  --tsf-control-selected: color-mix(in srgb, var(--ant-color-primary) 20%, var(--ant-color-bg-container));
+  --tsf-border: color-mix(in srgb, var(--ant-color-border) 78%, transparent);
+  --tsf-border-strong: color-mix(in srgb, var(--ant-color-primary) 30%, var(--ant-color-border));
+  --tsf-highlight: color-mix(in srgb, var(--ant-color-primary) 9%, transparent);
+  --tsf-inner-highlight: color-mix(in srgb, #fff 12%, transparent);
   --tsf-text-muted: var(--ant-color-text-secondary);
-  --tsf-shadow: 0 20px 60px rgb(0 0 0 / 18%);
+  --tsf-shadow: 0 16px 44px rgb(2 6 23 / 16%);
 
   position: relative;
   min-height: 100%;
   overflow: hidden;
   padding: 16px;
+  background:
+    radial-gradient(circle at 14% 0%, color-mix(in srgb, var(--ant-color-primary) 10%, transparent), transparent 30%),
+    linear-gradient(180deg, color-mix(in srgb, var(--ant-color-bg-layout) 94%, #0f172a), var(--ant-color-bg-layout));
   color: var(--ant-color-text);
   isolation: isolate;
 }
@@ -28,8 +37,8 @@
   width: min(540px, 70vw);
   height: min(540px, 70vw);
   background:
-    radial-gradient(circle at 35% 35%, rgb(64 156 255 / 28%), transparent 58%),
-    radial-gradient(circle at 68% 68%, rgb(45 212 191 / 16%), transparent 60%);
+    radial-gradient(circle at 35% 35%, rgb(64 156 255 / 18%), transparent 58%),
+    radial-gradient(circle at 68% 68%, rgb(45 212 191 / 10%), transparent 60%);
 }
 
 .tsf-glass-page::after {
@@ -37,8 +46,8 @@
   width: min(520px, 76vw);
   height: min(520px, 76vw);
   background:
-    radial-gradient(circle at 48% 50%, rgb(34 197 94 / 16%), transparent 58%),
-    radial-gradient(circle at 62% 40%, rgb(14 165 233 / 12%), transparent 62%);
+    radial-gradient(circle at 48% 50%, rgb(34 197 94 / 10%), transparent 58%),
+    radial-gradient(circle at 62% 40%, rgb(14 165 233 / 8%), transparent 62%);
 }
 
 .tsf-glass-shell {
@@ -58,9 +67,9 @@
   border: 1px solid var(--tsf-border);
   border-radius: 8px;
   background:
-    linear-gradient(135deg, rgb(255 255 255 / 10%), rgb(255 255 255 / 3%)),
+    linear-gradient(135deg, var(--tsf-inner-highlight), transparent 42%),
     var(--tsf-surface);
-  box-shadow: var(--tsf-shadow), inset 0 1px 0 rgb(255 255 255 / 12%);
+  box-shadow: var(--tsf-shadow), inset 0 1px 0 var(--tsf-inner-highlight);
   backdrop-filter: blur(18px) saturate(140%);
 }
 
@@ -87,7 +96,7 @@
   place-items: center;
   border: 1px solid color-mix(in srgb, var(--ant-color-primary) 40%, transparent);
   border-radius: 8px;
-  background: color-mix(in srgb, var(--ant-color-primary) 18%, transparent);
+  background: color-mix(in srgb, var(--ant-color-primary) 14%, var(--ant-color-bg-container));
   color: var(--ant-color-primary);
   font-size: 22px;
 }
@@ -133,6 +142,9 @@
 .tsf-filter-group .ant-segmented {
   max-width: min(100%, 860px);
   overflow-x: auto;
+  background: var(--tsf-control-bg);
+  border: 1px solid var(--tsf-border);
+  box-shadow: inset 0 1px 0 var(--tsf-inner-highlight);
 }
 
 .tsf-filter-group .ant-segmented::-webkit-scrollbar {
@@ -166,7 +178,7 @@
   width: 96px;
   height: 96px;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--tsf-accent, var(--ant-color-primary)) 18%, transparent);
+  background: color-mix(in srgb, var(--tsf-accent, var(--ant-color-primary)) 14%, transparent);
   content: '';
 }
 
@@ -202,7 +214,7 @@
   height: 36px;
   place-items: center;
   border-radius: 8px;
-  background: color-mix(in srgb, var(--tsf-accent, var(--ant-color-primary)) 16%, transparent);
+  background: color-mix(in srgb, var(--tsf-accent, var(--ant-color-primary)) 14%, var(--ant-color-bg-container));
   color: var(--tsf-accent, var(--ant-color-primary));
   font-size: 20px;
 }
@@ -241,6 +253,7 @@
   border: 1px solid var(--tsf-border);
   border-radius: 8px;
   background: var(--tsf-surface-strong);
+  box-shadow: inset 0 1px 0 var(--tsf-inner-highlight);
 }
 
 .tsf-table-panel .ant-table,
@@ -250,13 +263,18 @@
 }
 
 .tsf-table-panel .ant-table-thead > tr > th {
-  background: color-mix(in srgb, var(--ant-color-bg-container) 84%, transparent);
+  background: color-mix(in srgb, var(--ant-color-bg-container) 92%, var(--tsf-highlight));
   color: var(--ant-color-text);
   font-weight: 700;
 }
 
-.tsf-table-panel .ant-table-tbody > tr:hover > td {
-  background: color-mix(in srgb, var(--ant-color-primary) 10%, transparent);
+.tsf-table-panel .ant-table-tbody > tr:hover > td,
+.tsf-table-panel .ant-table-tbody > tr.ant-table-row:hover > td {
+  background: var(--tsf-highlight) !important;
+}
+
+.tsf-table-panel .ant-table-summary > tr > td {
+  background: color-mix(in srgb, var(--ant-color-bg-container) 90%, transparent);
 }
 
 .tsf-month-rail {
@@ -281,7 +299,7 @@
   border: 1px solid color-mix(in srgb, var(--ant-color-primary) 32%, transparent);
   border-radius: 999px;
   padding: 3px 10px;
-  background: color-mix(in srgb, var(--ant-color-primary) 12%, transparent);
+  background: color-mix(in srgb, var(--ant-color-primary) 12%, var(--ant-color-bg-container));
   color: var(--ant-color-text);
   font-size: 13px;
   font-weight: 650;
@@ -291,7 +309,136 @@
   border: 1px dashed var(--tsf-border-strong);
   border-radius: 8px;
   padding: 28px;
-  background: color-mix(in srgb, var(--ant-color-bg-container) 52%, transparent);
+  background: var(--tsf-surface);
+  box-shadow: inset 0 1px 0 var(--tsf-inner-highlight);
+}
+
+.tsf-glass-page .ant-table-wrapper {
+  overflow: hidden;
+  border: 1px solid var(--tsf-border);
+  border-radius: 8px;
+  background: var(--tsf-surface-strong);
+  box-shadow: inset 0 1px 0 var(--tsf-inner-highlight);
+}
+
+.tsf-glass-page .ant-table,
+.tsf-glass-page .ant-table-container,
+.tsf-glass-page .ant-table-cell {
+  background: transparent;
+}
+
+.tsf-glass-page .ant-table-thead > tr > th {
+  background: color-mix(in srgb, var(--ant-color-bg-container) 92%, var(--tsf-highlight));
+  color: var(--ant-color-text);
+  font-weight: 700;
+}
+
+.tsf-glass-page .ant-table-tbody > tr > td {
+  border-bottom-color: var(--tsf-border);
+}
+
+.tsf-glass-page .ant-table-tbody > tr:hover > td,
+.tsf-glass-page .ant-table-tbody > tr.ant-table-row:hover > td {
+  background: var(--tsf-highlight) !important;
+}
+
+.tsf-glass-page .ant-table-summary > tr > td {
+  background: color-mix(in srgb, var(--ant-color-bg-container) 90%, transparent);
+}
+
+.tsf-glass-page :where(.ant-select-selector, .ant-input, .ant-input-number, .ant-picker) {
+  border-color: var(--tsf-border) !important;
+  background: var(--tsf-control-bg) !important;
+  box-shadow: inset 0 1px 0 var(--tsf-inner-highlight) !important;
+}
+
+.tsf-glass-page :where(.ant-select-selector, .ant-input, .ant-input-number, .ant-picker):hover {
+  border-color: var(--tsf-border-strong) !important;
+  background: var(--tsf-control-hover) !important;
+}
+
+.tsf-glass-page :where(.ant-input-number-input, .ant-select-selection-item, .ant-picker-input > input) {
+  color: var(--ant-color-text) !important;
+}
+
+.tsf-glass-page .ant-select-dropdown,
+.tsf-glass-page .ant-picker-dropdown .ant-picker-panel-container {
+  border: 1px solid var(--tsf-border);
+  background: var(--tsf-surface-strong);
+  box-shadow: var(--tsf-shadow);
+  backdrop-filter: blur(18px) saturate(140%);
+}
+
+.tsf-glass-page .ant-btn {
+  border-radius: 8px;
+  font-weight: 650;
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease,
+    box-shadow 180ms ease,
+    color 180ms ease;
+}
+
+.tsf-glass-page :where(.ant-btn-default, .ant-btn-dashed) {
+  border-color: var(--tsf-border);
+  background: var(--tsf-control-bg);
+  box-shadow: inset 0 1px 0 var(--tsf-inner-highlight);
+}
+
+.tsf-glass-page :where(.ant-btn-default, .ant-btn-dashed):hover {
+  border-color: var(--tsf-border-strong);
+  background: var(--tsf-control-hover);
+}
+
+.tsf-glass-page .ant-btn-primary {
+  box-shadow:
+    0 10px 26px color-mix(in srgb, var(--ant-color-primary) 24%, transparent),
+    inset 0 1px 0 rgb(255 255 255 / 22%);
+}
+
+.tsf-glass-page .ant-segmented-item {
+  border-radius: 7px;
+}
+
+.tsf-glass-page .ant-segmented-item-selected {
+  background: var(--tsf-control-selected) !important;
+  box-shadow:
+    0 6px 18px color-mix(in srgb, var(--ant-color-primary) 12%, transparent),
+    inset 0 1px 0 var(--tsf-inner-highlight) !important;
+}
+
+.tsf-glass-page .ant-tag {
+  border-radius: 6px;
+  font-weight: 650;
+}
+
+.tsf-glass-page .ant-card {
+  border-color: var(--tsf-border);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, var(--tsf-inner-highlight), transparent 42%),
+    var(--tsf-surface);
+  box-shadow: inset 0 1px 0 var(--tsf-inner-highlight);
+  backdrop-filter: blur(18px) saturate(140%);
+}
+
+.tsf-glass-page .ant-card-head {
+  border-bottom-color: var(--tsf-border);
+  background: transparent;
+}
+
+.tsf-glass-page .ant-tabs-nav::before {
+  border-color: var(--tsf-border);
+}
+
+.tsf-glass-page .ant-tabs-tab {
+  border-radius: 8px;
+  padding-inline: 12px;
+}
+
+.tsf-glass-page .ant-tabs-tab-active {
+  background: var(--tsf-control-selected);
+  box-shadow: inset 0 1px 0 var(--tsf-inner-highlight);
 }
 
 .tsf-glass-page :where(.ant-btn, .ant-select-selector, .ant-input, .ant-input-number, .ant-picker, .ant-segmented):focus,
