@@ -1,9 +1,9 @@
 <script lang="ts" setup>
 import { ref } from 'vue';
 
-import { Page } from '@vben/common-ui';
+import { Tabs, TabPane } from 'ant-design-vue';
 
-import { Card, Tabs, TabPane } from 'ant-design-vue';
+import TsfGlassPage from '../_shared/TsfGlassPage.vue';
 
 import BankInitialBalance from './components/BankInitialBalance.vue';
 import DepartmentManagement from './components/DepartmentManagement.vue';
@@ -15,8 +15,12 @@ const activeTab = ref('departments');
 </script>
 
 <template>
-  <Page content-class="p-0" title="設定">
-    <Card :body-style="{ padding: '16px 24px' }">
+  <TsfGlassPage
+    icon="i-lucide-settings"
+    subtitle="管理體育部門、銀行起始資料與歷史交易初始化。"
+    title="設定"
+  >
+    <section class="tsf-panel">
       <Tabs v-model:activeKey="activeTab" tab-position="left">
         <TabPane key="departments" tab="體育部門管理">
           <div class="pl-4">
@@ -34,6 +38,6 @@ const activeTab = ref('departments');
           </div>
         </TabPane>
       </Tabs>
-    </Card>
-  </Page>
+    </section>
+  </TsfGlassPage>
 </template>

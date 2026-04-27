@@ -187,7 +187,11 @@ function formatCurrency(value: number): string {
                   <Tag
                     :color="(record as ActivityExpenseResponse).pendingRemittanceStatus === 0 ? 'orange' : 'green'"
                   >
-                    {{ (record as ActivityExpenseResponse).pendingRemittanceStatus === 0 ? '💸 待匯款中' : '✅ 已匯款' }}
+                    <span
+                      :class="(record as ActivityExpenseResponse).pendingRemittanceStatus === 0 ? 'i-lucide-send' : 'i-lucide-circle-check'"
+                      aria-hidden="true"
+                    />
+                    {{ (record as ActivityExpenseResponse).pendingRemittanceStatus === 0 ? '待匯款中' : '已匯款' }}
                   </Tag>
                 </template>
                 <Button
@@ -196,7 +200,8 @@ function formatCurrency(value: number): string {
                   type="dashed"
                   @click.stop="openRemittanceModal(record as unknown as ActivityExpenseResponse)"
                 >
-                  + 建立待匯款
+                  <template #icon><span class="i-lucide-plus" /></template>
+                  建立待匯款
                 </Button>
               </template>
               <template v-else-if="column.dataIndex === 'note'">
@@ -237,7 +242,11 @@ function formatCurrency(value: number): string {
               <Tag
                 :color="(record as ActivityExpenseResponse).pendingRemittanceStatus === 0 ? 'orange' : 'green'"
               >
-                {{ (record as ActivityExpenseResponse).pendingRemittanceStatus === 0 ? '💸 待匯款中' : '✅ 已匯款' }}
+                <span
+                  :class="(record as ActivityExpenseResponse).pendingRemittanceStatus === 0 ? 'i-lucide-send' : 'i-lucide-circle-check'"
+                  aria-hidden="true"
+                />
+                {{ (record as ActivityExpenseResponse).pendingRemittanceStatus === 0 ? '待匯款中' : '已匯款' }}
               </Tag>
             </template>
             <Button
@@ -246,7 +255,8 @@ function formatCurrency(value: number): string {
               type="dashed"
               @click.stop="openRemittanceModal(record as unknown as ActivityExpenseResponse)"
             >
-              + 建立待匯款
+              <template #icon><span class="i-lucide-plus" /></template>
+              建立待匯款
             </Button>
           </template>
         </template>
@@ -316,8 +326,30 @@ function formatCurrency(value: number): string {
 </template>
 
 <style scoped>
+.activity-card {
+  border: 1px solid var(--tsf-border);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgb(255 255 255 / 9%), rgb(255 255 255 / 3%)),
+    var(--tsf-surface);
+  box-shadow: var(--tsf-shadow), inset 0 1px 0 rgb(255 255 255 / 10%);
+  backdrop-filter: blur(18px) saturate(140%);
+}
+
 .activity-card :deep(.ant-card-head) {
   min-height: auto;
   padding: 8px 16px;
+  border-bottom-color: var(--tsf-border);
+  background: transparent;
+}
+
+.activity-card :deep(.ant-card-body) {
+  background: transparent;
+}
+
+.activity-card :deep(.ant-table-wrapper) {
+  overflow: hidden;
+  border: 1px solid var(--tsf-border);
+  border-radius: 8px;
 }
 </style>

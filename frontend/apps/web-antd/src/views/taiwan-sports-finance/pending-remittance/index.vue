@@ -1,11 +1,8 @@
 <script lang="ts" setup>
 import { onMounted, ref } from 'vue';
 
-import { Page } from '@vben/common-ui';
-
 import {
   Button,
-  Card,
   Col,
   DatePicker,
   Form,
@@ -42,6 +39,8 @@ import {
   getPendingRemittancesApi,
   updatePendingRemittanceApi,
 } from '#/api';
+
+import TsfGlassPage from '../_shared/TsfGlassPage.vue';
 
 defineOptions({ name: 'TsfPendingRemittancePage' });
 
@@ -260,31 +259,31 @@ async function handleDelete(id: string) {
 </script>
 
 <template>
-  <Page content-class="p-0" title="活動費待匯款">
-    <Card :body-style="{ padding: '16px 24px' }">
-      <!-- 頂部控制列 -->
-      <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div class="flex items-center gap-3">
-          <span class="text-2xl">💸</span>
-          <span class="text-lg font-medium">活動費待匯款</span>
-        </div>
-        <Button type="primary" @click="openCreateModal">
-          <template #icon><span class="i-lucide-plus" /></template>
-          新增待匯款
-        </Button>
-      </div>
+  <TsfGlassPage
+    icon="i-lucide-send"
+    subtitle="追蹤活動費匯款清單，完成後自動建立銀行支出紀錄。"
+    title="活動費待匯款"
+  >
+    <template #actions>
+      <Button type="primary" @click="openCreateModal">
+        <template #icon><span class="i-lucide-plus" /></template>
+        新增待匯款
+      </Button>
+    </template>
 
-      <!-- 狀態篩選 -->
-      <div class="mb-4">
+    <template #filters>
+      <div class="tsf-filter-group">
+        <span class="tsf-filter-label">狀態</span>
         <Segmented
           :value="statusReverseMap[filterStatus]"
           :options="statusSegmentedOptions"
           @change="(val: string | number) => onStatusChange(String(val))"
         />
       </div>
+    </template>
 
-      <!-- 匯款表格 -->
-      <Spin :spinning="loading">
+    <Spin :spinning="loading">
+      <section class="tsf-table-panel">
         <Table
           :columns="columns"
           :data-source="remittances"
@@ -367,8 +366,8 @@ async function handleDelete(id: string) {
             </div>
           </template>
         </Table>
-      </Spin>
-    </Card>
+      </section>
+    </Spin>
 
     <!-- 新增/編輯 Modal -->
     <Modal
@@ -530,5 +529,5 @@ async function handleDelete(id: string) {
         </FormItem>
       </Form>
     </Modal>
-  </Page>
+  </TsfGlassPage>
 </template>

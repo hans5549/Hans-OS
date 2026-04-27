@@ -1,19 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
 
-import { Page } from '@vben/common-ui';
-
 import {
   Button,
-  Card,
-  Col,
   Empty,
   InputNumber,
-  Row,
   Select,
   SelectOption,
   Spin,
-  Statistic,
   message,
 } from 'ant-design-vue';
 
@@ -29,6 +23,9 @@ import {
   getActivityMonthSummariesApi,
   getDepartmentsApi,
 } from '#/api';
+
+import TsfGlassPage from '../_shared/TsfGlassPage.vue';
+import TsfMetricCard from '../_shared/TsfMetricCard.vue';
 
 import ActivityCard from './components/ActivityCard.vue';
 import ActivityFormDrawer from './components/ActivityFormDrawer.vue';
@@ -156,85 +153,80 @@ onMounted(async () => {
 </script>
 
 <template>
-  <Page auto-content-height>
-    <!-- 頂部篩選列 -->
-    <Card class="mb-4">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-4">
-          <h3 class="m-0 text-lg font-medium">部門活動記錄</h3>
-          <InputNumber
-            v-model:value="selectedYear"
-            :max="currentYear + 5"
-            :min="2020"
-            style="width: 100px"
-          />
-          <Select
-            v-model:value="selectedDepartmentId"
-            placeholder="全部部門"
-            style="width: 160px"
-          >
-            <SelectOption :value="undefined">全部部門</SelectOption>
-            <SelectOption
-              v-for="dept in departments"
-              :key="dept.id"
-              :value="dept.id"
-            >
-              {{ dept.name }}
-            </SelectOption>
-          </Select>
-        </div>
-        <Button type="primary" @click="handleCreate">
-          新增活動
-        </Button>
+  <TsfGlassPage
+    icon="i-lucide-trophy"
+    subtitle="依月份與部門檢視活動費，並從活動明細建立待匯款。"
+    title="部門活動記錄"
+  >
+    <template #actions>
+      <Button type="primary" @click="handleCreate">
+        <template #icon><span class="i-lucide-plus" /></template>
+        新增活動
+      </Button>
+    </template>
+
+    <template #filters>
+      <div class="tsf-filter-group">
+        <span class="tsf-filter-label">年度</span>
+        <InputNumber
+          v-model:value="selectedYear"
+          :max="currentYear + 5"
+          :min="2020"
+          style="width: 108px"
+        />
       </div>
-    </Card>
-
-    <!-- 統計摘要 -->
-    <Row :gutter="16" class="mb-4">
-      <Col :span="8">
-        <Card>
-          <Statistic
-            :value="yearTotal"
-            :value-style="{ color: 'var(--ant-color-primary)' }"
-            title="年度合計"
+      <div class="tsf-filter-group">
+        <span class="tsf-filter-label">部門</span>
+        <Select
+          v-model:value="selectedDepartmentId"
+          placeholder="全部部門"
+          style="width: 168px"
+        >
+          <SelectOption :value="undefined">全部部門</SelectOption>
+          <SelectOption
+            v-for="dept in departments"
+            :key="dept.id"
+            :value="dept.id"
           >
-            <template #prefix>$</template>
-          </Statistic>
-        </Card>
-      </Col>
-      <Col :span="8">
-        <Card>
-          <Statistic
-            :value="monthTotal"
-            title="本月合計"
-          >
-            <template #prefix>$</template>
-          </Statistic>
-        </Card>
-      </Col>
-      <Col :span="8">
-        <Card>
-          <Statistic
-            :value="activities.length"
-            title="本月活動數"
-            suffix="項"
-          />
-        </Card>
-      </Col>
-    </Row>
+            {{ dept.name }}
+          </SelectOption>
+        </Select>
+      </div>
+    </template>
 
-    <!-- 主體：左側月份 + 右側活動列表 -->
-    <Row :gutter="16">
-      <Col :span="4">
-        <Card :body-style="{ padding: '8px 0' }">
+    <div class="tsf-kpi-grid tsf-kpi-grid--three">
+      <TsfMetricCard
+        icon="i-lucide-calendar-range"
+        label="年度合計"
+        prefix="$"
+        tone="info"
+        :value="yearTotal.toLocaleString('zh-TW')"
+      />
+      <TsfMetricCard
+        icon="i-lucide-calendar-days"
+        label="本月合計"
+        prefix="$"
+        tone="success"
+        :value="monthTotal.toLocaleString('zh-TW')"
+      />
+      <TsfMetricCard
+        icon="i-lucide-clipboard-list"
+        label="本月活動數"
+        suffix="項"
+        tone="neutral"
+        :value="activities.length"
+      />
+    </div>
+
+    <div class="grid grid-cols-1 gap-4 lg:grid-cols-[220px_minmax(0,1fr)]">
+      <aside class="tsf-month-rail">
           <MonthSidebar
             v-model:selected-month="selectedMonth"
             :month-summaries="monthSummaries"
           />
-        </Card>
-      </Col>
+      </aside>
 
-      <Col :span="20">
+      <section>
         <Spin :spinning="loadingActivities">
           <template v-if="activities.length > 0">
             <ActivityCard
@@ -246,16 +238,16 @@ onMounted(async () => {
               @remittanceCreated="fetchActivities"
             />
           </template>
-          <Card v-else>
+          <div v-else class="tsf-empty-panel">
             <Empty description="本月尚無活動記錄">
               <Button type="primary" @click="handleCreate">
                 新增活動
               </Button>
             </Empty>
-          </Card>
+          </div>
         </Spin>
-      </Col>
-    </Row>
+      </section>
+    </div>
 
     <!-- 新增/編輯 Drawer -->
     <ActivityFormDrawer
@@ -267,5 +259,5 @@ onMounted(async () => {
       @close="drawerOpen = false"
       @saved="handleSaved"
     />
-  </Page>
+  </TsfGlassPage>
 </template>

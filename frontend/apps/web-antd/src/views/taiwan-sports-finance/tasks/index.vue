@@ -1,11 +1,8 @@
 <script lang="ts" setup>
 import { computed, onMounted, ref, watch } from 'vue';
 
-import { Page } from '@vben/common-ui';
-
 import {
   Button,
-  Card,
   Col,
   DatePicker,
   Form,
@@ -19,7 +16,6 @@ import {
   Select,
   SelectOption,
   Spin,
-  Statistic,
   Table,
   Tag,
   Textarea,
@@ -44,6 +40,9 @@ import {
   patchReceiptStatusApi,
   updateFinanceTaskApi,
 } from '#/api';
+
+import TsfGlassPage from '../_shared/TsfGlassPage.vue';
+import TsfMetricCard from '../_shared/TsfMetricCard.vue';
 
 defineOptions({ name: 'TsfTasksPage' });
 
@@ -362,89 +361,70 @@ async function handleToggleReceipt(
 </script>
 
 <template>
-  <Page content-class="p-0" title="統一任務清單">
-    <Card :body-style="{ padding: '16px 24px' }">
-      <!-- 頂部控制列 -->
-      <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div class="flex items-center gap-3">
-          <span class="text-2xl">📋</span>
-          <span class="text-lg font-medium">統一任務清單</span>
-        </div>
-        <div class="flex items-center gap-2">
-          <Select
-            v-model:value="currentYear"
-            :options="
-              yearOptions.map((y) => ({ label: `${y}年`, value: y }))
-            "
-            style="width: 100px"
-          />
-          <Button type="primary" @click="openCreateModal">
-            <template #icon><span class="i-lucide-plus" /></template>
-            新增任務
-          </Button>
-        </div>
-      </div>
+  <TsfGlassPage
+    icon="i-lucide-list-checks"
+    subtitle="整合一般任務、活動匯款與收據追蹤，集中處理財務待辦。"
+    title="統一任務清單"
+  >
+    <template #actions>
+      <Select
+        v-model:value="currentYear"
+        :options="yearOptions.map((y) => ({ label: `${y}年`, value: y }))"
+        style="width: 108px"
+      />
+      <Button type="primary" @click="openCreateModal">
+        <template #icon><span class="i-lucide-plus" /></template>
+        新增任務
+      </Button>
+    </template>
 
-      <!-- 月份切換器 -->
-      <div class="mb-4">
+    <template #filters>
+      <div class="tsf-filter-group">
+        <span class="tsf-filter-label">月份</span>
         <Segmented
           v-model:value="monthSegmentedValue"
           :options="segmentedOptions"
-          block
+        />
+      </div>
+      <div class="tsf-filter-group">
+        <span class="tsf-filter-label">狀態</span>
+        <Segmented
+          v-model:value="statusSegmentedValue"
+          :options="statusFilterOptions"
+        />
+      </div>
+      <div class="tsf-filter-group">
+        <span class="tsf-filter-label">類型</span>
+        <Segmented
+          v-model:value="typeSegmentedValue"
+          :options="typeFilterOptions"
+        />
+      </div>
+    </template>
+
+    <Spin :spinning="loading">
+      <div class="tsf-kpi-grid tsf-kpi-grid--three">
+        <TsfMetricCard
+          icon="i-lucide-circle-alert"
+          label="待處理"
+          tone="danger"
+          :value="pendingCount"
+        />
+        <TsfMetricCard
+          icon="i-lucide-loader-circle"
+          label="進行中"
+          tone="info"
+          :value="inProgressCount"
+        />
+        <TsfMetricCard
+          icon="i-lucide-circle-check"
+          label="已完成"
+          tone="success"
+          :value="completedCount"
         />
       </div>
 
-      <!-- 統計卡片 -->
-      <Spin :spinning="loading">
-        <Row :gutter="16" class="mb-4">
-          <Col :md="8" :xs="24">
-            <Card size="small">
-              <Statistic
-                :value="pendingCount"
-                :value-style="{ color: '#cf1322' }"
-                title="待處理"
-              />
-            </Card>
-          </Col>
-          <Col :md="8" :xs="24">
-            <Card size="small">
-              <Statistic
-                :value="inProgressCount"
-                :value-style="{ color: '#1677ff' }"
-                title="進行中"
-              />
-            </Card>
-          </Col>
-          <Col :md="8" :xs="24">
-            <Card size="small">
-              <Statistic
-                :value="completedCount"
-                :value-style="{ color: '#3f8600' }"
-                title="已完成"
-              />
-            </Card>
-          </Col>
-        </Row>
-
-        <!-- 篩選列 -->
-        <div class="mb-3 flex flex-wrap gap-4">
-          <div class="flex items-center gap-2">
-            <span class="text-sm text-gray-500">狀態：</span>
-            <Segmented
-              v-model:value="statusSegmentedValue"
-              :options="statusFilterOptions"
-            />
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="text-sm text-gray-500">類型：</span>
-            <Segmented
-              v-model:value="typeSegmentedValue"
-              :options="typeFilterOptions"
-            />
-          </div>
-        </div>
-
-        <!-- 任務表格 -->
+      <section class="tsf-table-panel mt-4">
         <Table
           :columns="columns"
           :data-source="tasks"
@@ -593,12 +573,12 @@ async function handleToggleReceipt(
 
           <template #emptyText>
             <div class="py-8 text-center text-gray-400">
-              🎉 目前沒有待處理的任務
+              目前沒有待處理的任務
             </div>
           </template>
         </Table>
-      </Spin>
-    </Card>
+      </section>
+    </Spin>
 
     <!-- 新增/編輯一般任務 Modal -->
     <Modal
@@ -704,5 +684,5 @@ async function handleToggleReceipt(
         </FormItem>
       </Form>
     </Modal>
-  </Page>
+  </TsfGlassPage>
 </template>

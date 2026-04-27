@@ -1,11 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
 
-import { Page } from '@vben/common-ui';
-
 import {
   Button,
-  Card,
   Checkbox,
   Col,
   DatePicker,
@@ -23,7 +20,6 @@ import {
   Select,
   SelectOption,
   Spin,
-  Statistic,
   Table,
   Tag,
   Tooltip,
@@ -57,6 +53,8 @@ import {
 } from '#/api';
 
 import ActivityFormDrawer from '../activities/components/ActivityFormDrawer.vue';
+import TsfGlassPage from './TsfGlassPage.vue';
+import TsfMetricCard from './TsfMetricCard.vue';
 
 type ActivityMode = 'existing' | 'new' | 'none';
 
@@ -688,85 +686,74 @@ async function handleBatchUpdateDepartment() {
 </script>
 
 <template>
-  <Page content-class="p-0" :title="`${bankName}收支表`">
-    <Card :body-style="{ padding: '16px 24px' }">
-      <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div class="flex items-center gap-3">
-          <span class="text-2xl">{{ bankName.includes('上海') ? '🏦' : '🏛️' }}</span>
-          <span class="text-lg font-medium">{{ bankName }}收支表</span>
-        </div>
-        <div class="flex items-center gap-2">
-          <Select
-            v-model:value="currentYear"
-            :options="yearOptions.map((year) => ({ label: `${year}年`, value: year }))"
-            style="width: 100px"
-          />
-          <Button
-            :loading="exporting"
-            type="default"
-            @click="handleExport"
-          >
-            <template #icon><span class="i-lucide-download" /></template>
-            匯出 Excel
-          </Button>
-        </div>
-      </div>
+  <TsfGlassPage
+    :icon="bankName.includes('上海') ? 'i-lucide-building-2' : 'i-lucide-landmark'"
+    subtitle="銀行交易、活動來源、收據狀態與月度餘額檢視。"
+    :title="`${bankName}收支表`"
+  >
+    <template #actions>
+      <Select
+        v-model:value="currentYear"
+        :options="yearOptions.map((year) => ({ label: `${year}年`, value: year }))"
+        style="width: 108px"
+      />
+      <Button
+        :loading="exporting"
+        type="default"
+        @click="handleExport"
+      >
+        <template #icon><span class="i-lucide-download" /></template>
+        匯出 Excel
+      </Button>
+      <Button type="primary" @click="openCreateModal">
+        <template #icon><span class="i-lucide-plus" /></template>
+        新增交易
+      </Button>
+    </template>
 
-      <div class="mb-4">
+    <template #filters>
+      <div class="tsf-filter-group">
+        <span class="tsf-filter-label">月份</span>
         <Segmented
           v-model:value="monthSegmentedValue"
           :options="segmentedOptions"
-          block
+        />
+      </div>
+    </template>
+
+    <Spin :spinning="loading">
+      <div class="tsf-kpi-grid">
+        <TsfMetricCard
+          icon="i-lucide-wallet-cards"
+          label="期初餘額"
+          prefix="$"
+          tone="neutral"
+          :value="formatCurrency(summary.openingBalance)"
+        />
+        <TsfMetricCard
+          icon="i-lucide-trending-up"
+          label="期間收入"
+          prefix="$"
+          tone="success"
+          :value="formatCurrency(summary.totalIncome)"
+        />
+        <TsfMetricCard
+          icon="i-lucide-trending-down"
+          label="期間支出"
+          prefix="$"
+          tone="danger"
+          :value="formatCurrency(summary.totalExpense)"
+        />
+        <TsfMetricCard
+          icon="i-lucide-badge-dollar-sign"
+          label="期末餘額"
+          prefix="$"
+          tone="info"
+          :value="formatCurrency(summary.closingBalance)"
         />
       </div>
 
-      <Spin :spinning="loading">
-        <Row :gutter="16" class="mb-4">
-          <Col :md="6" :xs="12">
-            <Card size="small">
-              <Statistic
-                :precision="0"
-                prefix="$"
-                title="期初餘額"
-                :value="summary.openingBalance"
-              />
-            </Card>
-          </Col>
-          <Col :md="6" :xs="12">
-            <Card size="small">
-              <Statistic
-                :precision="0"
-                prefix="$"
-                title="期間收入"
-                :value="summary.totalIncome"
-                :value-style="{ color: '#3f8600' }"
-              />
-            </Card>
-          </Col>
-          <Col :md="6" :xs="12">
-            <Card size="small">
-              <Statistic
-                :precision="0"
-                prefix="$"
-                title="期間支出"
-                :value="summary.totalExpense"
-                :value-style="{ color: '#cf1322' }"
-              />
-            </Card>
-          </Col>
-          <Col :md="6" :xs="12">
-            <Card size="small">
-              <Statistic
-                :precision="0"
-                prefix="$"
-                title="期末餘額"
-                :value="summary.closingBalance"
-                :value-style="{ color: '#1677ff' }"
-              />
-            </Card>
-          </Col>
-        </Row>
-
+      <section class="tsf-table-panel mt-4">
         <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
           <div
             v-if="selectedRowKeys.length > 0"
@@ -800,11 +787,6 @@ async function handleBatchUpdateDepartment() {
             <Button @click="clearBatchSelection">取消選取</Button>
           </div>
           <div v-else />
-
-          <Button type="primary" @click="openCreateModal">
-            <template #icon><span class="i-lucide-plus" /></template>
-            新增交易
-          </Button>
         </div>
 
         <Table
@@ -936,8 +918,8 @@ async function handleBatchUpdateDepartment() {
             </div>
           </template>
         </Table>
-      </Spin>
-    </Card>
+      </section>
+    </Spin>
 
     <Modal
       :confirm-loading="submitting"
@@ -1121,5 +1103,5 @@ async function handleBatchUpdateDepartment() {
       @close="handleActivityDrawerClose"
       @saved="handleActivityDrawerSaved"
     />
-  </Page>
+  </TsfGlassPage>
 </template>

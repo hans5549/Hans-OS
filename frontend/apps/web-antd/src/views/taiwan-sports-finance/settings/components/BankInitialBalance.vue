@@ -50,8 +50,8 @@ async function saveEdit(id: string) {
   }
 }
 
-function getBankIcon(bankName: string): string {
-  return bankName.includes('上海') ? '🏦' : '🏛️';
+function getBankIconClass(bankName: string): string {
+  return bankName.includes('上海') ? 'i-lucide-building-2' : 'i-lucide-landmark';
 }
 
 onMounted(fetchBanks);
@@ -76,7 +76,11 @@ onMounted(fetchBanks);
         >
           <template #title>
             <div class="flex items-center gap-2">
-              <span class="text-xl">{{ getBankIcon(bank.bankName) }}</span>
+              <span
+                class="text-xl text-blue-500"
+                :class="getBankIconClass(bank.bankName)"
+                aria-hidden="true"
+              />
               <span>{{ bank.bankName }}</span>
             </div>
           </template>

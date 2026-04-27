@@ -1,17 +1,11 @@
 <script lang="ts" setup>
 import { computed, onMounted, ref, watch } from 'vue';
 
-import { Page } from '@vben/common-ui';
-
 import {
-  Card,
-  Col,
   message,
-  Row,
   Segmented,
   Select,
   Spin,
-  Statistic,
   Switch,
   Table,
   Tag,
@@ -21,6 +15,9 @@ import dayjs from 'dayjs';
 import type { ReceiptTrackingResponse } from '#/api';
 
 import { getReceiptTrackingApi, patchReceiptStatusApi } from '#/api';
+
+import TsfGlassPage from '../_shared/TsfGlassPage.vue';
+import TsfMetricCard from '../_shared/TsfMetricCard.vue';
 
 defineOptions({ name: 'TsfReceiptTrackingPage' });
 
@@ -178,77 +175,66 @@ async function handleToggleReceiptStatus(
 </script>
 
 <template>
-  <Page content-class="p-0" title="收據追蹤">
-    <Card :body-style="{ padding: '16px 24px' }">
-      <!-- 頂部控制列 -->
-      <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div class="flex items-center gap-3">
-          <span class="text-2xl">🧾</span>
-          <span class="text-lg font-medium">收據追蹤</span>
-        </div>
-        <Select
-          v-model:value="currentYear"
-          :options="yearOptions.map((y) => ({ label: `${y}年`, value: y }))"
-          style="width: 100px"
-        />
-      </div>
+  <TsfGlassPage
+    icon="i-lucide-receipt-text"
+    subtitle="集中檢查銀行支出的收據回收與寄送狀態。"
+    title="收據追蹤"
+  >
+    <template #actions>
+      <Select
+        v-model:value="currentYear"
+        :options="yearOptions.map((y) => ({ label: `${y}年`, value: y }))"
+        style="width: 108px"
+      />
+    </template>
 
-      <!-- 月份切換器 -->
-      <div class="mb-4">
+    <template #filters>
+      <div class="tsf-filter-group">
+        <span class="tsf-filter-label">月份</span>
         <Segmented
           v-model:value="monthSegmentedValue"
           :options="segmentedOptions"
-          block
+        />
+      </div>
+      <div class="tsf-filter-group">
+        <span class="tsf-filter-label">追蹤</span>
+        <Segmented
+          v-model:value="filterSegmentedValue"
+          :options="filterSegmentedOptions"
+        />
+      </div>
+    </template>
+
+    <Spin :spinning="loading">
+      <div class="tsf-kpi-grid tsf-kpi-grid--three">
+        <TsfMetricCard
+          icon="i-lucide-list-todo"
+          label="待處理總數"
+          tone="info"
+          :value="totalCount"
+        />
+        <TsfMetricCard
+          icon="i-lucide-hand"
+          label="未回收"
+          tone="danger"
+          :value="notCollectedCount"
+        />
+        <TsfMetricCard
+          icon="i-lucide-mail-warning"
+          label="未寄送"
+          tone="warning"
+          :value="notMailedCount"
         />
       </div>
 
-      <!-- 統計卡片 -->
-      <Spin :spinning="loading">
-        <Row :gutter="16" class="mb-4">
-          <Col :md="8" :xs="24">
-            <Card size="small">
-              <Statistic
-                title="待處理總數"
-                :value="totalCount"
-                :value-style="{ color: '#1677ff' }"
-              />
-            </Card>
-          </Col>
-          <Col :md="8" :xs="24">
-            <Card size="small">
-              <Statistic
-                title="未回收"
-                :value="notCollectedCount"
-                :value-style="{ color: '#cf1322' }"
-              />
-            </Card>
-          </Col>
-          <Col :md="8" :xs="24">
-            <Card size="small">
-              <Statistic
-                title="未寄送"
-                :value="notMailedCount"
-                :value-style="{ color: '#fa8c16' }"
-              />
-            </Card>
-          </Col>
-        </Row>
-
-        <!-- 篩選類型切換 -->
-        <div class="mb-3">
-          <Segmented
-            v-model:value="filterSegmentedValue"
-            :options="filterSegmentedOptions"
-          />
-        </div>
-
-        <!-- 追蹤表格 -->
+      <section class="tsf-table-panel mt-4">
         <Table
           :columns="columns"
           :data-source="filteredItems"
           :loading="loading"
           :pagination="{ pageSize: 50, showTotal: (total: number) => `共 ${total} 筆` }"
           row-key="id"
+          :scroll="{ x: 820 }"
           size="middle"
         >
           <template #bodyCell="{ column, record }">
@@ -289,11 +275,11 @@ async function handleToggleReceiptStatus(
 
           <template #emptyText>
             <div class="py-8 text-center text-gray-400">
-              🎉 本期間所有收據均已處理完成
+              本期間所有收據均已處理完成
             </div>
           </template>
         </Table>
-      </Spin>
-    </Card>
-  </Page>
+      </section>
+    </Spin>
+  </TsfGlassPage>
 </template>

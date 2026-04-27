@@ -1,17 +1,13 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue';
-
-import { Page } from '@vben/common-ui';
+import { computed, onMounted, ref, watch } from 'vue';
 
 import {
   Button,
-  Card,
   InputNumber,
   message,
   Select,
   SelectOption,
   Table,
-  Tag,
 } from 'ant-design-vue';
 
 import type {
@@ -24,6 +20,9 @@ import {
   updateBudgetStatusApi,
   updateGrantedBudgetApi,
 } from '#/api';
+
+import TsfGlassPage from '../_shared/TsfGlassPage.vue';
+import TsfMetricCard from '../_shared/TsfMetricCard.vue';
 
 import DepartmentBudgetDrawer from './components/DepartmentBudgetDrawer.vue';
 import SharePopover from './components/SharePopover.vue';
@@ -67,6 +66,12 @@ const parseBudgetInput = (value: string | undefined) =>
   value?.replace(/,/g, '') ?? '';
 
 const handleStatusSelect = (value: unknown) => handleStatusChange(String(value));
+
+const totalExecutionRate = computed(() =>
+  overview.value
+    ? formatExecutionRate(overview.value.totalActual, overview.value.grantedBudget)
+    : '—',
+);
 
 const columns = [
   { dataIndex: 'departmentName', title: '部門名稱', width: 180 },
@@ -181,50 +186,14 @@ onMounted(fetchOverview);
 </script>
 
 <template>
-  <Page auto-content-height>
-    <Card>
-      <!-- 標題列 -->
-      <div class="mb-4 flex items-center justify-between">
-        <div class="flex items-center gap-4">
-          <h3 class="text-lg font-medium">年度預算</h3>
-          <div class="flex items-center gap-2">
-            <span class="text-sm text-gray-500">年度：</span>
-            <InputNumber
-              v-model:value="selectedYear"
-              :max="currentYear + 5"
-              :min="2020"
-              style="width: 100px"
-            />
-          </div>
-          <Tag
-            v-if="overview"
-            :color="statusMap[overview.status]?.color ?? 'default'"
-          >
-            {{ statusMap[overview.status]?.label ?? overview.status }}
-          </Tag>
-        </div>
-
-        <div v-if="overview" class="flex items-center gap-2">
-          <span class="text-sm text-gray-500">切換狀態：</span>
-          <Select
-            :value="overview.status"
-            style="width: 120px"
-            @change="handleStatusSelect"
-          >
-            <SelectOption
-              v-for="(info, key) in statusMap"
-              :key="key"
-              :value="key"
-            >
-              {{ info.label }}
-            </SelectOption>
-          </Select>
-        </div>
-      </div>
-
-      <!-- 核定總預算 -->
-      <div v-if="overview" class="mb-4 flex items-center gap-4">
-        <span class="text-sm text-gray-500">核定總預算：</span>
+  <TsfGlassPage
+    icon="i-lucide-chart-no-axes-combined"
+    subtitle="年度需求、核定與實際執行金額的部門級總覽。"
+    title="年度預算"
+  >
+    <template #actions>
+      <div v-if="overview" class="tsf-action-group">
+        <span class="tsf-filter-label">核定總預算</span>
         <InputNumber
           v-model:value="grantedBudgetInput"
           :formatter="formatBudgetInput"
@@ -242,8 +211,71 @@ onMounted(fetchOverview);
           儲存
         </Button>
       </div>
+    </template>
 
-      <!-- 總表 -->
+    <template #filters>
+      <div class="tsf-filter-group">
+        <span class="tsf-filter-label">年度</span>
+        <InputNumber
+          v-model:value="selectedYear"
+          :max="currentYear + 5"
+          :min="2020"
+          style="width: 108px"
+        />
+      </div>
+      <div v-if="overview" class="tsf-filter-group">
+        <span class="tsf-filter-label">狀態</span>
+        <span class="tsf-status-pill">
+          <span class="i-lucide-circle-dot" aria-hidden="true" />
+          {{ statusMap[overview.status]?.label ?? overview.status }}
+        </span>
+        <Select
+          :value="overview.status"
+          style="width: 128px"
+          @change="handleStatusSelect"
+        >
+          <SelectOption
+            v-for="(info, key) in statusMap"
+            :key="key"
+            :value="key"
+          >
+            {{ info.label }}
+          </SelectOption>
+        </Select>
+      </div>
+    </template>
+
+    <div class="tsf-kpi-grid">
+      <TsfMetricCard
+        icon="i-lucide-file-spreadsheet"
+        label="需求預算"
+        prefix="$"
+        tone="info"
+        :value="formatBudgetAmount(overview?.totalBudget)"
+      />
+      <TsfMetricCard
+        icon="i-lucide-badge-dollar-sign"
+        label="核定預算"
+        prefix="$"
+        tone="success"
+        :value="formatBudgetAmount(overview?.grantedBudget)"
+      />
+      <TsfMetricCard
+        icon="i-lucide-receipt-text"
+        label="實際金額"
+        prefix="$"
+        tone="warning"
+        :value="formatBudgetAmount(overview?.totalActual)"
+      />
+      <TsfMetricCard
+        icon="i-lucide-gauge"
+        label="執行率"
+        tone="neutral"
+        :value="totalExecutionRate"
+      />
+    </div>
+
+    <section class="tsf-table-panel">
       <Table
         :columns="columns"
         :data-source="overview?.departments ?? []"
@@ -295,7 +327,7 @@ onMounted(fetchOverview);
           </div>
         </template>
       </Table>
-    </Card>
+    </section>
 
     <!-- 部門預算編輯 Drawer -->
     <DepartmentBudgetDrawer
@@ -306,5 +338,5 @@ onMounted(fetchOverview);
       @close="handleDrawerClose"
       @saved="handleDrawerSaved"
     />
-  </Page>
+  </TsfGlassPage>
 </template>

@@ -68,6 +68,11 @@ function handleSelect(info: { key: string | number }) {
 
 <style scoped>
 .month-sidebar {
+  background: transparent;
   border-inline-end: none !important;
+}
+
+.month-sidebar :deep(.ant-menu-item-selected) {
+  font-weight: 700;
 }
 </style>
