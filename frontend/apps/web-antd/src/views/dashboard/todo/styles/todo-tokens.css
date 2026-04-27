@@ -1,0 +1,115 @@
+/**
+ * Todo 模組視覺 tokens
+ *
+ * 集中管理玻璃卡密度、優先級/難度/狀態色彩，避免 inline style 散落。
+ * 所有色彩同時提供 light/dark 對應，符合 SKILL.md 對比度規範。
+ */
+
+:root {
+  /* 玻璃卡 — light: bg-white/85，dark: bg-slate-900/65（皆 ≥ SKILL.md 建議的 80% / 60%） */
+  --todo-glass-bg: 255 255 255 / 0.85;
+  --todo-glass-border: 226 232 240 / 1; /* slate-200 */
+  --todo-glass-shadow: 0 1px 2px 0 rgb(15 23 42 / 0.04), 0 1px 3px 0 rgb(15 23 42 / 0.06);
+
+  --todo-row-hover: 241 245 249 / 1; /* slate-100 */
+  --todo-row-selected: 219 234 254 / 0.6; /* blue-100/60 */
+
+  /* 優先級 (P0–P4) */
+  --todo-priority-p0: #7c3aed; /* Urgent / 紫 */
+  --todo-priority-p1: #ef4444; /* High / 紅 */
+  --todo-priority-p2: #f97316; /* Medium / 橙 */
+  --todo-priority-p3: #3b82f6; /* Low / 藍 */
+  --todo-priority-p4: #94a3b8; /* None / 灰 */
+
+  /* 難度 */
+  --todo-difficulty-hard: #ef4444;
+  --todo-difficulty-medium: #f97316;
+  --todo-difficulty-easy: #22c55e;
+  --todo-difficulty-none: #94a3b8;
+
+  /* 狀態 */
+  --todo-status-pending: #94a3b8;
+  --todo-status-in-progress: #3b82f6;
+  --todo-status-done: #22c55e;
+
+  /* 日期徽章 */
+  --todo-date-overdue-bg: 254 226 226 / 1; /* red-100 */
+  --todo-date-overdue-fg: 185 28 28 / 1; /* red-700 */
+  --todo-date-today-bg: 255 237 213 / 1; /* orange-100 */
+  --todo-date-today-fg: 194 65 12 / 1; /* orange-700 */
+  --todo-date-tomorrow-bg: 254 249 195 / 1; /* yellow-100 */
+  --todo-date-tomorrow-fg: 161 98 7 / 1; /* yellow-700 */
+  --todo-date-future-bg: 241 245 249 / 1; /* slate-100 */
+  --todo-date-future-fg: 71 85 105 / 1; /* slate-600 */
+
+  /* 排版 */
+  --todo-radius: 0.625rem; /* 10px */
+  --todo-radius-lg: 0.875rem; /* 14px */
+  --todo-row-gap: 0.125rem; /* 2px between rows */
+  --todo-section-gap: 1.25rem;
+}
+
+.dark {
+  --todo-glass-bg: 15 23 42 / 0.65; /* slate-900/65 */
+  --todo-glass-border: 51 65 85 / 0.6; /* slate-700/60 */
+  --todo-glass-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.3), 0 1px 3px 0 rgb(0 0 0 / 0.25);
+
+  --todo-row-hover: 30 41 59 / 0.7; /* slate-800/70 */
+  --todo-row-selected: 30 58 138 / 0.35; /* blue-900/35 */
+
+  --todo-date-overdue-bg: 127 29 29 / 0.4;
+  --todo-date-overdue-fg: 252 165 165 / 1;
+  --todo-date-today-bg: 154 52 18 / 0.35;
+  --todo-date-today-fg: 253 186 116 / 1;
+  --todo-date-tomorrow-bg: 113 63 18 / 0.35;
+  --todo-date-tomorrow-fg: 253 224 71 / 1;
+  --todo-date-future-bg: 51 65 85 / 0.4;
+  --todo-date-future-fg: 203 213 225 / 1;
+}
+
+/* ─── 共用 utility classes ─────────────────────── */
+
+.todo-glass-card {
+  background: rgb(var(--todo-glass-bg));
+  border: 1px solid rgb(var(--todo-glass-border));
+  border-radius: var(--todo-radius-lg);
+  box-shadow: var(--todo-glass-shadow);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.todo-row {
+  border-radius: var(--todo-radius);
+  transition: background-color 180ms ease, border-color 180ms ease;
+}
+
+.todo-row:hover {
+  background: rgb(var(--todo-row-hover));
+}
+
+.todo-row[data-selected='true'] {
+  background: rgb(var(--todo-row-selected));
+}
+
+.todo-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 500;
+  border: 1px solid rgb(var(--todo-glass-border));
+  background: rgb(var(--todo-glass-bg));
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+
+.todo-chip:hover {
+  background: rgb(var(--todo-row-hover));
+}
+
+.todo-chip[data-active='true'] {
+  border-color: currentColor;
+}
