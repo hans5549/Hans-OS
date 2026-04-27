@@ -31,13 +31,6 @@ export interface TodoCategory {
   sortOrder: number;
 }
 
-export interface ChecklistItem {
-  id: string;
-  title: string;
-  isCompleted: boolean;
-  order: number;
-}
-
 export interface TodoItem {
   id: string;
   title: string;
@@ -51,21 +44,19 @@ export interface TodoItem {
   projectName: string | null;
   projectColor: string | null;
   parentId: string | null;
+  categoryId: string | null;
   order: number;
+  recurrencePattern: TodoRecurrencePattern;
+  recurrenceInterval: number;
   createdAt: string;
   completedAt: string | null;
   archivedAt: string | null;
   tags: TodoTag[];
+  children: TodoItem[];
 }
 
 export interface TodoItemDetail extends TodoItem {
-  categoryId: string | null;
   categoryName: string | null;
-  recurrencePattern: TodoRecurrencePattern;
-  recurrenceInterval: number;
-  archivedAt: string | null;
-  children: TodoItem[];
-  checklistItems: ChecklistItem[];
 }
 
 export interface PagedItemsResponse {
@@ -157,17 +148,6 @@ export interface UpdateCategoryRequest {
   sortOrder?: number;
 }
 
-export interface CreateChecklistItemRequest {
-  title: string;
-  order?: number;
-}
-
-export interface UpdateChecklistItemRequest {
-  title?: string | null;
-  isCompleted?: boolean | null;
-  order?: number | null;
-}
-
 // ── Project API ───────────────────────────────────
 
 /** 取得所有專案 */
@@ -197,10 +177,12 @@ export const getItemsApi = (params: {
   search?: string;
   status?: TodoStatus;
   tagId?: string;
+  topLevelOnly?: boolean;
+  includeChildren?: boolean;
   view?: TodoViewFilter;
 }) => requestClient.get<PagedItemsResponse>('/todo/items', { params });
 
-/** 取得任務詳情（含 checklist、子任務、標籤） */
+/** 取得任務詳情（含子任務、標籤） */
 export const getItemDetailApi = (id: string) =>
   requestClient.get<TodoItemDetail>(`/todo/items/${id}`);
 
@@ -254,23 +236,15 @@ export const batchUpdateApi = (ids: string[], status: TodoStatus) =>
 export const sortItemsApi = (orderedIds: string[]) =>
   requestClient.put<object>('/todo/items/sort', { orderedIds });
 
+/** 重新排序直接子任務 */
+export const reorderChildrenApi = (parentId: string, orderedChildIds: string[]) =>
+  requestClient.put<TodoItem[]>(`/todo/items/${parentId}/children/reorder`, {
+    orderedChildIds,
+  });
+
 /** 軟刪除任務 */
 export const deleteItemApi = (id: string) =>
   requestClient.delete(`/todo/items/${id}`);
-
-// ── Checklist API ─────────────────────────────────
-
-/** 新增清單子項目 */
-export const addChecklistItemApi = (itemId: string, data: CreateChecklistItemRequest) =>
-  requestClient.post<ChecklistItem>(`/todo/items/${itemId}/checklist`, data);
-
-/** 更新清單子項目 */
-export const updateChecklistItemApi = (itemId: string, checklistId: string, data: UpdateChecklistItemRequest) =>
-  requestClient.put<ChecklistItem>(`/todo/items/${itemId}/checklist/${checklistId}`, data);
-
-/** 刪除清單子項目 */
-export const deleteChecklistItemApi = (itemId: string, checklistId: string) =>
-  requestClient.delete(`/todo/items/${itemId}/checklist/${checklistId}`);
 
 // ── Tags API ──────────────────────────────────────
 

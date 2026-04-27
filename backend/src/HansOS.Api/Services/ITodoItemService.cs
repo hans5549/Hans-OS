@@ -7,7 +7,7 @@ public interface ITodoItemService
     /// <summary>取得分頁任務列表</summary>
     Task<PagedItemsResponse> GetItemsAsync(PagedItemsQuery query, CancellationToken ct = default);
 
-    /// <summary>取得任務詳情（含子任務、清單、標籤）</summary>
+    /// <summary>取得任務詳情（含子任務、標籤）</summary>
     Task<ItemDetailResponse?> GetItemDetailAsync(string userId, Guid itemId, CancellationToken ct = default);
 
     /// <summary>取得各智慧視圖的待辦數量</summary>
@@ -40,15 +40,6 @@ public interface ITodoItemService
     /// <summary>永久刪除任務</summary>
     Task PermanentDeleteAsync(string userId, Guid itemId, CancellationToken ct = default);
 
-    /// <summary>新增清單子項目</summary>
-    Task<ChecklistItemResponse> AddChecklistItemAsync(string userId, Guid itemId, CreateChecklistItemRequest request, CancellationToken ct = default);
-
-    /// <summary>更新清單子項目</summary>
-    Task<ChecklistItemResponse> UpdateChecklistItemAsync(string userId, Guid itemId, Guid checklistId, UpdateChecklistItemRequest request, CancellationToken ct = default);
-
-    /// <summary>刪除清單子項目</summary>
-    Task DeleteChecklistItemAsync(string userId, Guid itemId, Guid checklistId, CancellationToken ct = default);
-
     /// <summary>今日任務（dueDate 或 scheduledDate = 今天）</summary>
     Task<List<ItemResponse>> GetTodayAsync(string userId, CancellationToken ct = default);
 
@@ -72,4 +63,7 @@ public interface ITodoItemService
 
     /// <summary>重新排序</summary>
     Task SortAsync(string userId, List<Guid> orderedIds, CancellationToken ct = default);
+
+    /// <summary>重新排序父任務下的直接子任務</summary>
+    Task<List<ItemResponse>> ReorderChildrenAsync(string userId, Guid parentId, List<Guid> orderedChildIds, CancellationToken ct = default);
 }

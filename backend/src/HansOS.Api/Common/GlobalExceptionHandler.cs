@@ -12,6 +12,7 @@ public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) : IE
     {
         var (statusCode, error) = exception switch
         {
+            ForbiddenException e => (HttpStatusCode.Forbidden, e.Message),
             UnauthorizedAccessException => (HttpStatusCode.Unauthorized, "未授權"),
             KeyNotFoundException => (HttpStatusCode.NotFound, "資源不存在"),
             ArgumentException e => (HttpStatusCode.BadRequest, e.Message),

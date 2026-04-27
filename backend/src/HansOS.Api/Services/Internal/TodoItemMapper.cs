@@ -6,24 +6,7 @@ namespace HansOS.Api.Services.Internal;
 internal static class TodoItemMapper
 {
     public static ItemResponse ToItemResponseFromEntity(TodoItem i)
-        => new(
-            i.Id,
-            i.Title,
-            i.Description,
-            i.Priority.ToString(),
-            i.Status.ToString(),
-            i.Difficulty.ToString(),
-            i.DueDate,
-            i.ScheduledDate,
-            i.ProjectId,
-            i.Project?.Name,
-            i.Project?.Color,
-            i.ParentId,
-            i.Order,
-            i.CreatedAt,
-            i.CompletedAt,
-            i.ArchivedAt,
-            i.TodoItemTags.Select(t => new TagResponse(t.TodoTag.Id, t.TodoTag.Name, t.TodoTag.Color)).ToList());
+        => ToItemResponse(i, ToChildResponses(i));
 
     public static ItemDetailResponse ToItemDetailResponse(TodoItem i)
         => new(
@@ -31,7 +14,7 @@ internal static class TodoItemMapper
             i.Title,
             i.Description,
             i.Priority.ToString(),
-            MapStatusToClient(i.Status),
+            i.Status.ToString(),
             i.Difficulty.ToString(),
             i.DueDate,
             i.ScheduledDate,
@@ -47,10 +30,46 @@ internal static class TodoItemMapper
             i.CreatedAt,
             i.CompletedAt,
             i.ArchivedAt,
-            i.Children.Select(ToItemResponseFromEntity).ToList(),
-            i.ChecklistItems.OrderBy(c => c.Order).Select(c => new ChecklistItemResponse(c.Id, c.Title, c.IsCompleted, c.Order)).ToList(),
-            i.TodoItemTags.Select(t => new TagResponse(t.TodoTag.Id, t.TodoTag.Name, t.TodoTag.Color)).ToList());
+            ToChildResponses(i),
+            ToTagResponses(i));
 
-    private static string MapStatusToClient(TodoStatus status)
-        => status == TodoStatus.Done ? "Completed" : status.ToString();
+    private static ItemResponse ToItemResponseWithoutChildren(TodoItem i)
+        => ToItemResponse(i, []);
+
+    private static ItemResponse ToItemResponse(TodoItem i, List<ItemResponse> children)
+        => new(
+            i.Id,
+            i.Title,
+            i.Description,
+            i.Priority.ToString(),
+            i.Status.ToString(),
+            i.Difficulty.ToString(),
+            i.DueDate,
+            i.ScheduledDate,
+            i.ProjectId,
+            i.Project?.Name,
+            i.Project?.Color,
+            i.ParentId,
+            i.CategoryId,
+            i.Order,
+            i.RecurrencePattern.ToString(),
+            i.RecurrenceInterval,
+            i.CreatedAt,
+            i.CompletedAt,
+            i.ArchivedAt,
+            ToTagResponses(i),
+            children);
+
+    private static List<ItemResponse> ToChildResponses(TodoItem i)
+        => i.Children
+            .Where(c => c.UserId == i.UserId && c.DeletedAt is null && c.ArchivedAt is null)
+            .OrderBy(c => c.Order)
+            .ThenBy(c => c.CreatedAt)
+            .Select(ToItemResponseWithoutChildren)
+            .ToList();
+
+    private static List<TagResponse> ToTagResponses(TodoItem i)
+        => i.TodoItemTags
+            .Select(t => new TagResponse(t.TodoTag.Id, t.TodoTag.Name, t.TodoTag.Color))
+            .ToList();
 }

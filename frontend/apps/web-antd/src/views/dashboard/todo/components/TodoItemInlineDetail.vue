@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type {
-  ChecklistItem,
   TodoDifficulty,
+  TodoItem,
   TodoItemDetail,
   TodoPriority,
   TodoProject,
@@ -33,6 +33,7 @@ import {
   statusOptions,
   todoIcons,
 } from '../composables/useTodoMeta';
+import TodoSubtaskRow from './TodoSubtaskRow.vue';
 
 const props = defineProps<{
   item: TodoItemDetail;
@@ -42,13 +43,15 @@ const store = useTodoStore();
 
 // ── Local editable state（描述以本地 buffer 處理；其餘欄位即時提交）──
 const description = ref(props.item.description ?? '');
-const newChecklistTitle = ref('');
+const draggedSubtaskId = ref<null | string>(null);
+const newSubtaskTitle = ref('');
 
 watch(
   () => props.item.id,
   () => {
     description.value = props.item.description ?? '';
-    newChecklistTitle.value = '';
+    draggedSubtaskId.value = null;
+    newSubtaskTitle.value = '';
   },
 );
 
@@ -61,22 +64,24 @@ watch(
 
 const isInTrash = computed(() => store.currentView === 'trash');
 
-const checklistProgress = computed(() => {
-  const total = props.item.checklistItems.length;
-  const done = props.item.checklistItems.filter(
-    (c: ChecklistItem) => c.isCompleted,
-  ).length;
+const subtaskProgress = computed(() => {
+  const total = props.item.children.length;
+  const done = props.item.children.filter((child: TodoItem) => child.status === 'Done').length;
   return { done, total };
 });
 
 // ── Helpers ──
 function buildBaseRequest() {
   return {
+    categoryId: props.item.categoryId,
     description: props.item.description,
     difficulty: props.item.difficulty,
     dueDate: props.item.dueDate,
+    parentId: props.item.parentId,
     priority: props.item.priority,
     projectId: props.item.projectId,
+    recurrenceInterval: props.item.recurrenceInterval,
+    recurrencePattern: props.item.recurrencePattern,
     scheduledDate: props.item.scheduledDate,
     status: props.item.status,
     tagIds: props.item.tags.map((t: TodoTag) => t.id),
@@ -140,12 +145,24 @@ const tagOptions = computed(() =>
   })),
 );
 
-// ── Checklist ──
-async function addChecklist() {
-  const v = newChecklistTitle.value.trim();
+// ── Subtasks ──
+async function addSubtask() {
+  const v = newSubtaskTitle.value.trim();
   if (!v) return;
-  await store.addChecklistItem(props.item.id, { title: v });
-  newChecklistTitle.value = '';
+  await store.createChildItem(props.item.id, {
+    difficulty: props.item.difficulty,
+    priority: 'None',
+    projectId: props.item.projectId,
+    title: v,
+  });
+  newSubtaskTitle.value = '';
+}
+
+function handleSubtaskDrop(targetId: string) {
+  if (draggedSubtaskId.value) {
+    store.reorderChildBefore(props.item.id, draggedSubtaskId.value, targetId);
+  }
+  draggedSubtaskId.value = null;
 }
 
 // ── Project options ──
@@ -167,9 +184,7 @@ function confirmDelete() {
     cancelText: $t('page.todo.cancel'),
     okText: $t('page.todo.delete'),
     okType: 'danger',
-    onOk: async () => {
-      await store.deleteItem(props.item.id);
-    },
+    onOk: () => store.deleteItem(props.item.id),
     title: $t('page.todo.confirmDelete'),
   });
 }
@@ -180,9 +195,7 @@ function confirmPermanentDelete() {
     content: '永久刪除後將無法復原',
     okText: '永久刪除',
     okType: 'danger',
-    onOk: async () => {
-      await store.permanentDeleteItem(props.item.id);
-    },
+    onOk: () => store.permanentDeleteItem(props.item.id),
     title: '確認永久刪除？',
   });
 }
@@ -521,113 +534,42 @@ function currentDifficultyMeta() {
       </Select>
     </div>
 
-    <!-- Checklist -->
+    <!-- Subtasks -->
     <div v-if="!isInTrash" class="mb-3">
       <div
         class="mb-1.5 flex items-center justify-between text-xs font-medium text-muted-foreground"
       >
-        <span>檢查清單</span>
-        <span v-if="checklistProgress.total > 0">
-          {{ checklistProgress.done }} / {{ checklistProgress.total }}
+        <span>子任務</span>
+        <span v-if="subtaskProgress.total > 0">
+          {{ subtaskProgress.done }} / {{ subtaskProgress.total }}
         </span>
       </div>
       <div class="space-y-0.5">
-        <div
-          v-for="ci in item.checklistItems"
-          :key="ci.id"
-          class="group flex cursor-default items-center gap-2 rounded-md px-2 py-1 hover:bg-accent/60"
-        >
-          <button
-            class="flex size-4 flex-shrink-0 cursor-pointer items-center justify-center rounded border transition-colors"
-            :class="
-              ci.isCompleted
-                ? 'border-green-500 bg-green-500'
-                : 'border-border hover:border-primary'
-            "
-            type="button"
-            @click="store.toggleChecklistItem(item.id, ci)"
-          >
-            <svg
-              v-if="ci.isCompleted"
-              class="size-3 text-white"
-              fill="none"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="3"
-              viewBox="0 0 24 24"
-            >
-              <path :d="todoIcons.check" />
-            </svg>
-          </button>
-          <span
-            class="flex-1 text-sm"
-            :class="
-              ci.isCompleted
-                ? 'text-muted-foreground line-through'
-                : 'text-foreground'
-            "
-          >
-            {{ ci.title }}
-          </span>
-          <button
-            class="hidden cursor-pointer text-xs text-muted-foreground transition-colors hover:text-red-500 group-hover:block"
-            type="button"
-            @click="store.deleteChecklistItem(item.id, ci.id)"
-          >
-            ✕
-          </button>
-        </div>
+        <TodoSubtaskRow
+          v-for="child in item.children"
+          :key="child.id"
+          :is-in-trash="isInTrash"
+          :parent-id="item.id"
+          :subtask="child"
+          @drag-start="(id) => (draggedSubtaskId = id)"
+          @drop="handleSubtaskDrop"
+        />
       </div>
       <div class="mt-2 flex gap-2">
         <input
-          v-model="newChecklistTitle"
+          v-model="newSubtaskTitle"
           class="flex-1 rounded-md border border-border bg-transparent px-2.5 py-1 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
-          placeholder="新增子項目…"
-          @keydown.enter.prevent="addChecklist"
+          placeholder="新增子任務…"
+          @keydown.enter.prevent="addSubtask"
           @keydown.esc.stop
         />
         <button
           class="cursor-pointer rounded-md bg-primary px-3 py-1 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
-          :disabled="!newChecklistTitle.trim()"
+          :disabled="!newSubtaskTitle.trim()"
           type="button"
-          @click="addChecklist"
+          @click="addSubtask"
         >
           新增
-        </button>
-      </div>
-    </div>
-
-    <!-- 子任務（read-only）-->
-    <div v-if="item.children.length > 0" class="mb-3">
-      <div class="mb-1.5 text-xs font-medium text-muted-foreground">
-        子任務 ({{ item.children.length }})
-      </div>
-      <div class="space-y-0.5">
-        <button
-          v-for="child in item.children"
-          :key="child.id"
-          class="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-left text-sm hover:bg-accent/60"
-          type="button"
-          @click="store.selectItem(child.id)"
-        >
-          <span
-            class="size-2.5 rounded-full border-2"
-            :class="
-              child.status === 'Done'
-                ? 'border-green-500 bg-green-500'
-                : 'border-border'
-            "
-          />
-          <span
-            :class="
-              child.status === 'Done'
-                ? 'text-muted-foreground line-through'
-                : 'text-foreground'
-            "
-          >
-            {{ child.title }}
-          </span>
         </button>
       </div>
     </div>

@@ -72,6 +72,23 @@ internal static class TodoItemQueries
             : throw new KeyNotFoundException("找不到指定的專案");
     }
 
+    public static async Task<Guid?> ValidateCategoryOwnershipAsync(
+        ApplicationDbContext db,
+        string userId,
+        Guid? categoryId,
+        CancellationToken ct)
+    {
+        if (categoryId is null) return null;
+
+        var exists = await db.TodoCategories
+            .AsNoTracking()
+            .AnyAsync(c => c.Id == categoryId && c.UserId == userId, ct);
+
+        return exists
+            ? categoryId
+            : throw new KeyNotFoundException("找不到指定的分類");
+    }
+
     public static async Task<TodoItem> GetUserItemAsync(
         ApplicationDbContext db,
         string userId,

@@ -14,6 +14,7 @@ import {
 import TodoDateBadge from './TodoDateBadge.vue';
 import TodoItemInlineDetail from './TodoItemInlineDetail.vue';
 import TodoPriorityFlag from './TodoPriorityFlag.vue';
+import TodoSubtaskRow from './TodoSubtaskRow.vue';
 
 const props = defineProps<{
   item: TodoItem;
@@ -23,6 +24,7 @@ const store = useTodoStore();
 const selection = useTodoSelection();
 
 const isAnimating = ref(false);
+const draggedSubtaskId = ref<null | string>(null);
 let animationTimer: ReturnType<typeof setTimeout> | null = null;
 
 const isExpanded = computed(
@@ -71,6 +73,13 @@ function handleRowClick(e: MouseEvent) {
 function handleSelectionCheck(e: Event) {
   e.stopPropagation();
   selection.toggle(props.item.id);
+}
+
+function handleSubtaskDrop(targetId: string) {
+  if (draggedSubtaskId.value) {
+    store.reorderChildBefore(props.item.id, draggedSubtaskId.value, targetId);
+  }
+  draggedSubtaskId.value = null;
 }
 
 onUnmounted(() => {
@@ -198,6 +207,21 @@ onUnmounted(() => {
         <TodoDateBadge :due-date="item.dueDate" />
         <TodoPriorityFlag :priority="item.priority" />
       </div>
+    </div>
+
+    <div
+      v-if="item.children.length > 0"
+      class="border-t border-border/40 px-3 py-1.5 pl-11"
+      @click.stop
+    >
+      <TodoSubtaskRow
+        v-for="child in item.children"
+        :key="child.id"
+        :parent-id="item.id"
+        :subtask="child"
+        @drag-start="(id) => (draggedSubtaskId = id)"
+        @drop="handleSubtaskDrop"
+      />
     </div>
 
     <!-- Inline Detail（同時最多一筆展開）-->

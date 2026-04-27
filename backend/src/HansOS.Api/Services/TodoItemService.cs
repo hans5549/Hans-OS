@@ -1,3 +1,4 @@
+using HansOS.Api.Common;
 using HansOS.Api.Data;
 using HansOS.Api.Data.Entities;
 using HansOS.Api.Models.Todos;
@@ -37,6 +38,9 @@ public class TodoItemService(ApplicationDbContext db) : ITodoItemService
         if (!string.IsNullOrWhiteSpace(query.Search))
             q = q.Where(i => i.Title.Contains(query.Search));
 
+        if (query.IncludeChildren)
+            q = IncludeActiveChildren(q, query.UserId);
+
         var totalCount = await q.CountAsync(ct);
 
         var items = await q
@@ -56,14 +60,13 @@ public class TodoItemService(ApplicationDbContext db) : ITodoItemService
     /// <inheritdoc />
     public async Task<ItemDetailResponse?> GetItemDetailAsync(string userId, Guid itemId, CancellationToken ct = default)
     {
-        var item = await db.TodoItems
-            .AsNoTracking()
-            .Include(i => i.Project)
-            .Include(i => i.Category)
-            .Include(i => i.ChecklistItems)
-            .Include(i => i.TodoItemTags).ThenInclude(t => t.TodoTag)
-            .Include(i => i.Children).ThenInclude(c => c.Project)
-            .Include(i => i.Children).ThenInclude(c => c.TodoItemTags).ThenInclude(t => t.TodoTag)
+        var item = await IncludeActiveChildren(
+                db.TodoItems
+                    .AsNoTracking()
+                    .Include(i => i.Project)
+                    .Include(i => i.Category)
+                    .Include(i => i.TodoItemTags).ThenInclude(t => t.TodoTag),
+                userId)
             .FirstOrDefaultAsync(i => i.Id == itemId && i.UserId == userId && i.DeletedAt == null, ct);
 
         return item is null ? null : ToItemDetailResponse(item);
@@ -95,9 +98,15 @@ public class TodoItemService(ApplicationDbContext db) : ITodoItemService
         string userId, CreateItemRequest request, CancellationToken ct = default)
     {
         var projectId = await ValidateProjectOwnershipAsync(db, userId, request.ProjectId, ct);
+        var parent = await ValidateParentAsync(userId, request.ParentId, ct);
+        var categoryId = await ValidateCategoryOwnershipAsync(db, userId, request.CategoryId, ct);
+        if (parent is not null && projectId is null)
+            projectId = parent.ProjectId;
+        if (parent is not null && categoryId is null)
+            categoryId = parent.CategoryId;
 
         var maxOrder = await db.TodoItems
-            .Where(i => i.UserId == userId && i.ProjectId == projectId)
+            .Where(i => i.UserId == userId && i.ProjectId == projectId && i.ParentId == request.ParentId)
             .Select(i => (int?)i.Order)
             .MaxAsync(ct) ?? -1;
 
@@ -108,7 +117,7 @@ public class TodoItemService(ApplicationDbContext db) : ITodoItemService
             UserId = userId,
             ProjectId = projectId,
             ParentId = request.ParentId,
-            CategoryId = request.CategoryId,
+            CategoryId = categoryId,
             Title = request.Title,
             Description = request.Description,
             Priority = ParsePriority(request.Priority),
@@ -125,7 +134,7 @@ public class TodoItemService(ApplicationDbContext db) : ITodoItemService
 
         db.TodoItems.Add(item);
 
-        TodoItemTagCommands.AddTags(db, item.Id, request.TagIds);
+        await TodoItemTagCommands.AddTagsAsync(db, userId, item.Id, request.TagIds, ct);
 
         await db.SaveChangesAsync(ct);
         return await GetItemResponseWithTagsAsync(db, item.Id, userId, ct);
@@ -136,8 +145,20 @@ public class TodoItemService(ApplicationDbContext db) : ITodoItemService
         string userId, Guid itemId, UpdateItemRequest request, CancellationToken ct = default)
     {
         var item = await GetUserItemAsync(db, userId, itemId, ct);
+        if (request.ParentId == itemId)
+            throw new ArgumentException("任務不能設定自身為父任務");
+        if (request.ParentId is not null)
+            await EnsureCanMoveUnderParentAsync(userId, itemId, ct);
+
         var projectId = await ValidateProjectOwnershipAsync(db, userId, request.ProjectId, ct);
+        var parent = await ValidateParentAsync(userId, request.ParentId, ct);
+        var categoryId = await ValidateCategoryOwnershipAsync(db, userId, request.CategoryId, ct);
         var utcNow = DateTime.UtcNow;
+
+        if (parent is not null && projectId is null)
+            projectId = parent.ProjectId;
+        if (parent is not null && categoryId is null)
+            categoryId = parent.CategoryId;
 
         item.Title = request.Title;
         item.Description = request.Description;
@@ -146,17 +167,14 @@ public class TodoItemService(ApplicationDbContext db) : ITodoItemService
         item.DueDate = request.DueDate;
         item.ScheduledDate = request.ScheduledDate;
         item.ProjectId = projectId;
-
-        if (request.ParentId == itemId)
-            throw new ArgumentException("任務不能設定自身為父任務");
         item.ParentId = request.ParentId;
-        item.CategoryId = request.CategoryId;
+        item.CategoryId = categoryId;
         item.RecurrencePattern = ParseRecurrencePattern(request.RecurrencePattern);
         item.RecurrenceInterval = request.RecurrenceInterval;
         item.UpdatedAt = utcNow;
         SetItemStatus(item, ParseStatus(request.Status), utcNow);
 
-        await TodoItemTagCommands.ReplaceTagsAsync(db, itemId, request.TagIds, ct);
+        await TodoItemTagCommands.ReplaceTagsAsync(db, userId, itemId, request.TagIds, ct);
 
         await db.SaveChangesAsync(ct);
         return await GetItemResponseWithTagsAsync(db, itemId, userId, ct);
@@ -196,8 +214,11 @@ public class TodoItemService(ApplicationDbContext db) : ITodoItemService
     public async Task<ItemDetailResponse> ArchiveAsync(string userId, Guid itemId, bool archive, CancellationToken ct = default)
     {
         var item = await GetUserItemAsync(db, userId, itemId, ct);
-        item.ArchivedAt = archive ? DateTime.UtcNow : null;
-        item.UpdatedAt = DateTime.UtcNow;
+        var utcNow = DateTime.UtcNow;
+        var previousArchivedAt = item.ArchivedAt;
+        item.ArchivedAt = archive ? utcNow : null;
+        item.UpdatedAt = utcNow;
+        await ApplyArchiveToChildrenAsync(userId, itemId, archive, utcNow, previousArchivedAt, ct);
         await db.SaveChangesAsync(ct);
         var detail = await GetItemDetailAsync(userId, itemId, ct);
         return detail!;
@@ -207,8 +228,10 @@ public class TodoItemService(ApplicationDbContext db) : ITodoItemService
     public async Task DeleteItemAsync(string userId, Guid itemId, CancellationToken ct = default)
     {
         var item = await GetUserItemAsync(db, userId, itemId, ct);
-        item.DeletedAt = DateTime.UtcNow;
-        item.UpdatedAt = DateTime.UtcNow;
+        var utcNow = DateTime.UtcNow;
+        item.DeletedAt = utcNow;
+        item.UpdatedAt = utcNow;
+        await ApplyDeleteToActiveChildrenAsync(userId, itemId, utcNow, ct);
         await db.SaveChangesAsync(ct);
     }
 
@@ -227,8 +250,10 @@ public class TodoItemService(ApplicationDbContext db) : ITodoItemService
             .FirstOrDefaultAsync(i => i.Id == itemId && i.UserId == userId, ct)
             ?? throw new KeyNotFoundException("找不到指定的任務");
 
+        var deletedAt = item.DeletedAt;
         item.DeletedAt = null;
         item.UpdatedAt = DateTime.UtcNow;
+        await RestoreCascadeDeletedChildrenAsync(userId, itemId, deletedAt, ct);
         await db.SaveChangesAsync(ct);
     }
 
@@ -239,24 +264,14 @@ public class TodoItemService(ApplicationDbContext db) : ITodoItemService
             .FirstOrDefaultAsync(i => i.Id == itemId && i.UserId == userId, ct)
             ?? throw new KeyNotFoundException("找不到指定的任務");
 
+        var children = await db.TodoItems
+            .Where(i => i.ParentId == itemId && i.UserId == userId)
+            .ToListAsync(ct);
+
+        db.TodoItems.RemoveRange(children);
         db.TodoItems.Remove(item);
         await db.SaveChangesAsync(ct);
     }
-
-    /// <inheritdoc />
-    public async Task<ChecklistItemResponse> AddChecklistItemAsync(
-        string userId, Guid itemId, CreateChecklistItemRequest request, CancellationToken ct = default)
-        => await TodoChecklistCommands.AddAsync(db, userId, itemId, request, ct);
-
-    /// <inheritdoc />
-    public async Task<ChecklistItemResponse> UpdateChecklistItemAsync(
-        string userId, Guid itemId, Guid checklistId, UpdateChecklistItemRequest request, CancellationToken ct = default)
-        => await TodoChecklistCommands.UpdateAsync(db, userId, itemId, checklistId, request, ct);
-
-    /// <inheritdoc />
-    public async Task DeleteChecklistItemAsync(
-        string userId, Guid itemId, Guid checklistId, CancellationToken ct = default)
-        => await TodoChecklistCommands.DeleteAsync(db, userId, itemId, checklistId, ct);
 
     /// <inheritdoc />
     public async Task<List<ItemResponse>> GetTodayAsync(string userId, CancellationToken ct = default)
@@ -365,4 +380,143 @@ public class TodoItemService(ApplicationDbContext db) : ITodoItemService
         await db.SaveChangesAsync(ct);
     }
 
+    /// <inheritdoc />
+    public async Task<List<ItemResponse>> ReorderChildrenAsync(
+        string userId,
+        Guid parentId,
+        List<Guid> orderedChildIds,
+        CancellationToken ct = default)
+    {
+        _ = await GetUserItemAsync(db, userId, parentId, ct);
+        if (orderedChildIds.Count != orderedChildIds.Distinct().Count())
+            throw new ArgumentException("子任務排序清單包含重複任務");
+
+        var foreignChildExists = await db.TodoItems
+            .AsNoTracking()
+            .AnyAsync(i => orderedChildIds.Contains(i.Id) && i.UserId != userId, ct);
+        if (foreignChildExists)
+            throw new ForbiddenException("無權限存取指定的子任務");
+
+        var children = await db.TodoItems
+            .Where(i => i.ParentId == parentId
+                && i.UserId == userId
+                && i.DeletedAt == null
+                && i.ArchivedAt == null)
+            .Include(i => i.Project)
+            .Include(i => i.TodoItemTags).ThenInclude(t => t.TodoTag)
+            .ToListAsync(ct);
+
+        if (!children.Select(i => i.Id).Order().SequenceEqual(orderedChildIds.Order()))
+            throw new ArgumentException("子任務排序清單必須完整包含所有直接子任務");
+
+        var orderMap = orderedChildIds
+            .Select((id, index) => (id, index))
+            .ToDictionary(x => x.id, x => x.index);
+        foreach (var child in children)
+            child.Order = orderMap[child.Id];
+
+        await db.SaveChangesAsync(ct);
+
+        return children
+            .OrderBy(i => i.Order)
+            .ThenBy(i => i.CreatedAt)
+            .Select(ToItemResponseFromEntity)
+            .ToList();
+    }
+
+    private async Task<TodoItem?> ValidateParentAsync(string userId, Guid? parentId, CancellationToken ct)
+    {
+        if (parentId is null) return null;
+
+        var parent = await GetUserItemAsync(db, userId, parentId.Value, ct);
+        if (parent.ParentId is not null)
+            throw new ArgumentException("目前只支援一層子任務");
+
+        return parent;
+    }
+
+    private static IQueryable<TodoItem> IncludeActiveChildren(IQueryable<TodoItem> query, string userId)
+        => query
+            .Include(i => i.Children
+                .Where(c => c.UserId == userId && c.DeletedAt == null && c.ArchivedAt == null)
+                .OrderBy(c => c.Order)
+                .ThenBy(c => c.CreatedAt))
+            .ThenInclude(c => c.Project)
+            .Include(i => i.Children
+                .Where(c => c.UserId == userId && c.DeletedAt == null && c.ArchivedAt == null)
+                .OrderBy(c => c.Order)
+                .ThenBy(c => c.CreatedAt))
+            .ThenInclude(c => c.TodoItemTags).ThenInclude(t => t.TodoTag);
+
+    private async Task EnsureCanMoveUnderParentAsync(string userId, Guid itemId, CancellationToken ct)
+    {
+        var hasActiveChildren = await db.TodoItems
+            .AsNoTracking()
+            .AnyAsync(i => i.ParentId == itemId
+                && i.UserId == userId
+                && i.DeletedAt == null
+                && i.ArchivedAt == null, ct);
+        if (hasActiveChildren)
+            throw new ArgumentException("有子任務的任務不能再設定父任務");
+    }
+
+    private async Task ApplyArchiveToChildrenAsync(
+        string userId,
+        Guid parentId,
+        bool archive,
+        DateTime utcNow,
+        DateTime? previousArchivedAt,
+        CancellationToken ct)
+    {
+        var children = await db.TodoItems
+            .Where(i => i.ParentId == parentId && i.UserId == userId && i.DeletedAt == null)
+            .Where(i => archive ? i.ArchivedAt == null : i.ArchivedAt == previousArchivedAt)
+            .ToListAsync(ct);
+
+        foreach (var child in children)
+        {
+            child.ArchivedAt = archive ? utcNow : null;
+            child.UpdatedAt = utcNow;
+        }
+    }
+
+    private async Task ApplyDeleteToActiveChildrenAsync(
+        string userId,
+        Guid parentId,
+        DateTime utcNow,
+        CancellationToken ct)
+    {
+        var children = await db.TodoItems
+            .Where(i => i.ParentId == parentId
+                && i.UserId == userId
+                && i.DeletedAt == null
+                && i.ArchivedAt == null)
+            .ToListAsync(ct);
+
+        foreach (var child in children)
+        {
+            child.DeletedAt = utcNow;
+            child.UpdatedAt = utcNow;
+        }
+    }
+
+    private async Task RestoreCascadeDeletedChildrenAsync(
+        string userId,
+        Guid parentId,
+        DateTime? deletedAt,
+        CancellationToken ct)
+    {
+        if (deletedAt is null) return;
+
+        var children = await db.TodoItems
+            .Where(i => i.ParentId == parentId && i.UserId == userId && i.DeletedAt == deletedAt)
+            .ToListAsync(ct);
+
+        var utcNow = DateTime.UtcNow;
+        foreach (var child in children)
+        {
+            child.DeletedAt = null;
+            child.UpdatedAt = utcNow;
+        }
+    }
 }
