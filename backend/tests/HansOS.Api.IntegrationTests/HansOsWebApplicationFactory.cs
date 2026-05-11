@@ -28,6 +28,7 @@ public class HansOsWebApplicationFactory : WebApplicationFactory<Program>
                 ["Jwt:SigningKey"] = TestSigningKey,
                 ["Jwt:Issuer"] = "HansOS",
                 ["Jwt:Audience"] = "HansOS",
+                ["DatabaseStartup:RunBeforeListen"] = "true",
             });
         });
 
