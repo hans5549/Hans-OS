@@ -313,17 +313,23 @@ public class MenuMigrationTests
             sql.Contains($"'{TodoListId}'"));
 
         operations.OfType<DropTableOperation>()
-            .Select(operation => operation.Name)
             .Should()
-            .Contain([
-                "ArticleBookmarks",
-                "ArticleBookmarkGroups",
-                "TodoItemTag",
-                "TodoItems",
-                "TodoProjects",
-                "TodoCategories",
-                "TodoTags",
-            ]);
+            .BeEmpty("production database drift must not crash startup migration when obsolete tables are already absent");
+
+        foreach (var tableName in new[]
+                 {
+                     "ArticleBookmarks",
+                     "ArticleBookmarkGroups",
+                     "TodoItemTag",
+                     "TodoItems",
+                     "TodoProjects",
+                     "TodoCategories",
+                     "TodoTags",
+                 })
+        {
+            sqlOperations.Should().Contain(sql =>
+                sql.Contains($"DROP TABLE IF EXISTS \"{tableName}\""));
+        }
 
         sqlOperations.Should().Contain(sql =>
             sql.Contains("DROP TABLE IF EXISTS \"__TodoChecklistMigrationMap\""));

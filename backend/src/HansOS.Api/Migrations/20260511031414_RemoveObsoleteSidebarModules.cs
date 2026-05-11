@@ -78,26 +78,16 @@ namespace HansOS.Api.Migrations
                 WHERE "Id" IN ({parentIdList});
                 """);
 
-            migrationBuilder.DropTable(
-                name: "ArticleBookmarks");
-
-            migrationBuilder.DropTable(
-                name: "TodoItemTag");
-
-            migrationBuilder.DropTable(
-                name: "ArticleBookmarkGroups");
-
-            migrationBuilder.DropTable(
-                name: "TodoItems");
-
-            migrationBuilder.DropTable(
-                name: "TodoTags");
-
-            migrationBuilder.DropTable(
-                name: "TodoCategories");
-
-            migrationBuilder.DropTable(
-                name: "TodoProjects");
+            migrationBuilder.Sql(
+                """
+                DROP TABLE IF EXISTS "ArticleBookmarks";
+                DROP TABLE IF EXISTS "TodoItemTag";
+                DROP TABLE IF EXISTS "ArticleBookmarkGroups";
+                DROP TABLE IF EXISTS "TodoItems";
+                DROP TABLE IF EXISTS "TodoTags";
+                DROP TABLE IF EXISTS "TodoCategories";
+                DROP TABLE IF EXISTS "TodoProjects";
+                """);
 
             migrationBuilder.Sql(
                 """
