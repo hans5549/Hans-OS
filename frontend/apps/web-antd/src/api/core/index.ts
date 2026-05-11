@@ -1,5 +1,4 @@
 export * from './activities';
-export * from './article-collection';
 export * from './annual-budget';
 export * from './auth';
 export * from './bank-transactions';

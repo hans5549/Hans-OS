@@ -105,13 +105,6 @@ builder.Services.AddScoped<ITransactionCategoryService, TransactionCategoryServi
 builder.Services.AddScoped<IFinanceTransactionService, FinanceTransactionService>();
 builder.Services.AddScoped<IFinanceTransactionAnalyticsService, FinanceTransactionAnalyticsService>();
 builder.Services.AddScoped<IStockTransactionService, StockTransactionService>();
-builder.Services.AddScoped<IArticleBookmarkService, ArticleBookmarkService>();
-builder.Services.AddScoped<IArticleBookmarkGroupService, ArticleBookmarkGroupService>();
-builder.Services.AddScoped<ITodoProjectService, TodoProjectService>();
-builder.Services.AddScoped<ITodoItemService, TodoItemService>();
-builder.Services.AddScoped<ITodoCategoryService, TodoCategoryService>();
-builder.Services.AddScoped<ITodoTagService, TodoTagService>();
-
 // ── Controllers + Swagger ────────────────────────
 builder.Services
     .AddControllers()

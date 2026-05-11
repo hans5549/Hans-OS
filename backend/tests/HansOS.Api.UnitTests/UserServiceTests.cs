@@ -216,7 +216,9 @@ public class UserServiceTests
 
     [Theory]
     [InlineData("/analytics")]
+    [InlineData("/article-collection")]
     [InlineData("/dashboard")]
+    [InlineData("/hope-media")]
     [InlineData("/todo")]
     [InlineData("/workspace")]
     public async Task GetUserInfo_LegacyDashboardHomePath_NormalizesToIndex(string legacyHomePath)

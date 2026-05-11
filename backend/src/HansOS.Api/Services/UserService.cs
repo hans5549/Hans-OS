@@ -10,7 +10,9 @@ public class UserService(
     private static readonly HashSet<string> RemovedDashboardHomePaths =
     [
         "/analytics",
+        "/article-collection",
         "/dashboard",
+        "/hope-media",
         "/todo",
         "/workspace"
     ];

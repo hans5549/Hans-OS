@@ -24,6 +24,14 @@ public class MenuMigrationTests
     private const string NetworkingEssentialsId = "c0000002-0000-0000-0000-000000000101";
     private const string RealWorldAppsId = "c0000002-0000-0000-0000-000000000005";
     private const string QrCodeGeneratorId = "c0000001-0000-0000-0000-000000000002";
+    private const string HopeMediaId = "d1e2f3a4-0000-0000-0000-000000000005";
+    private const string HopeMediaIndexId = "d1e2f3a4-0000-0000-0000-000000000008";
+    private const string HmAnnualBudgetId = "a0000002-0000-0000-0000-000000000001";
+    private const string HmAnnualPlanId = "a0000002-0000-0000-0000-000000000002";
+    private const string HmLearningDocsId = "a0000002-0000-0000-0000-000000000003";
+    private const string HmSurveyId = "a0000002-0000-0000-0000-000000000004";
+    private const string ArticleCollectionId = "a0000004-0000-0000-0000-000000000001";
+    private const string ArticleCollectionIndexId = "a0000004-0000-0000-0000-000000000002";
 
     [Fact]
     public void AddTodoMenuItem_Up_EmitsTodoMenuSeedSql()
@@ -278,14 +286,105 @@ public class MenuMigrationTests
             sql.Contains($"'{ZmActivityRecordsId}'"));
     }
 
+    [Fact]
+    public void RemoveObsoleteSidebarModules_Up_RemovesMenusAndTables()
+    {
+        var migration = new RemoveObsoleteSidebarModulesAccessor();
+        var operations = GetOperations(migration.ApplyUp);
+        var sqlOperations = operations.OfType<SqlOperation>().Select(operation => operation.Sql).ToArray();
+
+        sqlOperations.Should().Contain(sql =>
+            sql.Contains("DELETE FROM \"RoleMenus\"") &&
+            sql.Contains($"'{HopeMediaId}'") &&
+            sql.Contains($"'{HopeMediaIndexId}'") &&
+            sql.Contains($"'{HmAnnualBudgetId}'") &&
+            sql.Contains($"'{HmAnnualPlanId}'") &&
+            sql.Contains($"'{HmLearningDocsId}'") &&
+            sql.Contains($"'{HmSurveyId}'") &&
+            sql.Contains($"'{ArticleCollectionId}'") &&
+            sql.Contains($"'{ArticleCollectionIndexId}'") &&
+            sql.Contains($"'{TodoListId}'") &&
+            sql.Contains($"'{TodoListIndexId}'"));
+
+        sqlOperations.Should().Contain(sql =>
+            sql.Contains("DELETE FROM \"Menus\"") &&
+            sql.Contains($"'{HopeMediaId}'") &&
+            sql.Contains($"'{ArticleCollectionId}'") &&
+            sql.Contains($"'{TodoListId}'"));
+
+        operations.OfType<DropTableOperation>()
+            .Select(operation => operation.Name)
+            .Should()
+            .Contain([
+                "ArticleBookmarks",
+                "ArticleBookmarkGroups",
+                "TodoItemTag",
+                "TodoItems",
+                "TodoProjects",
+                "TodoCategories",
+                "TodoTags",
+            ]);
+
+        sqlOperations.Should().Contain(sql =>
+            sql.Contains("DROP TABLE IF EXISTS \"__TodoChecklistMigrationMap\""));
+    }
+
+    [Fact]
+    public void RemoveObsoleteSidebarModules_Down_RecreatesMenusAndTables()
+    {
+        var migration = new RemoveObsoleteSidebarModulesAccessor();
+        var operations = GetOperations(migration.ApplyDown);
+        var sqlOperations = operations.OfType<SqlOperation>().Select(operation => operation.Sql).ToArray();
+
+        operations.OfType<CreateTableOperation>()
+            .Select(operation => operation.Name)
+            .Should()
+            .Contain([
+                "ArticleBookmarkGroups",
+                "ArticleBookmarks",
+                "TodoProjects",
+                "TodoCategories",
+                "TodoTags",
+                "TodoItems",
+                "TodoItemTag",
+            ]);
+
+        sqlOperations.Should().Contain(sql =>
+            sql.Contains("CREATE TABLE IF NOT EXISTS \"__TodoChecklistMigrationMap\""));
+
+        sqlOperations.Should().Contain(sql =>
+            sql.Contains("INSERT INTO \"Menus\"") &&
+            sql.Contains($"'{HopeMediaId}'") &&
+            sql.Contains("'/hope-media'") &&
+            sql.Contains("'主希望光影音部'"));
+
+        sqlOperations.Should().Contain(sql =>
+            sql.Contains("INSERT INTO \"Menus\"") &&
+            sql.Contains($"'{ArticleCollectionId}'") &&
+            sql.Contains("'/article-collection'") &&
+            sql.Contains("'文章收藏'"));
+
+        sqlOperations.Should().Contain(sql =>
+            sql.Contains("INSERT INTO \"Menus\"") &&
+            sql.Contains($"'{TodoListId}'") &&
+            sql.Contains("'/todo'") &&
+            sql.Contains("'代辦清單'"));
+    }
+
     private static string[] GetSqlOperations(Action<MigrationBuilder> applyMigration)
+    {
+        return GetOperations(applyMigration)
+            .OfType<SqlOperation>()
+            .Select(operation => operation.Sql)
+            .ToArray();
+    }
+
+    private static MigrationOperation[] GetOperations(Action<MigrationBuilder> applyMigration)
     {
         var migrationBuilder = new MigrationBuilder(NpgsqlProvider);
         applyMigration(migrationBuilder);
 
         return migrationBuilder.Operations
-            .OfType<SqlOperation>()
-            .Select(operation => operation.Sql)
             .ToArray();
     }
 
@@ -311,6 +410,13 @@ public class MenuMigrationTests
     }
 
     private sealed class RemoveFinanceAndMissionMenusAddTodoMenuAccessor : RemoveFinanceAndMissionMenusAddTodoMenu
+    {
+        public void ApplyUp(MigrationBuilder migrationBuilder) => Up(migrationBuilder);
+
+        public void ApplyDown(MigrationBuilder migrationBuilder) => Down(migrationBuilder);
+    }
+
+    private sealed class RemoveObsoleteSidebarModulesAccessor : RemoveObsoleteSidebarModules
     {
         public void ApplyUp(MigrationBuilder migrationBuilder) => Up(migrationBuilder);
 
