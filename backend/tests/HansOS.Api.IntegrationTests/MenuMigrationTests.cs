@@ -307,6 +307,18 @@ public class MenuMigrationTests
             sql.Contains($"'{TodoListIndexId}'"));
 
         sqlOperations.Should().Contain(sql =>
+            sql.Contains("DELETE FROM \"RoleMenus\"") &&
+            sql.Contains("\"Path\" LIKE '/hope-media/%'") &&
+            sql.Contains("\"Path\" LIKE '/todo/%'") &&
+            sql.Contains("\"Path\" LIKE '/article-collection/%'"));
+
+        sqlOperations.Should().Contain(sql =>
+            sql.Contains("DELETE FROM \"Menus\"") &&
+            sql.Contains("\"Path\" LIKE '/hope-media/%'") &&
+            sql.Contains("\"Path\" LIKE '/todo/%'") &&
+            sql.Contains("\"Path\" LIKE '/article-collection/%'"));
+
+        sqlOperations.Should().Contain(sql =>
             sql.Contains("DELETE FROM \"Menus\"") &&
             sql.Contains($"'{HopeMediaId}'") &&
             sql.Contains($"'{ArticleCollectionId}'") &&
@@ -377,6 +389,34 @@ public class MenuMigrationTests
             sql.Contains("'代辦清單'"));
     }
 
+    [Fact]
+    public void CleanupObsoletePersonalModuleMenus_Up_DeletesResidualMenuPaths()
+    {
+        var migration = new CleanupObsoletePersonalModuleMenusAccessor();
+        var sqlOperations = GetSqlOperations(migration.ApplyUp);
+
+        sqlOperations.Should().Contain(sql =>
+            sql.Contains("UPDATE \"AspNetUsers\"") &&
+            sql.Contains("\"HomePath\" LIKE '/hope-media/%'") &&
+            sql.Contains("\"HomePath\" LIKE '/todo/%'") &&
+            sql.Contains("\"HomePath\" LIKE '/article-collection/%'"));
+
+        sqlOperations.Should().Contain(sql =>
+            sql.Contains("DELETE FROM \"RoleMenus\"") &&
+            sql.Contains("\"Path\" IN ('/hope-media', '/todo', '/article-collection')") &&
+            sql.Contains("\"Path\" LIKE '/todo/%'"));
+
+        sqlOperations.Should().Contain(sql =>
+            sql.Contains("DELETE FROM \"Menus\"") &&
+            sql.Contains("\"Path\" LIKE '/hope-media/%'") &&
+            sql.Contains("\"Path\" LIKE '/todo/%'") &&
+            sql.Contains("\"Path\" LIKE '/article-collection/%'"));
+
+        sqlOperations.Should().Contain(sql =>
+            sql.Contains("DELETE FROM \"Menus\"") &&
+            sql.Contains("\"Path\" IN ('/hope-media', '/todo', '/article-collection')"));
+    }
+
     private static string[] GetSqlOperations(Action<MigrationBuilder> applyMigration)
     {
         return GetOperations(applyMigration)
@@ -427,5 +467,10 @@ public class MenuMigrationTests
         public void ApplyUp(MigrationBuilder migrationBuilder) => Up(migrationBuilder);
 
         public void ApplyDown(MigrationBuilder migrationBuilder) => Down(migrationBuilder);
+    }
+
+    private sealed class CleanupObsoletePersonalModuleMenusAccessor : CleanupObsoletePersonalModuleMenus
+    {
+        public void ApplyUp(MigrationBuilder migrationBuilder) => Up(migrationBuilder);
     }
 }
