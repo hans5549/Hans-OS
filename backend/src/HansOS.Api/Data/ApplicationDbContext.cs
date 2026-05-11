@@ -25,13 +25,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<FinanceTransaction> FinanceTransactions => Set<FinanceTransaction>();
     public DbSet<StockTransaction> StockTransactions => Set<StockTransaction>();
     public DbSet<BudgetShareToken> BudgetShareTokens => Set<BudgetShareToken>();
-    public DbSet<ArticleBookmarkGroup> ArticleBookmarkGroups => Set<ArticleBookmarkGroup>();
-    public DbSet<ArticleBookmark> ArticleBookmarks => Set<ArticleBookmark>();
     public DbSet<FinanceTask> FinanceTasks => Set<FinanceTask>();
-    public DbSet<TodoProject> TodoProjects => Set<TodoProject>();
-    public DbSet<TodoItem> TodoItems => Set<TodoItem>();
-    public DbSet<TodoCategory> TodoCategories => Set<TodoCategory>();
-    public DbSet<TodoTag> TodoTags => Set<TodoTag>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
