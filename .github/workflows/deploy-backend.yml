@@ -69,6 +69,12 @@ jobs:
 
       - name: Configure App Settings
         run: |
+          az webapp config set \
+            --name "${{ env.AZURE_WEBAPP_NAME }}" \
+            --resource-group "${{ env.AZURE_RESOURCE_GROUP }}" \
+            --linux-fx-version "DOTNETCORE|9.0" \
+            --startup-file "dotnet HansOS.Api.dll"
+
           az webapp config appsettings set \
             --name "${{ env.AZURE_WEBAPP_NAME }}" \
             --resource-group "${{ env.AZURE_RESOURCE_GROUP }}" \
