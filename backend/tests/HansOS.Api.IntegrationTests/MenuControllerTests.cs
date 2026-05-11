@@ -100,7 +100,7 @@ public class MenuControllerTests(HansOsWebApplicationFactory factory)
     }
 
     [Fact]
-    public async Task GetAll_Authorized_DoesNotReturnRemovedDashboardMenus()
+    public async Task GetAll_Authorized_DoesNotReturnRemovedDashboardAndPersonalModuleMenus()
     {
         await SeedPreservedMenuAsync();
         var token = await LoginAndGetTokenAsync();
@@ -117,6 +117,15 @@ public class MenuControllerTests(HansOsWebApplicationFactory factory)
         ContainsMenuNamed(menus, "Analytics").Should().BeFalse();
         ContainsMenuNamed(menus, "Workspace").Should().BeFalse();
         ContainsMenuNamed(menus, "Todo").Should().BeFalse();
+        ContainsMenuNamed(menus, "HopeMedia").Should().BeFalse();
+        ContainsMenuNamed(menus, "HopeMediaIndex").Should().BeFalse();
+        ContainsMenuNamed(menus, "ArticleCollection").Should().BeFalse();
+        ContainsMenuNamed(menus, "ArticleCollectionIndex").Should().BeFalse();
+        ContainsMenuNamed(menus, "TodoList").Should().BeFalse();
+        ContainsMenuNamed(menus, "TodoListIndex").Should().BeFalse();
+        ContainsMenuPath(menus, "/hope-media").Should().BeFalse();
+        ContainsMenuPath(menus, "/article-collection").Should().BeFalse();
+        ContainsMenuPath(menus, "/todo").Should().BeFalse();
     }
 
     [Fact]
