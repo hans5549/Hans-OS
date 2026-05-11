@@ -105,6 +105,7 @@ builder.Services.AddScoped<ITransactionCategoryService, TransactionCategoryServi
 builder.Services.AddScoped<IFinanceTransactionService, FinanceTransactionService>();
 builder.Services.AddScoped<IFinanceTransactionAnalyticsService, FinanceTransactionAnalyticsService>();
 builder.Services.AddScoped<IStockTransactionService, StockTransactionService>();
+builder.Services.AddHostedService<DatabaseStartupService>();
 // ── Controllers + Swagger ────────────────────────
 builder.Services
     .AddControllers()
@@ -162,18 +163,6 @@ builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 
 var app = builder.Build();
-
-// ── Migrate + Seed ───────────────────────────────
-using (var scope = app.Services.CreateScope())
-{
-    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    if (db.Database.IsRelational())
-        await db.Database.MigrateAsync();
-    else
-        await db.Database.EnsureCreatedAsync();
-}
-
-await IdentitySeeder.SeedAsync(app.Services);
 
 // ── Middleware Pipeline ──────────────────────────
 app.UseExceptionHandler(_ => { });
