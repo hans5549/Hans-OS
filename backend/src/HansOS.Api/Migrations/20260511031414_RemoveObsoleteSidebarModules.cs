@@ -68,14 +68,41 @@ namespace HansOS.Api.Migrations
                 WHERE "MenuId" IN ({obsoleteIdList});
                 """);
 
+            migrationBuilder.Sql(
+                """
+                DELETE FROM "RoleMenus"
+                WHERE "MenuId" IN (
+                    SELECT "Id"
+                    FROM "Menus"
+                    WHERE "Path" IN ('/hope-media', '/todo', '/article-collection')
+                       OR "Path" LIKE '/hope-media/%'
+                       OR "Path" LIKE '/todo/%'
+                       OR "Path" LIKE '/article-collection/%'
+                );
+                """);
+
             migrationBuilder.Sql($"""
                 DELETE FROM "Menus"
                 WHERE "Id" IN ({childIdList});
                 """);
 
+            migrationBuilder.Sql(
+                """
+                DELETE FROM "Menus"
+                WHERE "Path" LIKE '/hope-media/%'
+                   OR "Path" LIKE '/todo/%'
+                   OR "Path" LIKE '/article-collection/%';
+                """);
+
             migrationBuilder.Sql($"""
                 DELETE FROM "Menus"
                 WHERE "Id" IN ({parentIdList});
+                """);
+
+            migrationBuilder.Sql(
+                """
+                DELETE FROM "Menus"
+                WHERE "Path" IN ('/hope-media', '/todo', '/article-collection');
                 """);
 
             migrationBuilder.Sql(
