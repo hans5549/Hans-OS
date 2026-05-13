@@ -1,12 +1,12 @@
 # Workflow — Claude to Codex Mapping
 
-本文件將 `Hans-OS/.claude/hooks/*`、`.claude/commands/*`、`.claude/workflow/*` 的實際自動化行為，翻譯成 `Codex` 可遵守的人工工作流。
+This file translates the actual automation behavior of `Hans-OS/.claude/hooks/*`, `.claude/commands/*`, and `.claude/workflow/*` into a manual workflow that `Codex` can follow.
 
 ## Core Principle
 
-- `Claude Code`：有 hooks、workflow state、agent verification，可做自動 gate
-- `Codex`：沒有與上述能力完全等價的 repo-local hook enforcement
-- 因此在 `Codex` 端，這些規則屬於 **必須遵守的人工規範**，不是自動攔截
+- `Claude Code`: has hooks, workflow state, and agent verification, so it can enforce gates automatically.
+- `Codex`: has no fully equivalent repo-local hook enforcement.
+- Therefore, on the `Codex` side, these rules are **mandatory manual rules**, not automatic blockers.
 
 ## Change Type Rules
 
@@ -17,119 +17,127 @@
 
 ## Required Flow for Code Changes
 
-1. **確認不在 `main` / `master` 上直接改 code**
-2. **進 plan mode**
-3. **選定當前 task**
-4. **RED**：先寫失敗測試或先補重現 bug 的測試
-5. **GREEN**：寫最小程式讓測試通過
-6. **REFACTOR**：整理命名、消除重複、降低複雜度
+1. **Confirm you are not editing code directly on `main` / `master`.**
+2. **Enter plan mode.**
+3. **Select the current task.**
+4. **RED**: write a failing test first, or add a test that reproduces the bug.
+5. **GREEN**: write the smallest implementation that makes the test pass.
+6. **REFACTOR**: improve naming, remove duplication, and reduce complexity.
 7. **Review pipeline**
 8. **Build / Typecheck / Tests**
-9. **只 stage 指定檔案後 commit**
+9. **Stage only explicit file paths before committing.**
+
+## Goal-Driven Execution
+
+- A plan must translate the requirement into "executable steps + verification method"; high-level descriptions alone are not enough.
+- A bug fix must define the reproduction method before the minimal fix.
+- A refactor must explicitly state the expected unchanged behavior and list the verification that proves it.
+- Trivial doc / typo / obvious one-liner changes may use shorter explanations and narrower verification, but must not expand scope; if it is a code change, it still follows the Change Type Rules above.
+- Every new concept, setting, interface, helper, or factory must answer: what real problem does it solve now? Can it be avoided?
 
 ## Manual Rules in Codex
 
 ### Branch Protection
 
-Claude 來源：
+Claude source:
 
 - `.claude/hooks/pre-edit-check.mjs`
 
-Claude 會做的事：
+What Claude does:
 
-- 若在 `main` / `master` 編輯程式碼，自動阻擋
-- 保護 `.claude/hooks/*`、`.claude/workflow/state.json`、`.claude/settings.local.json`
+- Automatically blocks code edits on `main` / `master`.
+- Protects `.claude/hooks/*`, `.claude/workflow/state.json`, and `.claude/settings.local.json`.
 
-Codex 對應規範：
+Codex equivalent rule:
 
-- 程式碼修改前，手動確認目前 branch 不是 `main` / `master`
-- 不修改 Claude workflow 相關檔案，除非需求本身就是維護 Claude automation
+- Before code changes, manually confirm the current branch is not `main` / `master`.
+- Do not modify Claude workflow files unless the requirement itself is to maintain Claude automation.
 
 ### Commit Gate
 
-Claude 來源：
+Claude source:
 
 - `.claude/hooks/pre-bash-check.mjs`
 
-Claude 會做的事：
+What Claude does:
 
-- 在 `git commit` 前檢查 review steps 是否完成
-- 檢查是否有 backend build / frontend typecheck
-- 阻止 `git add .` / `git add -A`
+- Before `git commit`, checks whether review steps are complete.
+- Checks whether backend build / frontend typecheck has run.
+- Blocks `git add .` / `git add -A`.
 
-Codex 對應規範：
+Codex equivalent rule:
 
-- commit 前自行核對 review、build、test、typecheck 是否完成
-- 僅能 `git add <specific-files>`
+- Before committing, manually verify review, build, tests, and typecheck are complete.
+- Only run `git add <specific-files>`.
 
 ### Post-Edit Build
 
-Claude 來源：
+Claude source:
 
 - `.claude/hooks/post-edit-build.mjs`
 
-Claude 會做的事：
+What Claude does:
 
-- `.cs` / `.razor` 修改後自動 `dotnet build backend/HansOS.slnx --no-restore -v q`
-- `.vue` / `.ts` / `.tsx` 修改後自動 `cd frontend && pnpm check:type`
+- After `.cs` / `.razor` changes, automatically runs `dotnet build backend/HansOS.slnx --no-restore -v q`.
+- After `.vue` / `.ts` / `.tsx` changes, automatically runs `cd frontend && pnpm check:type`.
 
-Codex 對應規範：
+Codex equivalent rule:
 
-- backend code 變更後，手動跑 backend build
-- frontend code 變更後，手動跑 `pnpm check:type`
-- 若雙邊都改，兩邊都跑
+- After backend code changes, manually run the backend build.
+- After frontend code changes, manually run `pnpm check:type`.
+- If both sides changed, run both.
 
 ### Agent Verification
 
-Claude 來源：
+Claude source:
 
 - `.claude/hooks/post-agent-verify.mjs`
 
-Claude 會做的事：
+What Claude does:
 
-- 只有真的 dispatch agent，workflow step 才算完成
+- A workflow step only counts as complete if the agent was actually dispatched.
 
-Codex 對應規範：
+Codex equivalent rule:
 
-- 若要聲稱已完成 review pipeline，必須真的執行對應 reviewer / sub-agent，不可只用主 agent 自述替代
-- `.Codex/agents/*` 是 reviewer persona 與 prompt 契約來源
+- If claiming the review pipeline is complete, actually run the corresponding reviewer / sub-agent. Do not replace it with the main agent's self-narration.
+- `.Codex/agents/*` is the source for reviewer personas and prompt contracts.
 
 ## Review Pipeline
 
 ### Plan Review
 
-平行執行：
+Run in parallel:
 
 - `plan-ceo-reviewer`
 - `plan-eng-reviewer`
 - `plan-linus-reviewer`
 
-若 CEO review 與 Linus review 衝突，不自動裁決，交由使用者決定。
+If the CEO review conflicts with the Linus review, do not resolve it automatically. Bring the decision to the user.
 
 ### Code Review
 
-平行執行：
+Run in parallel:
 
 - `code-review-specialist`
 - `security-vuln-scanner`
 
-之後再執行：
+Then run:
 
 - `linus-reviewer`
 
 ## Command Mapping
 
-Claude 既有命令：
+Existing Claude commands:
 
 - `.claude/commands/commit-this.md`
 - `.claude/commands/review-workflow.md`
 - `.claude/commands/review-vue.md`
 
-Codex 對應方式：
+Codex equivalent:
 
-- 不建立假 slash commands
-- 使用本文件與 `.Codex/agents/*` 作為人工操作說明
-- 主 agent 在需要時主動 dispatch reviewer，並在回覆中說明目前處於哪個 workflow step
+- Do not create fake slash commands.
+- Use this file and `.Codex/agents/*` as manual operating instructions.
+- The main agent should proactively dispatch reviewers when needed and state the current workflow step in the response.
 
 ## Build / Test Matrix
 
@@ -143,13 +151,13 @@ Codex 對應方式：
 
 ## Work Artifacts
 
-- `Codex` 端不鏡像 `.claude/workflow/state.json`、`progress.md`、`findings.md` 這類機器狀態檔
-- 若需要工作痕跡，以一般文件或回覆摘要呈現，不建立假 state machine
+- `Codex` must not mirror machine state files such as `.claude/workflow/state.json`, `progress.md`, or `findings.md`.
+- If work traces are needed, use regular documents or response summaries. Do not create a fake state machine.
 
 ## What This File Does Not Claim
 
-- 不宣稱 `Codex` 會自動擋 branch、commit 或 edit
-- 不宣稱 `Codex` 會自動在編輯後 build
-- 不宣稱 `Codex` 會自動驗證 reviewer 是否真的執行
+- It does not claim that `Codex` automatically blocks branches, commits, or edits.
+- It does not claim that `Codex` automatically builds after edits.
+- It does not claim that `Codex` automatically verifies whether reviewers actually ran.
 
-這些都是 **人工必守規範**，不是工具層 enforcement
+These are **mandatory manual rules**, not tool-level enforcement.

@@ -2,11 +2,11 @@
 
 ## Purpose
 
-針對近期修改的程式碼做應用安全審查，重點是找出真實 exploitable 的風險，而不是製造大量低價值警告。
+Application security review for recently modified code. The focus is finding genuinely exploitable risks, not producing a large number of low-value warnings.
 
 ## Scope
 
-優先用於以下類型變更：
+Prioritize this reviewer for these change types:
 
 - API endpoint
 - authentication / authorization
@@ -30,12 +30,12 @@
 
 ## Hans-OS Specific Checks
 
-- JWT cookie settings 是否正確
-- refresh token rotation 是否安全
-- `[Authorize]` 與 permission checks 是否完整
-- 是否暴露 secret / connection string / signing key
-- EF Core query 是否安全且不繞過既有分層
-- 是否破壞 CORS + credentials 模式
+- Whether JWT cookie settings are correct
+- Whether refresh token rotation is secure
+- Whether `[Authorize]` and permission checks are complete
+- Whether secrets / connection strings / signing keys are exposed
+- Whether EF Core queries are safe and do not bypass existing layering
+- Whether CORS + credentials behavior is broken
 
 ## Severity
 
@@ -60,6 +60,6 @@
 
 ## Rules
 
-- 只報有根據的問題；不確定的項目要明講是 potential
-- 使用繁體中文
-- remediation 必須具體，能對應到現有 codebase 模式
+- Report only evidence-backed issues; uncertain items must be clearly marked as potential.
+- Use Traditional Chinese.
+- Remediation must be concrete and map to existing codebase patterns.

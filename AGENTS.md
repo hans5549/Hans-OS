@@ -1,7 +1,7 @@
 # AGENTS.md — Hans-OS
 
-本檔是 `Codex` 在 `Hans-OS` repo 的第一入口。
-`Claude` 仍使用既有 `CLAUDE.md` 與 `.claude/*`；`Codex` 請優先依本檔與 `.Codex/*` 工作。
+This file is the primary entry point for `Codex` in the `Hans-OS` repo.
+`Claude` still uses the existing `CLAUDE.md` and `.claude/*`; `Codex` should prioritize this file and `.Codex/*`.
 
 ## Quick Facts
 
@@ -14,16 +14,24 @@
 | **Backend Test** | `dotnet test backend/HansOS.slnx` |
 | **Frontend Dev** | `cd frontend && pnpm dev:antd` |
 | **Frontend Type Check** | `cd frontend && pnpm check:type` |
+| **Codex Settings Index** | `.Codex/README.md` |
 
 ## Communication
 
-- **回覆語言一律使用繁體中文（zh-TW）**。
-- 語氣保持直接、務實、可執行。
-- 不確定時必須明講假設或缺口，不可猜。
+- **Always respond in Traditional Chinese (zh-TW).**
+- Keep the tone direct, pragmatic, and executable.
+- When uncertain, explicitly state assumptions or gaps. Do not guess.
+
+## AI Coding Guardrails
+
+- When requirements, data flow, or existing contracts are unclear, state assumptions or ask first. Do not fill gaps by guessing.
+- Prefer the smallest viable change. Do not add unrequested features, abstractions, settings, or speculative flexibility.
+- Only change the scope required by the task. Do not opportunistically refactor, reformat, or edit adjacent unrelated code.
+- Every non-trivial code change must define success criteria first, then verify with the corresponding tests, build, or typecheck.
 
 ## Codex Must-Read Mapping
 
-在開始修改前，先依任務性質閱讀對應文件：
+Before making changes, read the relevant files based on task type:
 
 | Task Keywords | MUST Read First |
 |---------------|-----------------|
@@ -33,31 +41,32 @@
 | Review, Refactor, Quality | `.Codex/LINUS_MODE.md` |
 | Workflow, Plan, Commit, Review Pipeline | `.Codex/rules/workflow.md` |
 | Communication, Response Style | `.Codex/rules/communication-style.md` |
+| Codex Setting, Agent, Rule, Skill | `.Codex/README.md` |
 
 ## Workflow
 
 ### Binary Rules
 
-- **Doc-only changes**（`.md`, `.txt`, `.rst`, `.yml`, `.yaml`）可跳過 TDD、build、review pipeline。
-- **Code changes**（`.cs`, `.vue`, `.ts`, `.tsx`, `.json`, `.css`, `.js`, `.html`, `.csproj`, `.xml`）必須走完整工作流。
+- **Doc-only changes** (`.md`, `.txt`, `.rst`, `.yml`, `.yaml`) may skip TDD, build, and the review pipeline.
+- **Code changes** (`.cs`, `.vue`, `.ts`, `.tsx`, `.json`, `.css`, `.js`, `.html`, `.csproj`, `.xml`) must follow the full workflow.
 
 ### Required for Code Changes
 
-1. 先進入 **plan mode**，將需求拆成可執行步驟。
-2. 在 **feature / fix / refactor branch** 工作，不可直接在 `main` / `master` 修改程式碼。
-3. 依序執行 **RED → GREEN → REFACTOR**。
-4. 完成後跑對應驗證與 review pipeline。
+1. Enter **plan mode** first and break the requirement into executable steps.
+2. Work on a **feature / fix / refactor branch**. Do not modify code directly on `main` / `master`.
+3. Follow **RED -> GREEN -> REFACTOR** in order.
+4. After completion, run the relevant verification and review pipeline.
 
 ### Branch Rules
 
-- 分支命名：`feature/add-xxx`、`fix/xxx-error`、`refactor/xxx`
-- `Codex` 雖可建立 `codex/*` 分支，但本 repo 以專案規範為主，**優先使用上述命名**。
+- Branch naming: `feature/add-xxx`, `fix/xxx-error`, `refactor/xxx`
+- Although `Codex` may create `codex/*` branches, this repo's project convention takes priority. **Prefer the branch names above.**
 
 ### Git Rules
 
-- **禁止 `git add .` 與 `git add -A`**
-- 僅能 stage 具體檔案路徑。
-- Commit message 採 Conventional Commits，內容使用繁體中文。
+- **Do not use `git add .` or `git add -A`.**
+- Stage only explicit file paths.
+- Commit messages must use Conventional Commits, with the content written in Traditional Chinese.
 
 ## TDD and Tests
 
@@ -74,7 +83,7 @@
 
 1. Happy path
 2. `401 Unauthorized`
-3. `400 Bad Request`（若 applicable）
+3. `400 Bad Request` (if applicable)
 4. Business logic edge cases
 
 ## Verification Commands
@@ -92,23 +101,23 @@ dotnet test backend/HansOS.slnx
 cd frontend && pnpm check:type
 ```
 
-- `.cs` / backend behavior 變更：至少跑 backend build 與相關 tests。
-- `.vue` / `.ts` / `.tsx` 變更：至少跑 `pnpm check:type`。
-- 若同時影響前後端，兩邊都要驗證。
+- `.cs` / backend behavior changes: run at least the backend build and relevant tests.
+- `.vue` / `.ts` / `.tsx` changes: run at least `pnpm check:type`.
+- If both frontend and backend are affected, verify both sides.
 
 ## Review Pipeline
 
-程式碼變更完成後，應手動遵守以下 review 順序：
+After code changes are complete, manually follow this review order:
 
-1. Plan Review：`plan-ceo-reviewer`、`plan-eng-reviewer`、`plan-linus-reviewer` 平行檢查
-2. Code Review：`code-review-specialist`、`security-vuln-scanner` 平行檢查
-3. Linus Review：`linus-reviewer`
+1. Plan Review: run `plan-ceo-reviewer`, `plan-eng-reviewer`, and `plan-linus-reviewer` in parallel.
+2. Code Review: run `code-review-specialist` and `security-vuln-scanner` in parallel.
+3. Linus Review: run `linus-reviewer`.
 4. Build / Typecheck / Tests
 
-Reviewer persona 與輸出契約見 `.Codex/agents/*`。
+Reviewer personas and output contracts are in `.Codex/agents/*`.
 
 ## Codex vs Claude
 
-- `Claude` 版的 branch protection、commit gate、post-edit build、agent verification，由 `.claude/hooks/*` 自動執行。
-- `Codex` **不提供等價 hook enforcement**；請依 `.Codex/rules/workflow.md` 手動遵守相同規範。
-- `CLAUDE.md` 保留給 `Claude Code` 使用；`Codex` 不應修改 `.claude/hooks/*`、`.claude/workflow/state.json` 等 Claude 自動化檔案，除非使用者明確要求處理 Claude workflow 本身。
+- `Claude` branch protection, commit gate, post-edit build, and agent verification are enforced automatically by `.claude/hooks/*`.
+- `Codex` **does not provide equivalent hook enforcement**. Manually follow `.Codex/rules/workflow.md`.
+- `CLAUDE.md` remains for `Claude Code`. `Codex` should not modify `.claude/hooks/*`, `.claude/workflow/state.json`, or other Claude automation files unless the user explicitly asks to maintain the Claude workflow itself.

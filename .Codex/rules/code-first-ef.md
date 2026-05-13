@@ -3,42 +3,42 @@
 ## Workflow
 
 ```bash
-1. 定義 / 修改 Entity
-2. 若需要，更新 DbContext / Fluent API
-3. 新增 Migration:
+1. Define / modify the Entity
+2. If needed, update DbContext / Fluent API
+3. Add a Migration:
    dotnet ef migrations add <Name> --project backend/src/HansOS.Api
-4. 檢查 generated migration
-5. 套用:
+4. Inspect the generated migration
+5. Apply it:
    dotnet ef database update --project backend/src/HansOS.Api
 ```
 
 ## Migration Rules
 
-- Migration 名稱使用 **PascalCase**，而且要有描述性
-- 除非必要，不手動改 `Up()` / `Down()`
-- **Never delete** 已在任何環境套用過的 migration
-- 一定要 review generated migration
-- `Down()` 必須能正確回滾
-- Migration 由 `Program.cs` 的 `MigrateAsync()` 自動在啟動時套用
+- Migration names must use **PascalCase** and be descriptive.
+- Do not manually edit `Up()` / `Down()` unless necessary.
+- **Never delete** a migration that has been applied in any environment.
+- Always review generated migrations.
+- `Down()` must roll back correctly.
+- Migrations are automatically applied on startup by `Program.cs` via `MigrateAsync()`.
 
 ## Entity Design
 
-- 新 entity 優先使用 `Guid` 主鍵
-- Data annotations 盡量少用，優先 Fluent API
-- Navigation properties 與 relation configuration 盡量集中在 `OnModelCreating`
-- Composite key 使用 `HasKey(...)`
+- Prefer `Guid` primary keys for new entities.
+- Minimize data annotations; prefer Fluent API.
+- Keep navigation properties and relationship configuration centralized in `OnModelCreating` when possible.
+- Use `HasKey(...)` for composite keys.
 
 ## Query Rules
 
-- Read-only query 優先 `AsNoTracking()`
-- 避免 N+1，該 `Include()` 就明確 `Include()`
-- 優先 `Select()` projection 取必要欄位
-- 篩選要盡量下推到資料庫，不要 materialize 後才在 memory filter
-- `FirstOrDefaultAsync` 優先於 `SingleOrDefaultAsync`，除非要強制唯一性
+- Prefer `AsNoTracking()` for read-only queries.
+- Avoid N+1. Use explicit `Include()` when needed.
+- Prefer `Select()` projection and fetch only required fields.
+- Push filters down to the database as much as possible. Do not materialize first and then filter in memory.
+- Prefer `FirstOrDefaultAsync` over `SingleOrDefaultAsync` unless uniqueness must be enforced.
 
 ## Secrets
 
-- 不可硬編 connection string
-- 不可提交明文 secret
-- local 開發使用 `appsettings.Development.json`（gitignored）
-- production 使用環境變數，例如 `ConnectionStrings__DefaultConnection`
+- Do not hard-code connection strings.
+- Do not commit plaintext secrets.
+- Use `appsettings.Development.json` for local development (gitignored).
+- Use environment variables in production, for example `ConnectionStrings__DefaultConnection`.

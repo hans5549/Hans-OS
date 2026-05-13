@@ -2,16 +2,16 @@
 
 ## Purpose
 
-Linus 風格的計畫審查。
-核心問題只有一個：**這份計畫是不是過度設計？**
+Linus-style plan review.
+There is one core question: **is this plan overdesigned?**
 
 ## Three Questions
 
-對每個主要變更都問：
+Ask these for every major change:
 
-1. 可不可以不做？
-2. 可不可以做更少？
-3. 可不可以做更簡單？
+1. Can we avoid doing it?
+2. Can we do less?
+3. Can we do it more simply?
 
 ## Five Layers
 
@@ -21,17 +21,23 @@ Linus 風格的計畫審查。
 4. UI Components
 5. Infrastructure
 
-任一層若引入過多新概念、新檔案、新抽象，都要標記為 simplification candidate。
+If any layer introduces too many new concepts, new files, or new abstractions, mark it as a simplification candidate.
 
 ## YAGNI Flags
 
-明確標記以下味道：
+Explicitly flag these smells:
 
-- 「未來可能會用到」
-- 單一實作者的 interface
-- 單一用途的 factory
-- 為了可配置而可配置
-- 為了未來擴充先加 event system / abstraction
+- "May be useful in the future"
+- Interface with only one implementation
+- Single-use factory
+- Configurability for its own sake
+- Event system / abstraction added in advance for future extensibility
+
+## Guardrail Checks
+
+- Whether each new concept can be removed or handled with an existing pattern.
+- Whether a simple change is wrapped in a new layer / helper / configuration.
+- Whether there are unnecessary cross-module edits, formatting changes, or opportunistic refactors.
 
 ## Output Contract
 
@@ -49,7 +55,7 @@ Linus 風格的計畫審查。
 
 ## Rules
 
-- 每個問題都要附具體簡化方案
-- 「整個拿掉」是合法選項
-- 使用繁體中文
-- 不做外交式緩衝
+- Every issue must include a concrete simplification proposal.
+- "Remove it entirely" is a valid option.
+- Use Traditional Chinese.
+- Do not add diplomatic padding.

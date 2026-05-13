@@ -1,54 +1,54 @@
 # Review Vue — Vue 3 / TypeScript Review Checklist
 
-本文件由 `Hans-OS/.claude/commands/review-vue.md` 鏡像整理，供 `Codex` 對前端變更進行人工 review。
+This file mirrors and organizes `Hans-OS/.claude/commands/review-vue.md` for manual `Codex` review of frontend changes.
 
 ## Critical
 
-- 必須使用 Composition API + `<script setup lang="ts">`
-- 不可缺少 `lang="ts"`
-- composable 不可洩漏未妥善包裝的 reactive state
-- `addEventListener` / `setInterval` / `setTimeout` 要在 `onUnmounted` 清理
+- Must use Composition API + `<script setup lang="ts">`.
+- Must not omit `lang="ts"`.
+- Composables must not leak improperly wrapped reactive state.
+- `addEventListener` / `setInterval` / `setTimeout` must be cleaned up in `onUnmounted`.
 
 ## Important
 
-- `defineProps()` 與 `defineEmits()` 要有型別
-- 不可在元件內直接 inline API call，應透過 API layer
-- 不可直接在元件外任意 mutate Pinia store state
-- 若專案已配置 i18n，避免硬編 UI 字串
-- `v-for` 必須有 `:key`
+- `defineProps()` and `defineEmits()` must be typed.
+- Do not make inline API calls directly inside components; use the API layer.
+- Do not arbitrarily mutate Pinia store state outside components.
+- If the project has i18n configured, avoid hard-coded UI strings.
+- `v-for` must have `:key`.
 
 ## Style
 
-- Component file name 用 PascalCase
-- script 內 prop 命名用 camelCase，template 內用 kebab-case
-- 移除未使用 import
-- 避免殘留 `console.log`
-- 避免 template 中的 magic numbers
+- Component filenames use PascalCase.
+- Prop names use camelCase in scripts and kebab-case in templates.
+- Remove unused imports.
+- Avoid leftover `console.log`.
+- Avoid magic numbers in templates.
 
 ## Ant Design Vue Checks
 
-- 元件引入風格要一致
-- 表單驗證優先既有 form pattern
-- Modal / Drawer 使用 `v-model:open`，避免舊 `visible`
-- Table slot 寫法保持既有專案風格
+- Keep component import style consistent.
+- Prefer existing form validation patterns.
+- Use `v-model:open` for Modal / Drawer; avoid the legacy `visible`.
+- Keep Table slot syntax consistent with the existing project style.
 
 ## Pinia Checks
 
-- store 命名採 `use*Store`
-- async 操作放在 actions，不放 getter
-- 元件解構 store state 時使用 `storeToRefs()`
-- 避免 cross-store circular dependency
+- Store names use `use*Store`.
+- Put async operations in actions, not getters.
+- Use `storeToRefs()` when destructuring store state in components.
+- Avoid cross-store circular dependencies.
 
 ## Tailwind CSS Checks
 
-- 能用 utility class 時避免 inline style
-- spacing scale 保持一致
-- responsive prefix 正確使用
-- 若頁面已有 dark mode 機制，避免破壞其相容性
+- Avoid inline style when a utility class can do the job.
+- Keep the spacing scale consistent.
+- Use responsive prefixes correctly.
+- If the page already has a dark-mode mechanism, do not break its compatibility.
 
 ## Review Workflow
 
-1. 找出本次修改的 `.vue` / `.ts` / `.tsx` 檔案
-2. 逐檔閱讀與分類問題
-3. 依 `Critical` / `Important` / `Style` 報告
-4. 給出具體修正建議與路徑
+1. Identify changed `.vue` / `.ts` / `.tsx` files.
+2. Read each file and classify issues.
+3. Report by `Critical` / `Important` / `Style`.
+4. Provide concrete fix suggestions and paths.
