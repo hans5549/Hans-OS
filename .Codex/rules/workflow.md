@@ -1,10 +1,10 @@
 # Workflow - Manual Codex Mapping
 
-這份文件把 Hans-OS 既有的 Claude / GitHub hook-based workflow 翻成 Codex 可手動遵守的規則。
+這份文件把 Hans-OS 既有的 Claude hook-based workflow 翻成 Codex 可手動遵守的規則。
 
 ## Core Principle
 
-- Claude Code 和 GitHub Copilot CLI 在本 repo 有 hook / workflow state / gate 檔案。
+- Claude Code 在本 repo 有 hook / workflow state / gate 檔案。
 - Codex 沒有同等的 repo-local 自動阻擋能力。
 - 因此 Codex 這邊是 mandatory manual rules，不是自動 hook。
 
@@ -39,7 +39,7 @@
 
 ### Branch Protection
 
-Claude / GitHub hooks automatically block code edits on `main` / `master`.
+Claude hooks automatically block code edits on `main` / `master`.
 
 Codex equivalent:
 
@@ -54,8 +54,6 @@ Do not edit these unless the user explicitly asks to maintain that workflow:
 - `.claude/hooks/*`
 - `.claude/workflow/state.json`
 - `.claude/settings.local.json`
-- `.github/hooks/*`
-- `.github/workflow/state.json`
 
 ### Commit Gate
 

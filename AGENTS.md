@@ -1,7 +1,7 @@
 # AGENTS.md - Hans-OS
 
 這是 `Codex` 在 `Hans-OS` repo 的主要入口。
-`Claude` 仍使用 `CLAUDE.md` 與 `.claude/*`；`GitHub Copilot` 使用 `.github/*`；`Codex` 優先讀本檔與 `.Codex/*`。
+`Claude` 仍使用 `CLAUDE.md` 與 `.claude/*`；`.github/*` 只保留 GitHub Actions；`Codex` 優先讀本檔與 `.Codex/*`。
 
 ## Quick Facts
 
@@ -144,5 +144,5 @@ If reviewers cannot be dispatched, explicitly say the review pipeline was not ru
 
 - Codex uses `AGENTS.md` and `.Codex/*`.
 - Claude uses `CLAUDE.md` and `.claude/*`.
-- GitHub Copilot CLI uses `.github/*`.
-- Do not modify `.claude/hooks/*`, `.claude/workflow/state.json`, `.claude/settings.local.json`, `.github/hooks/*`, or `.github/workflow/state.json` unless the user explicitly asks to maintain those workflows.
+- GitHub Actions uses `.github/workflows/*`.
+- Do not modify `.claude/hooks/*`, `.claude/workflow/state.json`, or `.claude/settings.local.json` unless the user explicitly asks to maintain the Claude workflow.

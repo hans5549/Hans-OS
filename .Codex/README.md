@@ -11,7 +11,7 @@
 | `.Codex/README.md` | This file: Codex settings index and maintenance rules |
 | `.Codex/ARCHITECTURE.md` | Current backend, frontend, database, auth, deployment, and module map |
 | `.Codex/LINUS_MODE.md` | Linus-style judgment and review principles |
-| `.Codex/rules/workflow.md` | Manual Codex workflow mapped from Claude and GitHub hook-based workflows |
+| `.Codex/rules/workflow.md` | Manual Codex workflow mapped from Claude hook-based workflows |
 | `.Codex/rules/communication-style.md` | Traditional Chinese response style and work posture |
 | `.Codex/rules/csharp-coding-style.md` | Backend C# style, architecture, async, logging, validation rules |
 | `.Codex/rules/code-first-ef.md` | EF Core code-first and migration rules |
@@ -27,17 +27,15 @@ There is no standalone repo-local `.codex/` or `codex.toml` project settings fil
 
 - `Codex`: `AGENTS.md` and `.Codex/*`
 - `Claude Code`: `CLAUDE.md` and `.claude/*`
-- `GitHub Copilot CLI`: `.github/*`
+- `GitHub Actions`: `.github/workflows/*`
 
-Codex may read `.claude/*` and `.github/*` as reference material, but should not edit their hook state or automation files unless the user explicitly asks for that workflow to be maintained.
+Codex may read `.claude/*` as reference material, but should not edit Claude hook state or automation files unless the user explicitly asks for that workflow to be maintained. `.github/*` is limited to GitHub Actions deployment workflows.
 
 Protected unless explicitly requested:
 
 - `.claude/hooks/*`
 - `.claude/workflow/state.json`
 - `.claude/settings.local.json`
-- `.github/hooks/*`
-- `.github/workflow/state.json`
 
 ## Current Project Facts
 
@@ -105,4 +103,4 @@ When adjusting Codex settings:
 - When changing backend patterns, update `.Codex/ARCHITECTURE.md`, `.Codex/rules/csharp-coding-style.md`, and `.Codex/rules/code-first-ef.md` if relevant.
 - When changing frontend design or UI rules, update `.Codex/rules/review-vue.md` and `.Codex/rules/ui-style-guide.md`.
 - When changing the reviewer flow, update `.Codex/rules/workflow.md` and `.Codex/agents/*`.
-- After completion, run `git diff -- AGENTS.md .Codex` to verify that only expected files changed.
+- After completion, run `git diff -- AGENTS.md .Codex .github` to verify that only expected files changed.

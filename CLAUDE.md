@@ -276,7 +276,7 @@ Doc: `.md`, `.txt`, `.rst`, `.yml`, `.yaml` (skip build verification)
 | Rule | Description |
 |------|-------------|
 | Main branch protection | Cannot edit code files on `main`/`master` |
-| Protected files | `.github/hooks/` and workflow state files cannot be modified |
+| Protected files | `.claude/hooks/` and `.claude/workflow/*` state files cannot be modified |
 | git add . blocked | Must stage specific files only |
 | Commit gating | Code changes require all review steps complete before commit |
 | Auto-build | `.cs` edits → `dotnet build`; `.vue`/`.ts` edits → `pnpm check:type` |
