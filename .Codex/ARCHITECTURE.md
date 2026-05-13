@@ -11,7 +11,7 @@ Hans-OS/
   docs/           Deployment notes
   .Codex/         Codex settings, rules, agents, skills
   .claude/        Claude Code automation and hooks
-  .github/        GitHub Copilot CLI instructions, hooks, workflows
+  .github/        GitHub Actions deployment workflows
 ```
 
 ## Backend
