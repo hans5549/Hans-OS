@@ -1,163 +1,146 @@
-# Workflow — Claude to Codex Mapping
+# Workflow - Manual Codex Mapping
 
-This file translates the actual automation behavior of `Hans-OS/.claude/hooks/*`, `.claude/commands/*`, and `.claude/workflow/*` into a manual workflow that `Codex` can follow.
+這份文件把 Hans-OS 既有的 Claude / GitHub hook-based workflow 翻成 Codex 可手動遵守的規則。
 
 ## Core Principle
 
-- `Claude Code`: has hooks, workflow state, and agent verification, so it can enforce gates automatically.
-- `Codex`: has no fully equivalent repo-local hook enforcement.
-- Therefore, on the `Codex` side, these rules are **mandatory manual rules**, not automatic blockers.
+- Claude Code 和 GitHub Copilot CLI 在本 repo 有 hook / workflow state / gate 檔案。
+- Codex 沒有同等的 repo-local 自動阻擋能力。
+- 因此 Codex 這邊是 mandatory manual rules，不是自動 hook。
 
 ## Change Type Rules
 
-| Change Type | Definition | Plan Mode | TDD | Review Pipeline | Build / Typecheck |
-|-------------|------------|:---------:|:---:|:---------------:|:-----------------:|
+| Change type | Definition | Plan | TDD | Review pipeline | Build / typecheck |
+|-------------|------------|------|-----|-----------------|-------------------|
 | Doc-only | `.md`, `.txt`, `.rst`, `.yml`, `.yaml` | Skip | Skip | Skip | Skip |
-| Code change | `.cs`, `.vue`, `.ts`, `.tsx`, `.json`, `.css`, `.js`, `.html`, `.csproj`, `.xml` | Required | Required | Required | Required |
+| Code change | `.cs`, `.vue`, `.ts`, `.tsx`, `.json`, `.css`, `.js`, `.html`, `.csproj`, `.xml` | Required | Required | Required when dispatchable | Required |
 
 ## Required Flow for Code Changes
 
-1. **Confirm you are not editing code directly on `main` / `master`.**
-2. **Enter plan mode.**
-3. **Select the current task.**
-4. **RED**: write a failing test first, or add a test that reproduces the bug.
-5. **GREEN**: write the smallest implementation that makes the test pass.
-6. **REFACTOR**: improve naming, remove duplication, and reduce complexity.
-7. **Review pipeline**
-8. **Build / Typecheck / Tests**
-9. **Stage only explicit file paths before committing.**
+1. Confirm the current branch is not `main` / `master`.
+2. Define success criteria and an executable plan.
+3. Read the must-read files from `AGENTS.md`.
+4. RED: write a failing test first, or add a test that reproduces the bug.
+5. GREEN: write the smallest implementation that makes the test pass.
+6. REFACTOR: simplify naming, duplication, flow, and data shape while tests stay green.
+7. Run review pipeline when reviewers can actually be dispatched.
+8. Run required build, typecheck, and tests.
+9. Stage only explicit file paths before committing.
 
 ## Goal-Driven Execution
 
-- A plan must translate the requirement into "executable steps + verification method"; high-level descriptions alone are not enough.
-- A bug fix must define the reproduction method before the minimal fix.
-- A refactor must explicitly state the expected unchanged behavior and list the verification that proves it.
-- Trivial doc / typo / obvious one-liner changes may use shorter explanations and narrower verification, but must not expand scope; if it is a code change, it still follows the Change Type Rules above.
-- Every new concept, setting, interface, helper, or factory must answer: what real problem does it solve now? Can it be avoided?
+- A plan must include executable steps and verification method.
+- A bug fix must define reproduction before the fix.
+- A refactor must state expected unchanged behavior and the verification proving it.
+- Every new setting, interface, helper, factory, or abstraction must solve a current real problem.
+- Trivial doc or typo changes can use shorter verification, but must not expand scope.
 
 ## Manual Rules in Codex
 
 ### Branch Protection
 
-Claude source:
+Claude / GitHub hooks automatically block code edits on `main` / `master`.
 
-- `.claude/hooks/pre-edit-check.mjs`
+Codex equivalent:
 
-What Claude does:
+- Before code changes, check `git status --short --branch`.
+- If on `main` / `master`, create or switch to a `feature/*`, `fix/*`, or `refactor/*` branch before editing code.
+- Doc-only Codex setting updates may happen on `main` when no code files are touched.
 
-- Automatically blocks code edits on `main` / `master`.
-- Protects `.claude/hooks/*`, `.claude/workflow/state.json`, and `.claude/settings.local.json`.
+### Protected Automation Files
 
-Codex equivalent rule:
+Do not edit these unless the user explicitly asks to maintain that workflow:
 
-- Before code changes, manually confirm the current branch is not `main` / `master`.
-- Do not modify Claude workflow files unless the requirement itself is to maintain Claude automation.
+- `.claude/hooks/*`
+- `.claude/workflow/state.json`
+- `.claude/settings.local.json`
+- `.github/hooks/*`
+- `.github/workflow/state.json`
 
 ### Commit Gate
 
-Claude source:
+Before `git commit`:
 
-- `.claude/hooks/pre-bash-check.mjs`
+- Confirm review, build, tests, and typecheck requirements are satisfied for code changes.
+- Use Conventional Commits with Traditional Chinese description.
+- Never run `git add .` or `git add -A`.
+- Stage only explicit files.
 
-What Claude does:
+### Post-Edit Build / Typecheck
 
-- Before `git commit`, checks whether review steps are complete.
-- Checks whether backend build / frontend typecheck has run.
-- Blocks `git add .` / `git add -A`.
-
-Codex equivalent rule:
-
-- Before committing, manually verify review, build, tests, and typecheck are complete.
-- Only run `git add <specific-files>`.
-
-### Post-Edit Build
-
-Claude source:
-
-- `.claude/hooks/post-edit-build.mjs`
-
-What Claude does:
-
-- After `.cs` / `.razor` changes, automatically runs `dotnet build backend/HansOS.slnx --no-restore -v q`.
-- After `.vue` / `.ts` / `.tsx` changes, automatically runs `cd frontend && pnpm check:type`.
-
-Codex equivalent rule:
-
-- After backend code changes, manually run the backend build.
-- After frontend code changes, manually run `pnpm check:type`.
-- If both sides changed, run both.
-
-### Agent Verification
-
-Claude source:
-
-- `.claude/hooks/post-agent-verify.mjs`
-
-What Claude does:
-
-- A workflow step only counts as complete if the agent was actually dispatched.
-
-Codex equivalent rule:
-
-- If claiming the review pipeline is complete, actually run the corresponding reviewer / sub-agent. Do not replace it with the main agent's self-narration.
-- `.Codex/agents/*` is the source for reviewer personas and prompt contracts.
+- Backend code change: run `dotnet build backend/HansOS.slnx` and relevant tests.
+- Frontend code change: run `cd frontend && pnpm check:type`.
+- Backend + frontend change: run both.
+- New or changed API endpoint: run integration tests that cover it.
 
 ## Review Pipeline
 
+`.Codex/agents/*` defines reviewer personas. It does not dispatch itself.
+
 ### Plan Review
 
-Run in parallel:
+Use when a code task is non-trivial and reviewer dispatch is available:
 
 - `plan-ceo-reviewer`
 - `plan-eng-reviewer`
 - `plan-linus-reviewer`
 
-If the CEO review conflicts with the Linus review, do not resolve it automatically. Bring the decision to the user.
+If CEO, engineering, and Linus judgments conflict, present the conflict to the user instead of silently blending the answers.
 
 ### Code Review
 
-Run in parallel:
+Use after implementation when reviewer dispatch is available:
 
 - `code-review-specialist`
 - `security-vuln-scanner`
-
-Then run:
-
+- `code-simplifier`, when the diff is more than a trivial change
 - `linus-reviewer`
 
-## Command Mapping
+If the current environment cannot dispatch reviewers, state `review pipeline not run`. Reading persona files as a checklist is allowed for self-checking, but it does not count as a completed pipeline.
 
-Existing Claude commands:
+## Validation Matrix
 
-- `.claude/commands/commit-this.md`
-- `.claude/commands/review-workflow.md`
-- `.claude/commands/review-vue.md`
-
-Codex equivalent:
-
-- Do not create fake slash commands.
-- Use this file and `.Codex/agents/*` as manual operating instructions.
-- The main agent should proactively dispatch reviewers when needed and state the current workflow step in the response.
-
-## Build / Test Matrix
-
-| Change | Required Validation |
+| Change | Required validation |
 |--------|---------------------|
-| Backend `.cs` / API behavior | `dotnet build backend/HansOS.slnx` + relevant tests |
+| Backend `.cs` / API behavior | `dotnet build backend/HansOS.slnx` plus relevant tests |
+| New / changed API endpoint | Integration tests under `backend/tests/HansOS.Api.IntegrationTests` |
+| New public service method | Unit or integration tests |
+| Bug fix | Reproduction test first, then targeted test pass |
 | Frontend `.vue` / `.ts` / `.tsx` | `cd frontend && pnpm check:type` |
-| New / changed API endpoint | Integration tests |
-| New public service method | Unit or Integration tests |
-| Bug fix | Reproduction test first |
+| UI behavior change | Typecheck plus manual/browser verification when feasible |
+| Deployment / workflow code | Relevant workflow or command dry-run where feasible |
+| Doc-only | `git diff --check` or targeted diff review is enough |
 
-## Work Artifacts
+## Command Reference
 
-- `Codex` must not mirror machine state files such as `.claude/workflow/state.json`, `progress.md`, or `findings.md`.
-- If work traces are needed, use regular documents or response summaries. Do not create a fake state machine.
+Backend:
+
+```bash
+dotnet build backend/HansOS.slnx
+dotnet test backend/HansOS.slnx
+dotnet run --project backend/src/HansOS.Api
+```
+
+Frontend:
+
+```bash
+cd frontend && pnpm dev:antd
+cd frontend && pnpm check:type
+cd frontend && pnpm build:antd
+```
+
+EF Core:
+
+```bash
+dotnet ef migrations add <Name> --project backend/src/HansOS.Api
+dotnet ef database update --project backend/src/HansOS.Api
+```
 
 ## What This File Does Not Claim
 
-- It does not claim that `Codex` automatically blocks branches, commits, or edits.
-- It does not claim that `Codex` automatically builds after edits.
-- It does not claim that `Codex` automatically verifies whether reviewers actually ran.
+- It does not claim Codex automatically blocks branches, commits, or edits.
+- It does not claim Codex automatically builds after edits.
+- It does not claim Codex automatically verifies reviewer dispatch.
+- It does not create fake workflow state files.
 
-These are **mandatory manual rules**, not tool-level enforcement.
+These are manual rules that Codex must follow and report honestly.
