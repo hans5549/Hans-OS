@@ -1,89 +1,108 @@
-# Codex Settings — Hans-OS
+# Codex Settings - Hans-OS
 
-This directory contains project-level settings for `Codex` in the Hans-OS repo.
-`AGENTS.md` is the primary entry point; `.Codex/*` contains fuller rules, reviewer personas, architecture references, and project skills.
+這個資料夾是 Hans-OS repo 的 Codex 專用設定、規則、審查 persona 與專案索引。
+主要入口是 repo root 的 `AGENTS.md`；詳細規則放在 `.Codex/*`。
 
 ## Current Layout
 
 | Path | Purpose |
 |------|---------|
-| `AGENTS.md` | Codex entry point: quick facts, must-read mapping, and workflow boundaries |
+| `AGENTS.md` | Codex entry point: quick facts, must-read mapping, workflow boundaries |
 | `.Codex/README.md` | This file: Codex settings index and maintenance rules |
-| `.Codex/ARCHITECTURE.md` | Backend, frontend, database, auth, and deployment architecture summary |
+| `.Codex/ARCHITECTURE.md` | Current backend, frontend, database, auth, deployment, and module map |
 | `.Codex/LINUS_MODE.md` | Linus-style judgment and review principles |
-| `.Codex/rules/workflow.md` | Mapping from Claude hooks to the manual Codex workflow |
-| `.Codex/rules/communication-style.md` | Traditional Chinese response style, work posture, and foundation/integration explanation rules |
+| `.Codex/rules/workflow.md` | Manual Codex workflow mapped from Claude and GitHub hook-based workflows |
+| `.Codex/rules/communication-style.md` | Traditional Chinese response style and work posture |
+| `.Codex/rules/csharp-coding-style.md` | Backend C# style, architecture, async, logging, validation rules |
 | `.Codex/rules/code-first-ef.md` | EF Core code-first and migration rules |
+| `.Codex/rules/testing.md` | xUnit, integration test, naming, and coverage rules |
 | `.Codex/rules/review-vue.md` | Vue 3 / TypeScript / Ant Design Vue review checklist |
-| `.Codex/agents/*.md` | Plan/code/security/Linus reviewer personas and output contracts |
+| `.Codex/rules/ui-style-guide.md` | Vben / Ant Design / Tailwind / design token rules |
+| `.Codex/agents/*.md` | Plan, code, security, cleanup, and Linus reviewer personas |
 | `.Codex/skills/ui-ux-pro-max/*` | Project UI/UX skill and searchable design data |
 
-This repo currently has no standalone `.codex/` or `codex.toml` project settings file. Project-level Codex rules are defined by `AGENTS.md` and `.Codex/*`.
+There is no standalone repo-local `.codex/` or `codex.toml` project settings file. Project-level Codex behavior is defined by `AGENTS.md` and `.Codex/*`.
 
-## Hans-OS AI Coding Guardrails
+## Source Boundaries
 
-The AI Coding Guardrails in `AGENTS.md` are Hans-OS-local rules used to constrain Codex's day-to-day planning, implementation, and review behavior.
+- `Codex`: `AGENTS.md` and `.Codex/*`
+- `Claude Code`: `CLAUDE.md` and `.claude/*`
+- `GitHub Copilot CLI`: `.github/*`
 
-- This is not an external plugin import, and it is not a verbatim copy.
-- Do not add `.claude-plugin/*`, `.cursor/*`, or modify `.claude/*`.
-- Keep the short entry rules in `AGENTS.md`; put detailed checks in `.Codex/rules/workflow.md`, `.Codex/LINUS_MODE.md`, and `.Codex/agents/*`.
-- The core standards are: clarify first, keep it simple, make surgical changes, and verify completion.
+Codex may read `.claude/*` and `.github/*` as reference material, but should not edit their hook state or automation files unless the user explicitly asks for that workflow to be maintained.
+
+Protected unless explicitly requested:
+
+- `.claude/hooks/*`
+- `.claude/workflow/state.json`
+- `.claude/settings.local.json`
+- `.github/hooks/*`
+- `.github/workflow/state.json`
+
+## Current Project Facts
+
+- Backend solution: `backend/HansOS.slnx`
+- Backend API project: `backend/src/HansOS.Api`
+- Test projects: `backend/tests/HansOS.Api.UnitTests`, `backend/tests/HansOS.Api.IntegrationTests`
+- Frontend app: `frontend/apps/web-antd`
+- Package manager: `pnpm@10.30.3`
+- Backend deploy target: Azure App Service `hans-os-api`
+- Frontend deploy target: Azure Static Web Apps
+- Health endpoints: `/healthz`, `/readyz`, `/health`
 
 ## Read Order
 
-1. Read `AGENTS.md` first.
-2. Read the must-read files from `AGENTS.md` based on task type.
-3. If the task involves Codex settings, workflow, reviewers, agents, or skill maintenance, read this file.
-4. For code changes, read `.Codex/rules/workflow.md` and follow the TDD / review / validation flow.
-5. For doc-only changes, TDD, build, and the review pipeline may be skipped, but still check that the diff only changes documents.
+1. Read `AGENTS.md`.
+2. Read `.Codex/README.md` when the task touches Codex settings, agents, rules, or skills.
+3. Read the must-read files listed in `AGENTS.md` for the task type.
+4. For code changes, read `.Codex/rules/workflow.md` before editing and define success criteria.
+5. For doc-only changes, TDD, build, typecheck, and review pipeline may be skipped, but verify the diff only changes expected documents.
 
 ## Task Routing
 
-| Task Type | Read First |
+| Task type | Read first |
 |-----------|------------|
 | Codex settings cleanup, rule restructuring, agent/skill changes | `.Codex/README.md`, `.Codex/rules/workflow.md`, `.Codex/rules/communication-style.md` |
-| Backend API / service / repository / EF / migration | `.Codex/ARCHITECTURE.md`, `.Codex/rules/code-first-ef.md`, `.Codex/rules/workflow.md` |
-| Frontend Vue / Pinia / TypeScript / Ant Design Vue | `.Codex/ARCHITECTURE.md`, `.Codex/rules/review-vue.md`, `.Codex/rules/workflow.md` |
+| Backend API / service / repository / EF / migration | `.Codex/ARCHITECTURE.md`, `.Codex/rules/csharp-coding-style.md`, `.Codex/rules/code-first-ef.md`, `.Codex/rules/testing.md` |
+| Frontend Vue / Pinia / TypeScript / Ant Design Vue | `.Codex/ARCHITECTURE.md`, `.Codex/rules/review-vue.md`, `.Codex/rules/ui-style-guide.md` |
 | Refactor / quality / review / guardrails | `.Codex/LINUS_MODE.md`, `.Codex/rules/workflow.md`, relevant `.Codex/agents/*.md` |
-| UI/UX design work | `.Codex/skills/ui-ux-pro-max/SKILL.md`, `.Codex/rules/review-vue.md` |
+| UI/UX design work | `.Codex/skills/ui-ux-pro-max/SKILL.md`, `.Codex/rules/ui-style-guide.md`, `.Codex/rules/review-vue.md` |
+| Deployment / CI / Azure | `.Codex/ARCHITECTURE.md`, `docs/deployment.md`, `.github/workflows/*` |
 
 ## Workflow Rules
 
-- Doc-only changes: `.md`, `.txt`, `.rst`, `.yml`, `.yaml` may skip TDD, build, and the review pipeline.
-- Code changes: `.cs`, `.vue`, `.ts`, `.tsx`, `.json`, `.css`, `.js`, `.html`, `.csproj`, `.xml` must follow the full workflow.
+- Doc-only changes: `.md`, `.txt`, `.rst`, `.yml`, `.yaml` may skip TDD, build, typecheck, and review pipeline.
+- Code changes: `.cs`, `.vue`, `.ts`, `.tsx`, `.json`, `.css`, `.js`, `.html`, `.csproj`, `.xml` require the full workflow.
 - Code changes must not be made directly on `main` / `master`.
-- Bug fixes require a reproducing test first; new API endpoints / public methods require corresponding tests.
-- Non-trivial code changes need success criteria and a verification loop; trivial changes may use shorter explanations, but must not expand scope.
+- Bug fixes require a reproducing test first.
+- New API endpoints and new public service methods require corresponding tests.
+- Non-trivial code changes need success criteria and a verification loop.
 - Before committing, do not use `git add .` or `git add -A`; stage only explicit file paths.
 
 ## Review Pipeline Notes
 
-`.Codex/agents/*` defines reviewer personas and output contracts. It is not an automatic hook.
+`.Codex/agents/*` defines reviewer personas and output contracts. These files are not automatic hooks.
 
-If claiming the review pipeline is complete, the corresponding reviewer or equivalent review flow must actually be run. If the current tool environment cannot dispatch sub-agents / reviewers, explicitly state "review pipeline not run"; do not replace it with the main agent's self-narration.
+If claiming the review pipeline is complete, the corresponding reviewer or equivalent dispatch flow must actually run. If the current tool environment cannot dispatch reviewers, explicitly state `review pipeline not run`; do not replace it with the main agent's self-review.
 
 Recommended order:
 
-1. Plan Review: `plan-ceo-reviewer`, `plan-eng-reviewer`, `plan-linus-reviewer`
-2. Code Review: `code-review-specialist`, `security-vuln-scanner`
-3. Linus Review: `linus-reviewer`
-4. Build / typecheck / tests
+1. Plan review: `plan-ceo-reviewer`, `plan-eng-reviewer`, `plan-linus-reviewer`
+2. Code review: `code-review-specialist`, `security-vuln-scanner`
+3. Cleanup review: `code-simplifier`, when the diff is larger than a trivial change
+4. Final taste review: `linus-reviewer`
+5. Build / typecheck / tests
 
-## Claude Boundary
-
-- `Claude` uses `CLAUDE.md` and `.claude/*`.
-- `Codex` uses `AGENTS.md` and `.Codex/*`.
-- Do not modify `.claude/hooks/*`, `.claude/workflow/state.json`, or `.claude/settings.local.json` unless the user explicitly asks to maintain the Claude workflow.
-- Do not create a fake hook state machine inside `.Codex`; Codex-side work traces should be regular documents or response summaries.
+Claude-only wrappers such as `plan-codex-adversarial-reviewer`, `gatex-codex-reviewer`, and `stop-review-gate` are not mirrored as Codex agents because they exist to call Codex from Claude.
 
 ## Maintenance Checklist
 
-When adjusting Codex settings, check each item:
+When adjusting Codex settings:
 
-- Keep `AGENTS.md` as a short entry point. Put detailed rules under `.Codex/*`.
-- When adding a must-read file, update both the `AGENTS.md` mapping and this file.
-- When changing AI Coding Guardrails, keep only hard entry rules in `AGENTS.md`; put details in workflow / Linus / reviewer files.
-- When changing build / test / typecheck commands, update both `AGENTS.md` and `.Codex/rules/workflow.md`.
+- Keep `AGENTS.md` as a short entry point; put detail under `.Codex/*`.
+- When adding a must-read file, update both `AGENTS.md` and this README.
+- When changing build / test / typecheck commands, update `AGENTS.md`, `.Codex/rules/workflow.md`, and any architecture notes.
+- When changing backend patterns, update `.Codex/ARCHITECTURE.md`, `.Codex/rules/csharp-coding-style.md`, and `.Codex/rules/code-first-ef.md` if relevant.
+- When changing frontend design or UI rules, update `.Codex/rules/review-vue.md` and `.Codex/rules/ui-style-guide.md`.
 - When changing the reviewer flow, update `.Codex/rules/workflow.md` and `.Codex/agents/*`.
-- When adding UI/UX skill data or scripts, ensure `.Codex/skills/ui-ux-pro-max/SKILL.md` still describes actual usage.
 - After completion, run `git diff -- AGENTS.md .Codex` to verify that only expected files changed.
