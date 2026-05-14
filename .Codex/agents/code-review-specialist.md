@@ -18,6 +18,7 @@ The task is to focus on **recently modified files** and check correctness, archi
 - Logic errors, null risk, off-by-one
 - async/await misuse
 - regression risk
+- deterministic routing, retry, status-code, permission, and transform logic handled by code / contracts, not model judgment
 
 ### Architecture
 
@@ -50,6 +51,8 @@ The task is to focus on **recently modified files** and check correctness, archi
 - Whether there are unnecessary diffs, style drift, or scope drift
 - Whether every new helper / abstraction / config is supported by the current requirement
 - Whether the change maps to success criteria and verification results
+- Whether conflicting patterns were averaged instead of resolved through a named source of truth
+- Whether skipped checks, uncertain results, or unverified edge cases were surfaced clearly
 
 ## Hans-OS Specific Checks
 
@@ -62,6 +65,7 @@ Use `.Codex/rules/project-fit-review-checklist.md` as the detailed project-fit c
 - EF migration chain, Fluent API configuration, `AsNoTracking()`, pagination, and N+1 risk
 - frontend request wrappers, strict TypeScript, Pinia, Vben router/access, and Ant Design Vue consistency
 - spec compliance: implemented requirements, omitted requirements, and any scope drift
+- test intent: assertions prove business invariants, not only shallow return values
 
 ## Output Contract
 

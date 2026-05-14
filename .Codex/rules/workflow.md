@@ -7,6 +7,8 @@
 - Codex rules are mandatory manual rules, not automatic hooks.
 - Do not add fake workflow state or fake automation claims.
 - Verification must be reported from commands that actually ran.
+- Skipped checks, unverified edge cases, and failed reviewer dispatch must be reported explicitly.
+- Deterministic behavior belongs in code, tests, types, config, and existing contracts, not ad hoc model judgment.
 
 ## Change Type Rules
 
@@ -19,13 +21,15 @@
 
 1. Confirm the current branch is not `main` / `master`.
 2. Define success criteria and an executable plan.
-3. Read the must-read files from `AGENTS.md`.
-4. RED: write a failing test first, or add a test that reproduces the bug.
-5. GREEN: write the smallest implementation that makes the test pass.
-6. REFACTOR: simplify naming, duplication, flow, and data shape while tests stay green.
-7. Run review pipeline when reviewers can actually be dispatched.
-8. Run required build, typecheck, and tests.
-9. Stage only explicit file paths before committing.
+3. Read `.Codex/rules/agent-behavior.md` and the must-read files from `AGENTS.md`.
+4. Read the target surface, immediate caller, shared utility / API contract, and relevant existing tests before editing.
+5. RED: write a failing test first, or add a test that reproduces the bug.
+6. GREEN: write the smallest implementation that makes the test pass.
+7. REFACTOR: simplify naming, duplication, flow, and data shape while tests stay green.
+8. For multi-step work, checkpoint done / verified / left after each meaningful step.
+9. Run review pipeline when reviewers can actually be dispatched.
+10. Run required build, typecheck, and tests.
+11. Stage only explicit file paths before committing.
 
 ## Goal-Driven Execution
 
@@ -34,6 +38,8 @@
 - A refactor must state expected unchanged behavior and the verification proving it.
 - Every new setting, interface, helper, factory, or abstraction must solve a current real problem.
 - Trivial doc or typo changes can use shorter verification, but must not expand scope.
+- If existing patterns conflict, choose the explicit rule, current contract, more tested implementation, or newer local convention; do not blend patterns.
+- If context or token pressure threatens continuity, summarize current state before continuing.
 
 ## Manual Rules in Codex
 
@@ -59,6 +65,23 @@ Before `git commit`:
 - Backend + frontend change: run both.
 - New or changed API endpoint: run integration tests that cover it.
 
+### Verification Integrity
+
+- Only say a command, reviewer, browser check, migration, or test passed if it actually ran.
+- If something was not run, use `not run` or `skipped` and include the reason.
+- Do not describe skipped verification as completed verification.
+- If the requested edge case was not verified, say so next to the result.
+
+### Pattern Conflicts
+
+When codebase patterns disagree:
+
+- Prefer explicit rules in `AGENTS.md` / `.Codex/*`.
+- Prefer the current API, database, auth, menu, route, and frontend request contracts.
+- Prefer the implementation with stronger tests or more recent module-local usage.
+- Flag the rejected pattern as cleanup debt instead of silently averaging both.
+- Do not perform the cleanup unless it is part of the task scope.
+
 ## Review Pipeline
 
 `.Codex/agents/*` defines reviewer personas. It does not dispatch itself.
@@ -72,6 +95,7 @@ Use when a code task is non-trivial and reviewer dispatch is available:
 - `plan-linus-reviewer`
 
 If CEO, engineering, and Linus judgments conflict, present the conflict to the user instead of silently blending the answers.
+The same rule applies to conflicting code patterns: do not average them without naming the chosen source of truth.
 
 ### Code Review
 

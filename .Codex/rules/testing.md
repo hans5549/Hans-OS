@@ -38,6 +38,14 @@ Every new public service method must have a unit or integration test.
 
 Bug fixes must include a test that reproduces the bug before the fix.
 
+## Intent and Invariants
+
+- Tests must verify the business invariant behind the behavior, not only the returned status or a non-null value.
+- Endpoint tests should prove the API contract and permission / validation intent that matters to the caller.
+- Service tests should fail if the business rule is changed incorrectly, not merely if the method stops returning a constant.
+- Bug reproduction tests must fail for the original bug reason, then pass because the implementation fixed that reason.
+- Avoid assertions that only confirm hard-coded sample data unless the sample data is the invariant under test.
+
 ## Structure
 
 Use Arrange / Act / Assert:

@@ -12,6 +12,7 @@
 | `.Codex/ARCHITECTURE.md` | Current backend, frontend, database, auth, deployment, and module map |
 | `.Codex/LINUS_MODE.md` | Linus-style judgment and review principles |
 | `.Codex/rules/workflow.md` | Manual Codex workflow rules and validation matrix |
+| `.Codex/rules/agent-behavior.md` | Cross-task behavior rules: deterministic work, checkpoints, conflicts, verification integrity |
 | `.Codex/rules/communication-style.md` | Traditional Chinese response style and work posture |
 | `.Codex/rules/csharp-coding-style.md` | Backend C# style, architecture, async, logging, validation rules |
 | `.Codex/rules/code-first-ef.md` | EF Core code-first and migration rules |
@@ -24,12 +25,22 @@
 
 There is no standalone repo-local `.codex/` or `codex.toml` project settings file. Project-level Codex behavior is defined by `AGENTS.md` and `.Codex/*`.
 
+## Rule Layering
+
+- Keep `AGENTS.md` as the stable short entry point.
+- Keep reusable task behavior in `.Codex/rules/agent-behavior.md`.
+- Keep workflow gates and validation commands in `.Codex/rules/workflow.md`.
+- Keep backend, frontend, EF, testing, UI, and review rules in their scoped rule files.
+- Keep repeatable specialist workflows under `.Codex/skills/*` only when they need scripts, data, or reusable assets.
+- Do not copy full external templates into the entry point. Adapt only the rules that prevent observed Hans-OS failure modes.
+
 ## Source Boundaries
 
 - `Codex`: `AGENTS.md` and `.Codex/*`
 - `GitHub Actions`: `.github/workflows/*`
 
 There is no repo-local second AI settings tree. Do not add one unless the user explicitly asks to reintroduce it.
+Do not add `CLAUDE.md`, `.claude/*`, `.github/copilot-instructions.md`, or another tool-specific bridge unless the user explicitly asks for multi-tool instruction sharing.
 
 ## Current Project Facts
 
@@ -46,18 +57,20 @@ There is no repo-local second AI settings tree. Do not add one unless the user e
 
 1. Read `AGENTS.md`.
 2. Read `.Codex/README.md` when the task touches Codex settings, agents, rules, or skills.
-3. Read the must-read files listed in `AGENTS.md` for the task type.
-4. For code changes, read `.Codex/rules/workflow.md` before editing and define success criteria.
-5. For doc-only changes, TDD, build, typecheck, and review pipeline may be skipped, but verify the diff only changes expected documents.
+3. Read `.Codex/rules/agent-behavior.md` for non-trivial or multi-step work.
+4. Read the must-read files listed in `AGENTS.md` for the task type.
+5. For code changes, read `.Codex/rules/workflow.md` before editing and define success criteria.
+6. For doc-only changes, TDD, build, typecheck, and review pipeline may be skipped, but verify the diff only changes expected documents.
 
 ## Task Routing
 
 | Task type | Read first |
 |-----------|------------|
-| Codex settings cleanup, rule restructuring, agent/skill changes | `.Codex/README.md`, `.Codex/rules/workflow.md`, `.Codex/rules/communication-style.md` |
+| Codex settings cleanup, rule restructuring, agent/skill changes | `.Codex/README.md`, `.Codex/rules/workflow.md`, `.Codex/rules/agent-behavior.md`, `.Codex/rules/communication-style.md` |
 | Backend API / service / repository / EF / migration | `.Codex/ARCHITECTURE.md`, `.Codex/rules/csharp-coding-style.md`, `.Codex/rules/code-first-ef.md`, `.Codex/rules/testing.md` |
 | Frontend Vue / Pinia / TypeScript / Ant Design Vue | `.Codex/ARCHITECTURE.md`, `.Codex/rules/review-vue.md`, `.Codex/rules/ui-style-guide.md` |
-| Refactor / quality / review / guardrails | `.Codex/LINUS_MODE.md`, `.Codex/rules/workflow.md`, `.Codex/rules/project-fit-review-checklist.md`, relevant `.Codex/agents/*.md` |
+| Code change / multi-step implementation | `.Codex/rules/workflow.md`, `.Codex/rules/agent-behavior.md`, relevant task-specific rule files |
+| Refactor / quality / review / guardrails | `.Codex/LINUS_MODE.md`, `.Codex/rules/workflow.md`, `.Codex/rules/agent-behavior.md`, `.Codex/rules/project-fit-review-checklist.md`, relevant `.Codex/agents/*.md` |
 | UI/UX design work | `.Codex/skills/ui-ux-pro-max/SKILL.md`, `.Codex/rules/ui-style-guide.md`, `.Codex/rules/review-vue.md` |
 | Deployment / CI / Azure | `.Codex/ARCHITECTURE.md`, `docs/deployment.md`, `.github/workflows/*` |
 
@@ -69,6 +82,8 @@ There is no repo-local second AI settings tree. Do not add one unless the user e
 - Bug fixes require a reproducing test first.
 - New API endpoints and new public service methods require corresponding tests.
 - Non-trivial code changes need success criteria and a verification loop.
+- Multi-step work needs checkpoints for done, verified, and left.
+- Skipped verification, reviewer dispatch, or edge-case checks must be reported explicitly.
 - Before committing, do not use `git add .` or `git add -A`; stage only explicit file paths.
 
 ## Review Pipeline Notes
@@ -93,6 +108,7 @@ When adjusting Codex settings:
 
 - Keep `AGENTS.md` as a short entry point; put detail under `.Codex/*`.
 - When adding a must-read file, update both `AGENTS.md` and this README.
+- When changing cross-task behavior, update `.Codex/rules/agent-behavior.md` and only summarize the highest-priority effects in `AGENTS.md`.
 - When changing build / test / typecheck commands, update `AGENTS.md`, `.Codex/rules/workflow.md`, and any architecture notes.
 - When changing backend patterns, update `.Codex/ARCHITECTURE.md`, `.Codex/rules/csharp-coding-style.md`, and `.Codex/rules/code-first-ef.md` if relevant.
 - When changing frontend design or UI rules, update `.Codex/rules/review-vue.md` and `.Codex/rules/ui-style-guide.md`.

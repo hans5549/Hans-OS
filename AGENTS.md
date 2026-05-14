@@ -46,6 +46,10 @@
 - Do not opportunistically refactor, reformat, or edit unrelated code.
 - Every non-trivial code change must define success criteria first, then verify with the corresponding tests, build, or typecheck.
 - New API endpoints and new public service methods require tests.
+- Deterministic logic belongs in code and existing contracts, not model judgment.
+- Before adding code, read the target surface, immediate caller, related shared utilities, and existing tests.
+- When existing patterns conflict, choose the explicit rule / current contract / more tested pattern; do not blend them.
+- For multi-step work, checkpoint done / verified / left; surface skipped checks, uncertainty, and unverified edge cases.
 
 ## Codex Must-Read Mapping
 
@@ -53,14 +57,15 @@ Before making changes, read the relevant files based on task type:
 
 | Task keywords | MUST read first |
 |---------------|-----------------|
-| Codex setting, agent, rule, skill | `.Codex/README.md`, `.Codex/rules/workflow.md`, `.Codex/rules/communication-style.md` |
+| Codex setting, agent, rule, skill | `.Codex/README.md`, `.Codex/rules/workflow.md`, `.Codex/rules/agent-behavior.md`, `.Codex/rules/communication-style.md` |
+| Code change, implementation, multi-step task | `.Codex/rules/workflow.md`, `.Codex/rules/agent-behavior.md`, relevant task-specific rule files |
 | Entity, Service, Controller, API, DbContext, Migration | `.Codex/ARCHITECTURE.md`, `.Codex/rules/csharp-coding-style.md` |
 | EF Core, Migration, DbContext, Entity | `.Codex/rules/code-first-ef.md` |
 | C#, backend behavior, dependency injection | `.Codex/rules/csharp-coding-style.md`, `.Codex/ARCHITECTURE.md` |
 | Backend tests, integration tests, bug fix | `.Codex/rules/testing.md`, `.Codex/rules/workflow.md` |
 | Vue, Component, Pinia, TypeScript, Frontend | `.Codex/ARCHITECTURE.md`, `.Codex/rules/review-vue.md` |
 | UI, styling, design tokens, Ant Design appearance | `.Codex/rules/ui-style-guide.md`, `.Codex/rules/review-vue.md` |
-| Review, refactor, quality, taste | `.Codex/LINUS_MODE.md`, `.Codex/rules/workflow.md`, `.Codex/rules/project-fit-review-checklist.md`, relevant `.Codex/agents/*.md` |
+| Review, refactor, quality, taste | `.Codex/LINUS_MODE.md`, `.Codex/rules/workflow.md`, `.Codex/rules/agent-behavior.md`, `.Codex/rules/project-fit-review-checklist.md`, relevant `.Codex/agents/*.md` |
 | Deployment, CI, Azure, GitHub Actions | `.Codex/ARCHITECTURE.md`, `docs/deployment.md`, `.github/workflows/*` |
 | Communication, response style | `.Codex/rules/communication-style.md` |
 
