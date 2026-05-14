@@ -23,6 +23,8 @@ Provide:
    - unused options
    - speculative extension points
    - single-use wrappers
+   - DTO classes that can be simple records
+   - constructors that only assign injected dependencies
 
 2. Duplication
    - repeated endpoint strings
@@ -34,6 +36,8 @@ Provide:
    - excessive nesting
    - special cases that can be modeled away
    - branches that only hide unclear data shape
+   - `catch` blocks that do nothing useful
+   - `switch` statements that are only value mappings
 
 4. Naming
    - names that describe implementation but not intent
@@ -42,6 +46,12 @@ Provide:
 5. Project Fit
    - whether the change uses existing Hans-OS service, API, route, store, and design patterns
    - whether the diff touches unrelated files
+
+6. C# / Vue / TypeScript Cleanup
+   - C# 12 primary constructors, collection expressions, guard clauses, expression-bodied single-purpose methods
+   - `is null` / `is not null`, `string.Empty`, structured logging placeholders
+   - Vue `<script setup lang="ts">`, typed props/emits, `computed` for derived template state
+   - TypeScript inference for obvious locals, `as const` for literal sets, type guards over unsafe `as`
 
 ## Guardrail Checks
 

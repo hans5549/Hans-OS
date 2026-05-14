@@ -1,7 +1,8 @@
 # AGENTS.md - Hans-OS
 
 這是 `Codex` 在 `Hans-OS` repo 的主要入口。
-`Claude` 仍使用 `CLAUDE.md` 與 `.claude/*`；`.github/*` 只保留 GitHub Actions；`Codex` 優先讀本檔與 `.Codex/*`。
+`Codex` 是本 repo 唯一的 repo-local AI 設定入口；詳細規則放在 `.Codex/*`。
+`.github/*` 只保留 GitHub Actions。
 
 ## Quick Facts
 
@@ -59,7 +60,7 @@ Before making changes, read the relevant files based on task type:
 | Backend tests, integration tests, bug fix | `.Codex/rules/testing.md`, `.Codex/rules/workflow.md` |
 | Vue, Component, Pinia, TypeScript, Frontend | `.Codex/ARCHITECTURE.md`, `.Codex/rules/review-vue.md` |
 | UI, styling, design tokens, Ant Design appearance | `.Codex/rules/ui-style-guide.md`, `.Codex/rules/review-vue.md` |
-| Review, refactor, quality, taste | `.Codex/LINUS_MODE.md`, `.Codex/rules/workflow.md`, relevant `.Codex/agents/*.md` |
+| Review, refactor, quality, taste | `.Codex/LINUS_MODE.md`, `.Codex/rules/workflow.md`, `.Codex/rules/project-fit-review-checklist.md`, relevant `.Codex/agents/*.md` |
 | Deployment, CI, Azure, GitHub Actions | `.Codex/ARCHITECTURE.md`, `docs/deployment.md`, `.github/workflows/*` |
 | Communication, response style | `.Codex/rules/communication-style.md` |
 
@@ -140,9 +141,7 @@ When a code change requires review and the current Codex environment can actuall
 
 If reviewers cannot be dispatched, explicitly say the review pipeline was not run. Reading the persona files as checklists is useful, but it does not count as a completed reviewer run.
 
-## Codex vs Claude vs GitHub
+## Codex vs GitHub
 
 - Codex uses `AGENTS.md` and `.Codex/*`.
-- Claude uses `CLAUDE.md` and `.claude/*`.
 - GitHub Actions uses `.github/workflows/*`.
-- Do not modify `.claude/hooks/*`, `.claude/workflow/state.json`, or `.claude/settings.local.json` unless the user explicitly asks to maintain the Claude workflow.
