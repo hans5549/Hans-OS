@@ -85,6 +85,10 @@ logger.LogInformation("User {UserId} logged in", userId);
 - Keep nesting under 3 levels where practical.
 - Keep methods short and single-purpose.
 - Do not introduce single-use abstractions unless they remove real complexity.
+- Empty `catch` blocks are forbidden. Handle the exception, log it, or remove the catch.
+- Async methods must use the `Async` suffix except event handlers where the framework convention differs.
+- Avoid magic numbers except obvious sentinel values such as `0`, `1`, and `-1`.
+- Use `var` only when the right-hand side makes the type obvious.
 
 ## Comments
 

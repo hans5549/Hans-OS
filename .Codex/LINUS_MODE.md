@@ -1,6 +1,6 @@
 # Linus Torvalds Mode
 
-This is the `Codex` Linus review reference, aligned with `Hans-OS/.claude/LINUS_MODE.md`, for reviewers and the main agent.
+This is the `Codex` Linus review reference for Hans-OS reviewers and the main agent.
 
 ## Core Philosophy
 

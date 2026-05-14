@@ -5,11 +5,15 @@ Use this for frontend changes under `frontend/apps/web-antd` and shared Vben pac
 ## Current Project Shape
 
 - Main app: `frontend/apps/web-antd`
+- App startup: `src/main.ts` calls `bootstrap(namespace)`, which initializes adapters, i18n, Pinia, access directives, router, and plugins before mounting.
+- Component adapters: `src/adapter/*` maps Vben common UI/form abstractions to Ant Design Vue.
 - API wrappers: `frontend/apps/web-antd/src/api/core/*`
 - Request client: `frontend/apps/web-antd/src/api/request.ts`
 - Auth store: `frontend/apps/web-antd/src/store/auth.ts`
 - Routes and guards: `frontend/apps/web-antd/src/router/*`
 - Views: `frontend/apps/web-antd/src/views/*`
+- Shared packages: `frontend/packages/*` provide Vben core, effects, icons, locales, preferences, stores, styles, types, and utils.
+- Internal tooling: `frontend/internal/*` owns lint, Tailwind, tsconfig, Vite, and build utilities.
 - Typecheck command: `cd frontend && pnpm check:type`
 
 ## Critical
@@ -32,6 +36,7 @@ Use this for frontend changes under `frontend/apps/web-antd` and shared Vben pac
 - Preserve backend-driven menu and route behavior through `getAllMenusApi()` and `generateAccessible()`.
 - Preserve auth redirect behavior in `router/guard.ts`.
 - Keep refresh-token behavior aligned with `baseRequestClient` for `/auth/refresh` and `/auth/logout`.
+- Use `#/*` imports for app-local source and existing workspace package aliases for shared Vben packages.
 - New user-visible text should be Traditional Chinese unless the surrounding Vben source is intentionally upstream text.
 
 ## Ant Design Vue
@@ -65,6 +70,7 @@ Use this for frontend changes under `frontend/apps/web-antd` and shared Vben pac
 - Use `baseRequestClient` only for endpoints that intentionally do not return the standard envelope.
 - Do not duplicate endpoint strings across components.
 - Align request/response DTOs with backend `Models/*`.
+- Do not reintroduce local Nitro mock assumptions; local development should point `VITE_GLOB_API_URL` at the backend or an explicit mock service.
 
 ## Style
 

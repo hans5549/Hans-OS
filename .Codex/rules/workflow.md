@@ -1,12 +1,12 @@
-# Workflow - Manual Codex Mapping
+# Workflow - Codex
 
-這份文件把 Hans-OS 既有的 Claude hook-based workflow 翻成 Codex 可手動遵守的規則。
+這份文件定義 Hans-OS 在 Codex 中的手動工作流程。這些規則靠 Codex 執行與回報，不宣稱 repo 內有自動 hook 會代為阻擋。
 
 ## Core Principle
 
-- Claude Code 在本 repo 有 hook / workflow state / gate 檔案。
-- Codex 沒有同等的 repo-local 自動阻擋能力。
-- 因此 Codex 這邊是 mandatory manual rules，不是自動 hook。
+- Codex rules are mandatory manual rules, not automatic hooks.
+- Do not add fake workflow state or fake automation claims.
+- Verification must be reported from commands that actually ran.
 
 ## Change Type Rules
 
@@ -39,21 +39,9 @@
 
 ### Branch Protection
 
-Claude hooks automatically block code edits on `main` / `master`.
-
-Codex equivalent:
-
 - Before code changes, check `git status --short --branch`.
 - If on `main` / `master`, create or switch to a `feature/*`, `fix/*`, or `refactor/*` branch before editing code.
 - Doc-only Codex setting updates may happen on `main` when no code files are touched.
-
-### Protected Automation Files
-
-Do not edit these unless the user explicitly asks to maintain that workflow:
-
-- `.claude/hooks/*`
-- `.claude/workflow/state.json`
-- `.claude/settings.local.json`
 
 ### Commit Gate
 

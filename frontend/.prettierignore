@@ -1,7 +1,6 @@
 dist
 dev-dist
 .local
-.claude
 .agent
 .agents
 .codex

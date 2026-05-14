@@ -11,10 +11,11 @@
 | `.Codex/README.md` | This file: Codex settings index and maintenance rules |
 | `.Codex/ARCHITECTURE.md` | Current backend, frontend, database, auth, deployment, and module map |
 | `.Codex/LINUS_MODE.md` | Linus-style judgment and review principles |
-| `.Codex/rules/workflow.md` | Manual Codex workflow mapped from Claude hook-based workflows |
+| `.Codex/rules/workflow.md` | Manual Codex workflow rules and validation matrix |
 | `.Codex/rules/communication-style.md` | Traditional Chinese response style and work posture |
 | `.Codex/rules/csharp-coding-style.md` | Backend C# style, architecture, async, logging, validation rules |
 | `.Codex/rules/code-first-ef.md` | EF Core code-first and migration rules |
+| `.Codex/rules/project-fit-review-checklist.md` | Hans-OS architecture, auth, EF, menu, Vue, and spec-fit review checklist |
 | `.Codex/rules/testing.md` | xUnit, integration test, naming, and coverage rules |
 | `.Codex/rules/review-vue.md` | Vue 3 / TypeScript / Ant Design Vue review checklist |
 | `.Codex/rules/ui-style-guide.md` | Vben / Ant Design / Tailwind / design token rules |
@@ -26,16 +27,9 @@ There is no standalone repo-local `.codex/` or `codex.toml` project settings fil
 ## Source Boundaries
 
 - `Codex`: `AGENTS.md` and `.Codex/*`
-- `Claude Code`: `CLAUDE.md` and `.claude/*`
 - `GitHub Actions`: `.github/workflows/*`
 
-Codex may read `.claude/*` as reference material, but should not edit Claude hook state or automation files unless the user explicitly asks for that workflow to be maintained. `.github/*` is limited to GitHub Actions deployment workflows.
-
-Protected unless explicitly requested:
-
-- `.claude/hooks/*`
-- `.claude/workflow/state.json`
-- `.claude/settings.local.json`
+There is no repo-local second AI settings tree. Do not add one unless the user explicitly asks to reintroduce it.
 
 ## Current Project Facts
 
@@ -63,7 +57,7 @@ Protected unless explicitly requested:
 | Codex settings cleanup, rule restructuring, agent/skill changes | `.Codex/README.md`, `.Codex/rules/workflow.md`, `.Codex/rules/communication-style.md` |
 | Backend API / service / repository / EF / migration | `.Codex/ARCHITECTURE.md`, `.Codex/rules/csharp-coding-style.md`, `.Codex/rules/code-first-ef.md`, `.Codex/rules/testing.md` |
 | Frontend Vue / Pinia / TypeScript / Ant Design Vue | `.Codex/ARCHITECTURE.md`, `.Codex/rules/review-vue.md`, `.Codex/rules/ui-style-guide.md` |
-| Refactor / quality / review / guardrails | `.Codex/LINUS_MODE.md`, `.Codex/rules/workflow.md`, relevant `.Codex/agents/*.md` |
+| Refactor / quality / review / guardrails | `.Codex/LINUS_MODE.md`, `.Codex/rules/workflow.md`, `.Codex/rules/project-fit-review-checklist.md`, relevant `.Codex/agents/*.md` |
 | UI/UX design work | `.Codex/skills/ui-ux-pro-max/SKILL.md`, `.Codex/rules/ui-style-guide.md`, `.Codex/rules/review-vue.md` |
 | Deployment / CI / Azure | `.Codex/ARCHITECTURE.md`, `docs/deployment.md`, `.github/workflows/*` |
 
@@ -91,7 +85,7 @@ Recommended order:
 4. Final taste review: `linus-reviewer`
 5. Build / typecheck / tests
 
-Claude-only wrappers such as `plan-codex-adversarial-reviewer`, `gatex-codex-reviewer`, and `stop-review-gate` are not mirrored as Codex agents because they exist to call Codex from Claude.
+Do not describe unimplemented automation as available. If a review step cannot actually be dispatched in the current Codex environment, report that honestly.
 
 ## Maintenance Checklist
 

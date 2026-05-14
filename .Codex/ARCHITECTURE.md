@@ -10,7 +10,6 @@ Hans-OS/
   frontend/       Vue Vben Admin pnpm monorepo, main app at apps/web-antd
   docs/           Deployment notes
   .Codex/         Codex settings, rules, agents, skills
-  .claude/        Claude Code automation and hooks
   .github/        GitHub Actions deployment workflows
 ```
 
@@ -177,13 +176,16 @@ frontend/
   pnpm-lock.yaml
   apps/web-antd/
     src/
+      bootstrap.ts          Initializes adapter, i18n, Pinia, access, router, plugins
+      adapter/              Ant Design Vue bridge for Vben common UI and forms
       api/core/             Auth, menu, TSF, finance, budget APIs
       api/request.ts        RequestClient config
       router/               Guards, access generation, local static routes
       store/auth.ts         Login/logout/fetchUserInfo
+      preferences.ts        App-level Vben preference overrides
       views/                Page components
-  packages/                 Shared Vben packages
-  internal/                 Build tooling
+  packages/                 Shared Vben packages: core, effects, constants, icons, locales, stores, styles, utils
+  internal/                 Build tooling: lint configs, node utilities, Tailwind, tsconfig, Vite config
 ```
 
 Important scripts:
@@ -214,6 +216,21 @@ Use API wrapper files under `frontend/apps/web-antd/src/api/core/`; do not call 
 - Backend-driven menus are loaded by `getAllMenusApi()` inside `router/access.ts`.
 - `generateAccessible()` maps backend menu records to Vue route components through `import.meta.glob('../views/**/*.vue')`.
 - Public or core routes use `meta.ignoreAccess` / auth paths; authenticated routes depend on access token and generated access routes.
+
+Access modes follow Vben semantics:
+
+- `frontend`: filter static routes by role.
+- `backend`: load menus/routes from the backend.
+- `mixed`: combine both modes when explicitly configured.
+
+Hans-OS currently relies on backend-driven access for the main app flow.
+
+### Frontend State and Preferences
+
+- Global stores are Pinia stores initialized through Vben store setup.
+- Auth/access/user state should stay separated; do not move component-local state into global stores.
+- `@vben/preferences` provides runtime preferences and localStorage persistence by app namespace.
+- App-level preference overrides belong in `frontend/apps/web-antd/src/preferences.ts`.
 
 ### Main Frontend Views
 

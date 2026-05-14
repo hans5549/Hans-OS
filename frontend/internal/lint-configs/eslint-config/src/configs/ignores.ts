@@ -52,7 +52,6 @@ export async function ignores(): Promise<Linter.Config[]> {
         '**/.agent/**',
         '**/.agents/**',
         '**/.codex/**',
-        '**/.claude/**',
         '**/.cursor/**',
       ],
     },

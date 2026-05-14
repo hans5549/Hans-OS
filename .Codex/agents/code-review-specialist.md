@@ -53,11 +53,15 @@ The task is to focus on **recently modified files** and check correctness, archi
 
 ## Hans-OS Specific Checks
 
+Use `.Codex/rules/project-fit-review-checklist.md` as the detailed project-fit checklist. Minimum checks:
+
 - `ApiEnvelope<T>` contract
 - JWT login / refresh / logout flow
+- `[Authorize]` / `[AllowAnonymous]` clarity and service-layer permission checks where applicable
 - menu / route / access code consistency
-- migration and startup behavior
-- frontend strict TypeScript compatibility
+- EF migration chain, Fluent API configuration, `AsNoTracking()`, pagination, and N+1 risk
+- frontend request wrappers, strict TypeScript, Pinia, Vben router/access, and Ant Design Vue consistency
+- spec compliance: implemented requirements, omitted requirements, and any scope drift
 
 ## Output Contract
 
